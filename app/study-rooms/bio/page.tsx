@@ -6,26 +6,30 @@ import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { 
     Dna, Activity, CheckCircle, AlertTriangle, 
     BookOpen, ClipboardList, FlaskConical, Microscope, 
-    Users, Eye, EyeOff, Minus, X 
+    Users, Eye, EyeOff, UserCircle, Newspaper
 } from 'lucide-react';
 import { Navbar } from "@/components/main/navbar";
 import { LoungeChatWidget } from "@/components/sub/LoungeChatWidget";
 
 // --- 1. CONFIGURAÇÃO DE IMPORTS ---
 const LoadingModule = () => (
-    <div className="w-full h-full flex items-center justify-center text-emerald-400/50 animate-pulse text-xs tracking-widest uppercase">
-        Loading Stream...
+    <div className="w-full h-full flex flex-col items-center justify-center text-emerald-400/50 animate-pulse gap-2">
+        <Activity className="w-5 h-5 animate-bounce" />
+        <span className="text-[10px] tracking-[0.2em] uppercase font-mono">Loading Stream...</span>
     </div>
 );
 
-// CORREÇÃO: Apontando para os módulos reais ('classes' e 'exames') em vez dos mockups ('lessons' e 'exams')
-const LessonsModule = dynamic(() => import('./main-room/classes/page'), { loading: LoadingModule });
+// Módulos Bio (Atualizados com os módulos do Lounge)
+const ClassesModule = dynamic(() => import('./main-room/classes/page'), { loading: LoadingModule });
 const ExamsModule = dynamic(() => import('./main-room/exams/page'), { loading: LoadingModule });
 const ProjectsModule = dynamic(() => import('./main-room/projects/page'), { loading: LoadingModule });
 const ResearchModule = dynamic(() => import('./main-room/researches/page'), { loading: LoadingModule });
 const CommunityModule = dynamic(() => import('./main-room/community/page'), { loading: LoadingModule });
+// Novos módulos integrados do Lounge
+const ProfileModule = dynamic(() => import('./main-room/profile/page'), { loading: LoadingModule });
+const NewsModule = dynamic(() => import('./main-room/news/page'), { loading: LoadingModule });
 
-// --- 2. TERMOS ---
+// --- 2. TERMOS (CANVAS) ---
 const BASE_TERMS = [
     "Mitochondria", "Ribosome", "Nucleus", "Cytoplasm", "Membrane",
     "DNA", "RNA", "CRISPR", "Enzyme", "Protein", "Lipid", "ATP", 
@@ -37,56 +41,77 @@ const BIO_TERMS = [...BASE_TERMS, ...BASE_TERMS];
 export default function ZaeonBiologyRoom() {
     // --- ESTADOS ---
     const [isLoaded, setIsLoaded] = useState(false);
-    const [isModalOpen, setIsModalOpen] = useState(true);
+    const [isModalOpen, setIsModalOpen] = useState(true); // O Protocolo inicial
     const [isFocusMode, setIsFocusMode] = useState(false);
     const [isDarkMode, setIsDarkMode] = useState(true);
     const [isMinimized, setIsMinimized] = useState(false);
     
-    const [activeTab, setActiveTab] = useState("lessons");
-    const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
+    const [activeTab, setActiveTab] = useState("classes");
     
-    // REF para o Timer do Menu (Hover Intent)
-    const sidebarTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-    const [tabs, setTabs] = useState([
-        { id: 'lessons', label: 'Classes', icon: <BookOpen size={18} /> },
+    // --- TABS (BASE INICIAL UNIFICADA) ---
+    // Usando os mesmos IDs do Lounge para manter a compatibilidade do layoutState no BD
+    const baseTabs = [
+        { id: 'community', label: 'Community', icon: <Users size={18} /> },
+        { id: 'classes', label: 'Classes', icon: <BookOpen size={18} /> },
         { id: 'exams', label: 'Exams', icon: <ClipboardList size={18} /> },
         { id: 'projects', label: 'Projects', icon: <FlaskConical size={18} /> },
         { id: 'research', label: 'Research', icon: <Microscope size={18} /> },
-        { id: 'community', label: 'Community', icon: <Users size={18} /> },
-    ]);
+        { id: 'news', label: 'News', icon: <Newspaper size={18} /> }, 
+        { id: 'profile', label: 'Identity', icon: <UserCircle size={18} /> },
+    ];
 
+    const [tabs, setTabs] = useState(baseTabs);
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
-    // --- HANDLERS DA SIDEBAR (Lógica de 3 Segundos) ---
-    const handleSidebarEnter = () => {
-        // Inicia o timer de 3 segundos
-        sidebarTimerRef.current = setTimeout(() => {
-            setIsSidebarExpanded(true);
-        }, 2000);
-    };
+    // --- BUSCAR A ORDEM SALVA NO BANCO ---
+    useEffect(() => {
+        // Só busca depois de passar pelo modal (Protocolo)
+        if (!isModalOpen) {
+            const fetchSavedOrder = async () => {
+                try {
+                    const res = await fetch('/api/user-space');
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data?.data?.layoutState?.sidebarOrder) {
+                            const savedOrder = data.data.layoutState.sidebarOrder;
+                            const newTabs = savedOrder
+                                .map((id: string) => baseTabs.find(t => t.id === id))
+                                .filter(Boolean);
 
-    const handleSidebarLeave = () => {
-        // Se sair antes de 3s, cancela a abertura
-        if (sidebarTimerRef.current) {
-            clearTimeout(sidebarTimerRef.current);
-            sidebarTimerRef.current = null;
+                            const missingTabs = baseTabs.filter(t => !savedOrder.includes(t.id));
+                            setTabs([...newTabs, ...missingTabs]);
+                        }
+                    }
+                } catch (error) {
+                    console.error("Erro ao buscar a ordem da sidebar", error);
+                }
+            };
+            fetchSavedOrder();
         }
-        // Fecha imediatamente ao sair
-        setIsSidebarExpanded(false);
+    }, [isModalOpen]);
+
+    // --- SALVAR A ORDEM NO BANCO QUANDO O USUÁRIO ARRASTAR ---
+    const handleReorder = async (newOrderTabs: any[]) => {
+        setTabs(newOrderTabs);
+        const sidebarOrder = newOrderTabs.map(t => t.id);
+
+        try {
+            await fetch('/api/user-space', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ layoutState: { sidebarOrder } })
+            });
+        } catch (error) {
+            console.error("Erro ao salvar a nova ordem da sidebar", error);
+        }
     };
 
     // --- SETUP & DETECÇÃO DE TEMA ---
     useEffect(() => {
         const timer = setTimeout(() => setIsLoaded(true), 500);
-
-        const checkTheme = () => {
-            const isDark = document.documentElement.classList.contains('dark');
-            setIsDarkMode(isDark);
-        };
-
+        const checkTheme = () => setIsDarkMode(document.documentElement.classList.contains('dark'));
+        
         checkTheme();
-
         const observer = new MutationObserver(checkTheme);
         observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 
@@ -96,7 +121,7 @@ export default function ZaeonBiologyRoom() {
         };
     }, []);
 
-    // --- BIO-PHYSICS ENGINE (CANVAS) ---
+    // --- BIO-PHYSICS ENGINE (CANVAS DNA) ---
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
@@ -239,7 +264,7 @@ export default function ZaeonBiologyRoom() {
             {/* 1. BACKGROUND: CANVAS DNA */}
             <canvas ref={canvasRef} className="absolute inset-0 z-0 pointer-events-none" />
 
-            {/* 2. MODAL DE PROTOCOLO */}
+            {/* 2. MODAL DE PROTOCOLO (Mantido da Sala Bio) */}
             <AnimatePresence>
                 {isLoaded && isModalOpen && (
                     <motion.div
@@ -281,7 +306,7 @@ export default function ZaeonBiologyRoom() {
                 )}
             </AnimatePresence>
 
-            {/* 3. NAVBAR REINTEGRADA */}
+            {/* 3. NAVBAR */}
             <AnimatePresence>
                 {!isFocusMode && !isModalOpen && (
                     <motion.div 
@@ -301,38 +326,30 @@ export default function ZaeonBiologyRoom() {
                         layout 
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0, transition: { delay: 0.2, duration: 0.6 } }}
-                        className={`flex items-start justify-start px-4 gap-4 w-full h-full relative z-10 transition-all duration-700 ${isFocusMode ? 'pt-4' : 'pt-24'}`}
+                        className={`flex items-start justify-start px-4 gap-6 w-full h-full relative z-10 transition-all duration-700 ${isFocusMode ? 'pt-4' : 'pt-32'}`}
                     >
-                        {/* SIDEBAR (Com Hover Delay) */}
+                        {/* SIDEBAR (Tinner & Static - Trazido do Lounge) */}
                         <motion.aside
                             layout
-                            className={`rounded-[2rem] ${fixedBioStyle} flex flex-col items-center py-6 gap-3 z-20 relative
-                                ${isSidebarExpanded ? 'w-48 px-4' : 'w-14'}
-                                ${isFocusMode ? 'h-[96vh]' : 'h-[80vh]'} 
-                            `}
-                            onMouseEnter={handleSidebarEnter}
-                            onMouseLeave={handleSidebarLeave}
+                            className={`z-20 rounded-[2.5rem] ${fixedBioStyle} transition-all duration-500 flex flex-col items-center py-6 gap-4 w-12 ${isFocusMode ? 'h-[96vh]' : 'h-[70vh]'}`}
                         >
-                            <Reorder.Group axis="y" values={tabs} onReorder={setTabs} className="flex flex-col gap-2 w-full flex-1 justify-center">
+                            <Reorder.Group axis="y" values={tabs} onReorder={handleReorder} className="flex flex-col gap-2 w-full flex-1 justify-center">
                                 {tabs.map((item) => (
                                     <Reorder.Item key={item.id} value={item}>
                                         <button 
-                                            onClick={() => {
-                                                setActiveTab(item.id);
-                                                setIsMinimized(false);
-                                            }}
-                                            className={`flex items-center gap-4 w-full p-3 rounded-xl transition-all relative overflow-hidden group
+                                            onClick={() => { setActiveTab(item.id); setIsMinimized(false); }}
+                                            className={`flex items-center justify-center w-8 h-8 mx-auto rounded-xl transition-all relative overflow-hidden group
                                             ${activeTab === item.id
                                                 ? 'bg-emerald-500/20 text-emerald-100 border border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.15)]'
                                                 : 'text-emerald-500/40 hover:text-emerald-100 hover:bg-emerald-500/10'
                                             }`}
                                         >
-                                            <div className="shrink-0 relative z-10">{item.icon}</div>
-                                            {isSidebarExpanded && (
-                                                <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[10px] font-black uppercase tracking-widest truncate relative z-10">
-                                                    {item.label}
-                                                </motion.span>
-                                            )}
+                                            <div className="shrink-0 relative z-10 flex justify-center w-full">{item.icon}</div>
+                                            
+                                            {/* Tooltip Estilizada Tema Bio */}
+                                            <span className="absolute left-full ml-4 px-2 py-1 bg-[#022c22] border border-emerald-500/30 text-emerald-100 text-[9px] rounded font-bold uppercase opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                                                {item.label}
+                                            </span>
                                         </button>
                                     </Reorder.Item>
                                 ))}
@@ -341,25 +358,23 @@ export default function ZaeonBiologyRoom() {
                             <div className="w-full pt-4 mt-auto border-t border-emerald-500/20">
                                 <button 
                                     onClick={() => setIsFocusMode(!isFocusMode)}
-                                    className={`flex items-center gap-4 w-full p-3 rounded-xl transition-all 
+                                    className={`flex items-center justify-center w-8 h-8 mx-auto rounded-xl transition-all group relative
                                         ${isFocusMode 
                                             ? 'bg-emerald-500/20 text-emerald-400' 
                                             : 'text-emerald-500/40 hover:text-emerald-100 hover:bg-emerald-500/10'
                                         }`}
                                 >
-                                    <div className="shrink-0">
+                                    <div className="shrink-0 flex justify-center w-full">
                                         {isFocusMode ? <EyeOff size={18} /> : <Eye size={18} />}
                                     </div>
-                                    {isSidebarExpanded && (
-                                        <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[10px] font-black uppercase tracking-widest truncate">
-                                            {isFocusMode ? "Exit" : "Focus"}
-                                        </motion.span>
-                                    )}
+                                    <span className="absolute left-full ml-4 px-2 py-1 bg-[#022c22] border border-emerald-500/30 text-emerald-100 text-[9px] rounded font-bold uppercase opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                                        {isFocusMode ? "Exit" : "Focus"}
+                                    </span>
                                 </button>
                             </div>
                         </motion.aside>
 
-                        {/* CONTENT AREA */}
+                        {/* CONTENT AREA (Layout do Lounge, Tema Bio) */}
                         <AnimatePresence>
                             {!isMinimized && (
                                 <motion.main 
@@ -367,27 +382,25 @@ export default function ZaeonBiologyRoom() {
                                     initial={{ opacity: 0, scale: 0.95 }}
                                     animate={{ opacity: 1, scale: 1 }}
                                     exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.3 } }}
-                                    className={`flex-1 rounded-[2.5rem] ${fixedBioStyle} overflow-hidden flex flex-col relative transition-all duration-700
-                                        ${isFocusMode ? 'h-[96vh]' : 'h-[88vh]'}
+                                    className={`z-10 flex-1 rounded-[3.5rem] ${fixedBioStyle} overflow-hidden flex flex-col relative transition-all duration-700
+                                        ${isFocusMode ? 'h-[96vh]' : 'h-[82vh]'}
                                     `}
                                 >
-                                    <div className="p-8 pb-4 flex justify-between items-center border-b border-emerald-500/20">
+                                    {/* HEADER DA JANELA (MAC-STYLE Adaptado para a Bio Room) */}
+                                    <div className="p-10 pb-4 flex items-center gap-4 border-b border-emerald-500/20">
+                                        <div
+                                            onClick={() => setIsMinimized(true)}
+                                            className="w-3 h-3 rounded-full bg-[#f59e0b] border border-[#d97706] shadow-sm cursor-pointer hover:bg-[#fbbf24] active:scale-95 transition-transform"
+                                            title="Minimize Window"
+                                        />
                                         <h2 className="text-xl font-black uppercase tracking-[0.2em] leading-none flex items-center gap-3 text-emerald-100">
                                             <Dna className="w-6 h-6 text-emerald-500" />
                                             {tabs.find(t => t.id === activeTab)?.label}
                                         </h2>
-                                        
-                                        <button 
-                                            onClick={() => setIsMinimized(true)}
-                                            className="p-2 rounded-full hover:bg-emerald-500/20 text-emerald-400/50 hover:text-emerald-200 transition-colors"
-                                            title="Minimize to Sidebar"
-                                        >
-                                            <Minus size={20} />
-                                        </button>
                                     </div>
 
-                                    {/* Container dos módulos: Força o tema 'dark' interno para que os módulos usem as cores verdes */}
-                                    <div className="flex-1 overflow-y-auto custom-scrollbar p-10 pt-6 relative text-emerald-50 dark">
+                                    {/* Container dos módulos */}
+                                    <div className="flex-1 overflow-y-auto custom-scrollbar p-12 pt-6 relative text-emerald-50 dark">
                                         <AnimatePresence mode="wait">
                                             <motion.div
                                                 key={activeTab}
@@ -397,11 +410,14 @@ export default function ZaeonBiologyRoom() {
                                                 transition={{ duration: 0.2 }}
                                                 className="h-full"
                                             >
-                                                {activeTab === 'lessons' && <LessonsModule />}
+                                                {/* Módulos Originais + Novos do Lounge */}
+                                                {activeTab === 'news' && <NewsModule />} 
+                                                {activeTab === 'classes' && <ClassesModule />}
                                                 {activeTab === 'exams' && <ExamsModule />}
                                                 {activeTab === 'projects' && <ProjectsModule />}
                                                 {activeTab === 'research' && <ResearchModule />}
                                                 {activeTab === 'community' && <CommunityModule />}
+                                                {activeTab === 'profile' && <ProfileModule />}
                                             </motion.div>
                                         </AnimatePresence>
                                     </div>
@@ -409,7 +425,7 @@ export default function ZaeonBiologyRoom() {
                             )}
                         </AnimatePresence>
                         
-                        {/* Wrapper do Chat (Sempre Tema Bio, DEFAULT CLOSED) */}
+                        {/* Wrapper do Chat */}
                         <div className="relative z-50 text-emerald-50 dark">
                             <LoungeChatWidget />
                         </div>

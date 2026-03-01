@@ -70,7 +70,7 @@ const NavbarComponent = () => {
                 width={280}
                 height={150}
                 priority
-                className="h-12 w-auto object-contain invert dark:invert-0 transition-all"
+              className="h-12 w-auto object-contain invert dark:invert-0 transition-all"
             />
           </Link>
 
