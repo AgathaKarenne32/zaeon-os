@@ -1,29 +1,62 @@
 import { prisma } from '../lib/prisma';
 
-export const UserService = {
-    async getUserProfile(userId: string) {
+export class UserService {
+    static async createUser(id: string, name: string, email: string) {
+        return await prisma.user.create({
+            data: {
+                id,
+                name,
+                email,
+                level: 1,
+                xp: 0
+            }
+        });
+    }
+
+    // Busca o perfil completo do usuário
+    static async getUserProfile(id: string) {
         return await prisma.user.findUnique({
-            where: { id: userId },
+            where: { id },
             include: { userSpaceData: true }
         });
-    },
+    }
 
-    async addXp(userId: string, amount: number) {
-        const user = await prisma.user.findUnique({ where: { id: userId } });
-        if (!user) throw new Error("User not found");
+    // Atualiza dados de bio, curso, etc.
+    static async updateProfile(id: string, data: any) {
+        return await prisma.user.update({
+            where: { id },
+            data: {
+                name: data.name,
+                bio: data.bio,
+                course: data.course,
+                age: data.age,
+                gender: data.gender,
+                torsoImage: data.torsoImage,
+                phone: data.phone
+            }
+        });
+    }
 
-        let newXp = user.xp + amount;
+    // Lógica de Gamificação: Adicionar XP e subir de nível
+    static async addExperience(id: string, xpAmount: number) {
+        const user = await prisma.user.findUnique({ where: { id } });
+        if (!user) throw new Error("Usuário não encontrado");
+
+        let newXp = user.xp + xpAmount;
         let newLevel = user.level;
 
-        // Lógica simples de Level Up (ex: cada 1000 XP sobe um nível)
-        if (newXp >= 1000) {
-            newLevel += Math.floor(newXp / 1000);
-            newXp = newXp % 1000;
+        // Lógica simples: cada 100 XP sobe um nível
+        if (newXp >= 100) {
+            newLevel += Math.floor(newXp / 100);
+            newXp = newXp % 100;
         }
 
         return await prisma.user.update({
-            where: { id: userId },
-            data: { xp: newXp, level: newLevel }
+            where: { id },
+            data: {
+                xp: newXp,
+                level: newLevel
+            }
         });
     }
-};
+}
