@@ -26,6 +26,9 @@ model User {
   torsoImage    String?   
   role          String?   
   phone         String?   
+
+  // Status de Presença (Adicione esta linha abaixo)
+  isOnline       Boolean   @default(false)
   
   // Gamification
   level         Int       @default(1)

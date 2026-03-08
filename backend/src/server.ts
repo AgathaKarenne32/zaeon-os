@@ -12,6 +12,8 @@ import { SystemService } from './services/system.service';
 import { LibraryService } from './services/library.service';
 import { zaeonGuard } from './middlewares/auth.middleware';
 import { LayoutService } from './services/layout.service';
+import { SearchService } from './services/search.service';
+import { ShareService } from './services/share.service';
 
 dotenv.config();
 
@@ -220,6 +222,32 @@ app.post('/layout/save', async (req, res) => {
   const { userId, windows } = req.body;
   const updated = await LayoutService.saveLayout(userId, windows);
   res.json(updated);
+});
+
+app.get('/search', async (req, res) => {
+  const { userId, q } = req.query; 
+  
+  if (!userId || !q) {
+    return res.status(400).json({ error: "Parâmetros userId e q são obrigatórios" });
+  }
+
+  try {
+    const results = await SearchService.globalSearch(userId as string, q as string);
+    res.json(results);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/library/share', async (req, res) => {
+  const { fromUserId, toUserId, fileId } = req.body;
+
+  try {
+    const result = await ShareService.shareFile(fromUserId, toUserId, fileId);
+    res.json(result);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
 });
 
 export { io };
