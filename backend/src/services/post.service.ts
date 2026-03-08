@@ -1,13 +1,13 @@
 import { prisma } from '../lib/prisma';
 import { LogService } from './log.service';
 import { UserService } from './user.service';
+import { io } from '../server'; 
 
 export class PostService {
-    // Criar uma nova postagem no Lounge
+    // 1. Criar uma nova postagem no Lounge (Com Log, XP e Socket)
     static async createPost(userId: string, content: string) {
         const user = await prisma.user.findUnique({ where: { id: userId } });
 
-        // 2. Criamos o post normalmente
         const post = await prisma.post.create({
             data: {
                 content,
@@ -15,16 +15,25 @@ export class PostService {
                 user: user?.name || "Usuário Anonimo",
                 userImage: user?.image || null,
                 room: "lounge"
+            },
+            include: {
+                author: { select: { name: true, image: true, level: true } }
             }
         });
 
+        // Auditoria
         await LogService.createLog(userId, "LOUNGE_POST", `Conteúdo: ${content.substring(0, 30)}...`);
 
+        // Notifica o sistema em tempo real
+        io.emit('NEW_LOUNGE_POST', post);
+
+        // Gamificação
         await UserService.addExperience(userId, 25);
 
         return post;
     }
-    // Listar todos os posts com os comentários e dados do autor
+
+    // 2. Listar todos os posts (Feed)
     static async getLoungeFeed() {
         return await prisma.post.findMany({
             orderBy: { createdAt: 'desc' },
@@ -37,11 +46,11 @@ export class PostService {
         });
     }
 
-    // Adicionar um comentário a um post
+    // 3. Adicionar um comentário
     static async addComment(postId: string, userId: string, content: string) {
         const user = await prisma.user.findUnique({ where: { id: userId } });
 
-        return await prisma.comment.create({
+        const comment = await prisma.comment.create({
             data: {
                 content,
                 postId,
@@ -49,9 +58,14 @@ export class PostService {
                 user: user?.name || "Usuário Anonimo"
             }
         });
+
+        // Avisa que há um novo comentário
+        io.emit('NEW_COMMENT', { postId, comment });
+
+        return comment;
     }
 
-    // Curtir/Descurtir um post (Toggle Like)
+    // 4. Curtir/Descurtir um post (Toggle Like)
     static async toggleLike(postId: string, userId: string) {
         const post = await prisma.post.findUnique({ where: { id: postId } });
         if (!post) throw new Error("Post não encontrado");
@@ -65,9 +79,14 @@ export class PostService {
             updatedLikes.push(userId); // Adiciona o like
         }
 
-        return await prisma.post.update({
+        const updatedPost = await prisma.post.update({
             where: { id: postId },
             data: { likes: updatedLikes }
         });
+
+        // Emite o evento de Like para atualização instantânea no Front
+        io.emit('POST_LIKED', { postId, userId, likesCount: updatedPost.likes.length });
+
+        return updatedPost;
     }
 }

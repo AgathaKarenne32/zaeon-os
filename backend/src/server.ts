@@ -1,18 +1,41 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { createServer } from 'http'; 
+import { Server } from 'socket.io'; 
 import { WorkspaceService } from './services/workspace.service';
 import { UserService } from './services/user.service';
 import { PostService } from './services/post.service';
 import { LogService } from './services/log.service';
 import { NewsService } from './services/news.service';
 import { SystemService } from './services/system.service';
+import { LibraryService } from './services/library.service';
+import { zaeonGuard } from './middlewares/auth.middleware';
 
 dotenv.config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+const httpServer = createServer(app);
+
+// 2. Socket.io para aceitar conexões do seu Frontend
+const io = new Server(httpServer, {
+  cors: {
+    origin: "*", // trocar pela url do frontend
+    methods: ["GET", "POST"]
+  }
+});
+
+// 3. Escutando novas conexões
+io.on('connection', (socket) => {
+  console.log(`🔌 Novo dispositivo conectado ao Zaeon: ${socket.id}`);
+
+  socket.on('disconnect', () => {
+    console.log('💤 Dispositivo desconectado');
+  });
+});
 
 app.post('/user-space/save', async (req, res) => {
     try {
@@ -160,7 +183,26 @@ app.get('/system/settings/:key', async (req, res) => {
     }
 });
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-    console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
+// Adiciona o 'zaeonGuard' como segundo parâmetro
+app.post('/library/save', zaeonGuard, async (req, res) => {
+  try {
+    const { userId, item } = req.body;
+    
+    // Verificação de segurança: O ID autenticado é o mesmo que quer salvar o arquivo?
+    if (userId !== (req as any).authenticatedUserId) {
+      return res.status(403).json({ error: "Você não tem permissão para alterar este espaço." });
+    }
+
+    const result = await LibraryService.saveItem(userId, item);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+export { io };
+
+const PORT = 3001;
+httpServer.listen(PORT, () => {
+  console.log(`🚀 Zaeon Kernel Online na porta ${PORT}`);
 });
