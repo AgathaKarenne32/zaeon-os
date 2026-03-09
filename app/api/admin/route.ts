@@ -1,10 +1,11 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import connectToDatabase from "@/src/lib/db"; // Mantenha sua conexão Mongoose antiga para usuários
 import User from "@/src/models/User"; // Mantenha seu modelo Mongoose
 import { authOptions } from "@/src/lib/auth"; // <--- CORREÇÃO: Importa da LIB, não da rota
 
-export async function GET() {
+export async function GET(req: Request) {
     try {
         const session = await getServerSession(authOptions);
 

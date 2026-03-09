@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { 
-    motion, 
-    AnimatePresence, 
-    useMotionValue, 
-    useSpring, 
-    useMotionTemplate, 
-    useTransform 
+import {
+    motion,
+    AnimatePresence,
+    useMotionValue,
+    useSpring,
+    useMotionTemplate,
+    useTransform
 } from "framer-motion";
 import Link from "next/link";
 import { useTranslation } from "react-i18next"; // Reintegrado
@@ -28,17 +28,17 @@ interface NewsPost {
     imageUrl: string;
     publishDate: string;
     status: string;
-    category: "news" | "report"; 
+    category: "news" | "report";
 }
 
 // --- SUB-COMPONENT: BARRA DE LEITURA FÍSICA (FOCUS LOUPE) ---
 function LoupeText({ content, category }: { content: string, category: string }) {
     const containerRef = useRef<HTMLDivElement>(null);
     const [isHovering, setIsHovering] = useState(false);
-    
+
     // Controles do Usuário
     const [isLoupeEnabled, setIsLoupeEnabled] = useState(false);
-    const [loupeRadius, setLoupeRadius] = useState(35); 
+    const [loupeRadius, setLoupeRadius] = useState(35);
 
     // Motor de Física (Sempre no top-level para evitar erros de renderização)
     const mouseX = useMotionValue(0);
@@ -46,8 +46,8 @@ function LoupeText({ content, category }: { content: string, category: string })
     const smoothX = useSpring(mouseX, { stiffness: 400, damping: 30 });
     const smoothY = useSpring(mouseY, { stiffness: 400, damping: 30 });
 
-    const LENS_WIDTH = loupeRadius * 6; 
-    const LENS_HEIGHT = loupeRadius * 2.5; 
+    const LENS_WIDTH = loupeRadius * 6;
+    const LENS_HEIGHT = loupeRadius * 2.5;
 
     // Cálculo das margens para o recorte perfeito (Clip-Path)
     const topInset = useTransform(smoothY, y => y - LENS_HEIGHT / 2);
@@ -74,11 +74,11 @@ function LoupeText({ content, category }: { content: string, category: string })
             <div className="flex items-center gap-6 border-b border-slate-200 dark:border-white/5 pb-4 mb-2">
                 <label className="flex items-center gap-3 cursor-pointer group">
                     <div className="relative">
-                        <input 
-                            type="checkbox" 
-                            className="sr-only" 
-                            checked={isLoupeEnabled} 
-                            onChange={(e) => setIsLoupeEnabled(e.target.checked)} 
+                        <input
+                            type="checkbox"
+                            className="sr-only"
+                            checked={isLoupeEnabled}
+                            onChange={(e) => setIsLoupeEnabled(e.target.checked)}
                         />
                         <div className={`block w-8 h-4 rounded-full transition-colors ${isLoupeEnabled ? 'bg-cyan-500' : 'bg-slate-300 dark:bg-slate-700'}`}></div>
                         <div className={`absolute left-0.5 top-0.5 bg-white w-3 h-3 rounded-full transition-transform ${isLoupeEnabled ? 'transform translate-x-4' : ''}`}></div>
@@ -90,18 +90,18 @@ function LoupeText({ content, category }: { content: string, category: string })
 
                 <AnimatePresence>
                     {isLoupeEnabled && (
-                        <motion.div 
-                            initial={{ opacity: 0, width: 0 }} 
-                            animate={{ opacity: 1, width: "auto" }} 
+                        <motion.div
+                            initial={{ opacity: 0, width: 0 }}
+                            animate={{ opacity: 1, width: "auto" }}
                             exit={{ opacity: 0, width: 0 }}
                             className="flex items-center gap-3 overflow-hidden"
                         >
                             <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Lens Size</span>
-                            <input 
-                                type="range" 
-                                min="20" 
-                                max="60" 
-                                value={loupeRadius} 
+                            <input
+                                type="range"
+                                min="20"
+                                max="60"
+                                value={loupeRadius}
                                 onChange={(e) => setLoupeRadius(Number(e.target.value))}
                                 className="w-24 h-1 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
                             />
@@ -113,7 +113,7 @@ function LoupeText({ content, category }: { content: string, category: string })
             {/* ÁREA DO TEXTO */}
             <div
                 ref={containerRef}
-                className={`relative w-full ${isLoupeEnabled ? 'cursor-none group/loupe' : ''}`} 
+                className={`relative w-full ${isLoupeEnabled ? 'cursor-none group/loupe' : ''}`}
                 onMouseMove={handleMouseMove}
                 onMouseEnter={() => setIsHovering(true)}
                 onMouseLeave={() => setIsHovering(false)}
@@ -132,11 +132,11 @@ function LoupeText({ content, category }: { content: string, category: string })
                                 opacity: isHovering ? 1 : 0
                             }}
                         >
-                            <div className="absolute inset-0 bg-white dark:bg-[#1e293b]" /> 
+                            <div className="absolute inset-0 bg-white dark:bg-[#1e293b]" />
                             <motion.div
                                 className="absolute inset-0 w-full h-full"
                                 style={{ transformOrigin: originTemplate }}
-                                animate={{ scale: isHovering ? 1.35 : 1 }} 
+                                animate={{ scale: isHovering ? 1.35 : 1 }}
                                 transition={{ duration: 0.3, ease: "easeOut" }}
                             >
                                 <p className="text-sm text-slate-900 dark:text-white leading-relaxed font-serif whitespace-pre-wrap font-medium shadow-sm">
@@ -196,10 +196,10 @@ function NewsCard({ item, locale }: { item: NewsPost, locale: string }) {
         >
             {item.imageUrl && (
                 <div className="w-full h-32 sm:h-40 overflow-hidden relative border-b border-slate-200 dark:border-white/5 rounded-t-2xl">
-                    <img 
-                        src={item.imageUrl} 
-                        alt={title} 
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
+                    <img
+                        src={item.imageUrl}
+                        alt={title}
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-50 dark:opacity-80" />
                 </div>
@@ -232,7 +232,7 @@ function NewsCard({ item, locale }: { item: NewsPost, locale: string }) {
                             animate={{ height: "auto", opacity: 1, transitionEnd: { overflow: "visible" } }}
                             exit={{ height: 0, opacity: 0, overflow: "hidden" }}
                             className="w-full"
-                            onClick={(e) => e.stopPropagation()} 
+                            onClick={(e) => e.stopPropagation()}
                         >
                             <div className="mt-4 pt-6 border-t border-slate-200 dark:border-white/5 relative">
                                 <LoupeText content={content} category={item.category} />
@@ -248,7 +248,7 @@ function NewsCard({ item, locale }: { item: NewsPost, locale: string }) {
 // --- MAIN COMPONENT ---
 export default function LoungeNewsFeed() {
     const { i18n } = useTranslation(); // Escutando menu de Opções
-    const activeLocale = i18n.language.split('-')[0];
+    const activeLocale = i18n?.language ? i18n.language.split('-')[0] : 'pt';
 
     const [newsList, setNewsList] = useState<NewsPost[]>([]);
     const [isLoading, setIsLoading] = useState(true);
