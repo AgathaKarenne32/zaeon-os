@@ -4,6 +4,7 @@ import { chatWithZaeon } from '../controllers/ai.controller';
 import { agentCommand, agentLog } from '../controllers/agent.controller';
 import { syncUserSpace, getUserSpace } from "../controllers/user.controller";
 import { createRoom, getRooms } from "../controllers/room.Controller";
+import { commandController } from '../controllers/command.controller';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -16,13 +17,13 @@ router.get('/health', (req, res) => {
 // --- FEED DE NOTÍCIAS / POSTAGENS ---
 router.post('/feed/post', async (req, res) => {
     const userId = req.headers['x-user-id'] as string;
-    const { content, roomId } = req.body; // Mudamos de room para roomId
+    const { content, roomId } = req.body;
 
     try {
         const post = await prisma.post.create({
             data: {
                 content,
-                roomId, // Agora aponta para o ID da coleção Room
+                roomId,
                 userId,
                 user: "Usuário Teste",
                 userImage: ""
@@ -39,7 +40,7 @@ router.get('/feed/:roomId', async (req, res) => {
     const { roomId } = req.params;
     try {
         const posts = await prisma.post.findMany({
-            where: { roomId }, // Busca pelo ID da sala
+            where: { roomId },
             orderBy: { createdAt: 'desc' }
         });
         res.json(posts);
@@ -47,6 +48,8 @@ router.get('/feed/:roomId', async (req, res) => {
         res.status(500).json({ error: "Erro ao buscar posts" });
     }
 });
+
+
 
 // --- AI & AGENTS ---
 router.post('/ai/chat', chatWithZaeon);
@@ -60,5 +63,7 @@ router.get("/state/:userId", getUserSpace);
 // --- ROOMS (Salas) ---
 router.post("/rooms", createRoom);
 router.get("/rooms", getRooms);
+
+router.post('/cli/execute', commandController.handle);
 
 export default router;

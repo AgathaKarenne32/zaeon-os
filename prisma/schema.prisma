@@ -54,7 +54,27 @@ model User {
   posts         Post[]
   comments      Comment[]
   userSpaceData UserSpaceData?
-  automationFlows AutomationFlow[] // Conexão com Tarefa 2
+  automationFlows AutomationFlow[] 
+
+  // --- NOVAS RELAÇÕES DE NETWORK ---
+  following     Follow[] @relation("UserFollows")    // Pessoas que eu sigo
+  followers     Follow[] @relation("UserFollowedBy") // Pessoas que me seguem
+}
+
+model Follow {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  
+  // Quem está seguindo
+  followerId  String   @db.ObjectId
+  follower    User     @relation("UserFollows", fields: [followerId], references: [id], onDelete: Cascade)
+  
+  // Quem está sendo seguido
+  followingId String   @db.ObjectId
+  following   User     @relation("UserFollowedBy", fields: [followingId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, followingId]) // Impede seguir a mesma pessoa duas vezes
 }
 
 // --- MEMÓRIA DO LOUNGE & SALAS ---

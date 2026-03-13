@@ -16,6 +16,8 @@ build/
 # --- casper ---
 zaeon-contracts/keys/
 secret_key.pem
+mongodb_data/
+
 
 # --- AMBIENTE E SEGURANÇA ---
 .env
@@ -34,7 +36,7 @@ yarn-debug.log*
 yarn-error.log*
 .eslintcache
 .cache/
-
+docker-compose.yml
 # --- IDE E SISTEMA ---
 .DS_Store
 .idea/
@@ -42,3 +44,4 @@ yarn-error.log*
 Thumbs.db
 *.tsbuildinfo
 /generated/prisma
+node_modules/.prisma

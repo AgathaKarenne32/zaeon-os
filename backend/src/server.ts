@@ -16,12 +16,14 @@ import { SearchService } from './services/search.service';
 import { ShareService } from './services/share.service';
 import { ModuleService } from './services/module.service';
 import { RoomService } from './services/room.service';
+import router from './routes/index';
 
 dotenv.config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use('/api', router);
 
 const httpServer = createServer(app);
 
