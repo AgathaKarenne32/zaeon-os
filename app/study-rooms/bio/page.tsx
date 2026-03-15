@@ -8,7 +8,7 @@ import {
     BookOpen, ClipboardList, FlaskConical, Microscope, 
     Users, Eye, EyeOff, UserCircle, Newspaper
 } from 'lucide-react';
-import { Navbar } from "@/components/main/navbar";
+// IMPORT DA NAVBAR REMOVIDO DAQUI
 import { LoungeChatWidget } from "@/components/sub/LoungeChatWidget";
 
 // --- 1. CONFIGURAÇÃO DE IMPORTS ---
@@ -62,6 +62,16 @@ export default function ZaeonBiologyRoom() {
 
     const [tabs, setTabs] = useState(baseTabs);
     const canvasRef = useRef<HTMLCanvasElement>(null);
+
+    // --- SINAL DE RÁDIO: COMUNICAÇÃO COM A NAVBAR GLOBAL ---
+    useEffect(() => {
+        window.dispatchEvent(new CustomEvent("zaeon-focus-mode", { detail: isFocusMode }));
+        
+        return () => {
+            // Garante que a Navbar volte a aparecer se o usuário sair dessa tela
+            window.dispatchEvent(new CustomEvent("zaeon-focus-mode", { detail: false }));
+        };
+    }, [isFocusMode]);
 
     // --- BUSCAR A ORDEM SALVA NO BANCO ---
     useEffect(() => {
@@ -264,7 +274,7 @@ export default function ZaeonBiologyRoom() {
             {/* 1. BACKGROUND: CANVAS DNA */}
             <canvas ref={canvasRef} className="absolute inset-0 z-0 pointer-events-none" />
 
-            {/* 2. MODAL DE PROTOCOLO (Mantido da Sala Bio) */}
+            {/* 2. MODAL DE PROTOCOLO */}
             <AnimatePresence>
                 {isLoaded && isModalOpen && (
                     <motion.div
@@ -306,20 +316,7 @@ export default function ZaeonBiologyRoom() {
                 )}
             </AnimatePresence>
 
-            {/* 3. NAVBAR */}
-            <AnimatePresence>
-                {!isFocusMode && !isModalOpen && (
-                    <motion.div 
-                        initial={{ y: -50, opacity: 0 }} 
-                        animate={{ y: 0, opacity: 1, transition: { delay: 0.3 } }} 
-                        className="fixed top-0 left-0 w-full z-50 pointer-events-auto"
-                    >
-                        <Navbar />
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* 4. MAIN UI */}
+            {/* 3. MAIN UI */}
             <AnimatePresence>
                 {!isModalOpen && (
                     <motion.div 
@@ -427,7 +424,7 @@ export default function ZaeonBiologyRoom() {
                         
                         {/* Wrapper do Chat */}
                         <div className="relative z-50 text-emerald-50 dark">
-                            <LoungeChatWidget />
+                            <LoungeChatWidget defaultOpen={false} />
                         </div>
                     </motion.div>
                 )}

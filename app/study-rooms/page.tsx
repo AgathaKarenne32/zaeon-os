@@ -18,6 +18,7 @@ const ROOMS = [
     { id: 3, nameKey: "bio_name", topicKey: "bio_topic", route: "/study-rooms/bio" },
     { id: 4, nameKey: "quantum_name", topicKey: "quantum_topic", route: "/study-rooms/quantic" },
     { id: 5, nameKey: "humanities_name", topicKey: "humanities_topic", route: "/study-rooms/humanities" },
+    { id: 6, nameKey: "Med Lab", topicKey: "Med_topic", route: "/study-rooms/med" },
 ];
 
 export default function StudyRoomsPage() {

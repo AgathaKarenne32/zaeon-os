@@ -29,6 +29,9 @@ export const Navbar = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [showTrackName, setShowTrackName] = useState(false);
+  
+  // --- NOVO: Estado do Modo Foco ---
+  const [isFocusMode, setIsFocusMode] = useState(false);
 
   const barsRef = useRef<(HTMLDivElement | null)[]>([]);
   const isPlayingRef = useRef(false);
@@ -53,12 +56,8 @@ export const Navbar = () => {
     }
   }, []);
 
-  // ==========================================
-  // O SEGREDO DO "AUTO-REWIND" ESTÁ AQUI
-  // ==========================================
   useEffect(() => {
     if (isHome && globalAudio) {
-      // Se voltou pra Home: Pausa, rebobina e prepara a faixa 0
       globalAudio.pause();
       globalAudio.currentTime = 0;
       globalAudio.src = TRACKS[0];
@@ -77,6 +76,19 @@ export const Navbar = () => {
     };
     window.addEventListener("zaeon-music-sync", handleMusicSync);
     return () => window.removeEventListener("zaeon-music-sync", handleMusicSync);
+  }, []);
+
+  // --- NOVO: ESCUTA O SINAL DE MODO FOCO DAS SALAS ---
+  useEffect(() => {
+    const handleFocusMode = (e: any) => {
+      setIsFocusMode(e.detail);
+    };
+    window.addEventListener("zaeon-focus-mode", handleFocusMode);
+    
+    // Resetar se mudar de rota
+    return () => {
+      window.removeEventListener("zaeon-focus-mode", handleFocusMode);
+    };
   }, []);
 
   const initAudioEngine = () => {
@@ -161,7 +173,11 @@ export const Navbar = () => {
   if (!mounted) return null;
 
   return (
-    <div className="w-full h-[90px] fixed top-0 z-[100] flex justify-center items-center pointer-events-none font-sans">
+    <div 
+      className={`w-full h-[90px] fixed top-0 z-[100] flex justify-center items-center pointer-events-none font-sans transition-all duration-700 ease-in-out ${
+        isFocusMode ? "-translate-y-full opacity-0" : "translate-y-0 opacity-100"
+      }`}
+    >
       <div className="pointer-events-auto w-[96%] max-w-[1300px] h-[70px] rounded-[35px] backdrop-blur-xl bg-background/70 border border-foreground/10 shadow-2xl flex items-center justify-between px-8">
         
         <Link href="/" className="hover:scale-105 transition-transform">

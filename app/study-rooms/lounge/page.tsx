@@ -10,7 +10,7 @@ import {
     Users, Eye, EyeOff, UserCircle, Zap, ShieldCheck, Aperture,
     Newspaper
 } from 'lucide-react';
-import { Navbar } from "@/components/main/navbar";
+// IMPORT DA NAVBAR REMOVIDO DAQUI
 import { LoungeChatWidget } from "@/components/sub/LoungeChatWidget";
 
 // --- 1. CONFIGURAÇÃO DE IMPORTS ---
@@ -55,11 +55,21 @@ export default function ZaeonLoungeRoom() {
         { id: 'exams', label: 'Exams', icon: <ClipboardList size={18} /> },
         { id: 'projects', label: 'Projects', icon: <Cpu size={18} /> },
         { id: 'research', label: 'Research', icon: <Activity size={18} /> },
-        { id: 'news', label: 'News', icon: <Newspaper size={18} /> }, 
+        { id: 'news', label: 'News', icon: <Newspaper size={18} /> },
         { id: 'profile', label: 'Identity', icon: <UserCircle size={18} /> },
     ];
 
     const [tabs, setTabs] = useState(baseTabs);
+
+    // --- SINAL DE RÁDIO: COMUNICAÇÃO COM A NAVBAR GLOBAL ---
+    useEffect(() => {
+        window.dispatchEvent(new CustomEvent("zaeon-focus-mode", { detail: isFocusMode }));
+
+        return () => {
+            // Garante que a Navbar volte a aparecer se o usuário sair dessa tela
+            window.dispatchEvent(new CustomEvent("zaeon-focus-mode", { detail: false }));
+        };
+    }, [isFocusMode]);
 
     // --- BUSCAR A ORDEM SALVA NO BANCO AO AUTENTICAR ---
     useEffect(() => {
@@ -288,15 +298,6 @@ export default function ZaeonLoungeRoom() {
                 )}
             </AnimatePresence>
 
-            {/* 3. NAVBAR */}
-            <AnimatePresence>
-                {!isFocusMode && isAuthenticated && (
-                    <motion.div initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1, transition: { delay: 0.5 } }} className="fixed top-0 left-0 w-full z-50 pointer-events-auto">
-                        <Navbar />
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
             {/* 4. MAIN UI */}
             <AnimatePresence>
                 {isAuthenticated && (
@@ -325,7 +326,7 @@ export default function ZaeonLoungeRoom() {
                                                 }`}
                                         >
                                             <div className="shrink-0 relative z-10 flex justify-center w-full">{item.icon}</div>
-                                             {/* Tooltip para mostrar o nome da aba já que a sidebar não expande mais */}
+                                            {/* Tooltip para mostrar o nome da aba já que a sidebar não expande mais */}
                                             <span className="absolute left-full ml-4 px-2 py-1 bg-slate-800 text-white text-[9px] rounded font-bold uppercase opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
                                                 {item.label}
                                             </span>
@@ -388,7 +389,7 @@ export default function ZaeonLoungeRoom() {
                                                 className="h-full"
                                             >
                                                 {/* MÓDULOS CARREGADOS DINAMICAMENTE */}
-                                                {activeTab === 'news' && <NewsModule />} 
+                                                {activeTab === 'news' && <NewsModule />}
                                                 {activeTab === 'classes' && <ClassesModule />}
                                                 {activeTab === 'exams' && <ExamsModule />}
                                                 {activeTab === 'projects' && <ProjectsModule />}

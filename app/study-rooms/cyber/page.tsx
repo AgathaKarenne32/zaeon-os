@@ -9,7 +9,7 @@ import {
     BookOpen, ClipboardList, Cpu, Activity,
     Users, Eye, EyeOff, UserCircle, Newspaper
 } from 'lucide-react';
-import { Navbar } from "@/components/main/navbar";
+// IMPORT DA NAVBAR REMOVIDO DAQUI
 import { LoungeChatWidget } from "@/components/sub/LoungeChatWidget";
 
 // --- 1. CONFIGURAÇÃO DE IMPORTS (MODULOS CYBER) ---
@@ -25,11 +25,9 @@ const ExamsModule = dynamic(() => import('./main-hall/exams/page').then(mod => m
 const ProjectsModule = dynamic(() => import('./main-hall/projects/page').then(mod => mod.default), { loading: LoadingModule });
 const ResearchModule = dynamic(() => import('./main-hall/researches/page').then(mod => mod.default), { loading: LoadingModule });
 const CommunityModule = dynamic(() => import('./main-hall/community/page').then(mod => mod.default), { loading: LoadingModule });
-// Novos módulos integrados
 const ProfileModule = dynamic(() => import('./main-hall/profile/page').then(mod => mod.default), { loading: LoadingModule });
 const NewsModule = dynamic(() => import('./main-hall/news/page').then(mod => mod.default), { loading: LoadingModule });
 
-// --- 2. LISTA DE CURSOS (PARTÍCULAS) ---
 const COURSE_KEYS = [
     "Computer Science", "Software Eng.", "InfoSec", "Cloud Computing",
     "DevOps", "AI & ML", "Big Data", "Blockchain", "Cybersecurity",
@@ -38,23 +36,19 @@ const COURSE_KEYS = [
 
 export default function ZaeonComputerScienceRoom() {
 
-    // --- ESTADOS GERAIS ---
     const [isLoaded, setIsLoaded] = useState(false);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isAuthenticating, setIsAuthenticating] = useState(false);
 
-    // --- ESTADOS DO MODAL ---
     const [inputValue, setInputValue] = useState('');
     const [isError, setIsError] = useState(false);
 
-    // --- ESTADOS DA UI ---
     const [activeTab, setActiveTab] = useState("classes");
     const [isFocusMode, setIsFocusMode] = useState(false);
     const [isMinimized, setIsMinimized] = useState(false);
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
-    // --- TABS (BASE INICIAL UNIFICADA) ---
     const baseTabs = [
         { id: 'community', label: 'Communities', icon: <Users size={18} /> },
         { id: 'classes', label: 'Classes', icon: <BookOpen size={18} /> },
@@ -67,7 +61,16 @@ export default function ZaeonComputerScienceRoom() {
 
     const [tabs, setTabs] = useState(baseTabs);
 
-    // --- BUSCAR A ORDEM SALVA NO BANCO AO AUTENTICAR ---
+    // --- SINAL DE RÁDIO: COMUNICAÇÃO COM A NAVBAR GLOBAL ---
+    useEffect(() => {
+        window.dispatchEvent(new CustomEvent("zaeon-focus-mode", { detail: isFocusMode }));
+        
+        return () => {
+            // Garante que a Navbar volte a aparecer se o usuário sair dessa tela
+            window.dispatchEvent(new CustomEvent("zaeon-focus-mode", { detail: false }));
+        };
+    }, [isFocusMode]);
+
     useEffect(() => {
         if (isAuthenticated) {
             const fetchSavedOrder = async () => {
@@ -93,7 +96,6 @@ export default function ZaeonComputerScienceRoom() {
         }
     }, [isAuthenticated]);
 
-    // --- SALVAR A ORDEM NO BANCO QUANDO O USUÁRIO ARRASTAR ---
     const handleReorder = async (newOrderTabs: any[]) => {
         setTabs(newOrderTabs); 
         const sidebarOrder = newOrderTabs.map(t => t.id);
@@ -109,15 +111,12 @@ export default function ZaeonComputerScienceRoom() {
         }
     };
 
-    // --- 1. SETUP INICIAL ---
     useEffect(() => {
         const timer = setTimeout(() => setIsLoaded(true), 500);
         return () => clearTimeout(timer);
     }, []);
 
-    // --- 2. LÓGICA DE AUTENTICAÇÃO ("npm run dev") ---
     const handleAuth = () => {
-        // Alterado o comando de inicialização
         if (inputValue.trim() === "npm run dev") {
             setIsError(false);
             setIsAuthenticating(true);
@@ -135,7 +134,6 @@ export default function ZaeonComputerScienceRoom() {
         if (e.key === 'Enter') handleAuth();
     };
 
-    // --- 3. PHYSICS ENGINE (BACKGROUND FIXED) ---
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
@@ -217,7 +215,6 @@ export default function ZaeonComputerScienceRoom() {
         };
     }, []);
 
-    // --- STYLES CYBER (Azul/Roxo/Slate) ---
     const cardStyle = `
         dark:bg-[#0f172a]/80 bg-white/60
         backdrop-blur-[20px] 
@@ -228,7 +225,6 @@ export default function ZaeonComputerScienceRoom() {
     return (
         <div className="relative w-screen h-screen overflow-hidden font-mono bg-[#e2e8f0] dark:bg-[#010816] text-slate-800 dark:text-slate-200 transition-colors duration-1000">
 
-            {/* 1. BACKGROUND FIXO */}
             <motion.div className="absolute inset-0 z-0 pointer-events-none" animate={{ opacity: isLoaded ? 1 : 0 }} transition={{ duration: 1 }}>
                 <div className="absolute top-16 bottom-0 left-0 w-1/3 border-r border-slate-300 dark:border-white/5 bg-transparent">
                     <Image src="/assets/computer.png" alt="Cyber Room" fill className="object-cover object-center opacity-80" priority />
@@ -237,7 +233,6 @@ export default function ZaeonComputerScienceRoom() {
             </motion.div>
             <canvas ref={canvasRef} className="absolute inset-0 z-0 pointer-events-none" />
 
-            {/* 2. MODAL DE SENHA */}
             <AnimatePresence>
                 {isLoaded && !isAuthenticated && (
                     <motion.div
@@ -312,16 +307,6 @@ export default function ZaeonComputerScienceRoom() {
                 )}
             </AnimatePresence>
 
-            {/* 3. NAVBAR */}
-            <AnimatePresence>
-                {!isFocusMode && isAuthenticated && (
-                    <motion.div initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1, transition: { delay: 0.5 } }} className="fixed top-0 left-0 w-full z-50 pointer-events-auto">
-                        <Navbar />
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* 4. MAIN UI */}
             <AnimatePresence>
                 {isAuthenticated && (
                     <motion.div
@@ -330,7 +315,6 @@ export default function ZaeonComputerScienceRoom() {
                         animate={{ opacity: 1, y: 0, transition: { delay: 0.2, duration: 0.8 } }}
                         className={`flex items-start justify-start px-4 gap-6 w-full h-full relative z-10 transition-all duration-700 ${isFocusMode ? 'pt-4' : 'pt-32'}`}
                     >
-                        {/* SIDEBAR: Fina, estática, idêntica ao Lounge */}
                         <motion.aside
                             layout
                             className={`z-20 rounded-[2.5rem] ${cardStyle} transition-all duration-500 flex flex-col items-center py-6 gap-4 w-12 ${isFocusMode ? 'h-[96vh]' : 'h-[70vh]'}`}
@@ -347,8 +331,6 @@ export default function ZaeonComputerScienceRoom() {
                                                 }`}
                                         >
                                             <div className="shrink-0 relative z-10 flex justify-center w-full">{item.icon}</div>
-                                            
-                                            {/* Tooltip Hover Estilo Cyber */}
                                             <span className="absolute left-full ml-4 px-2 py-1 bg-[#0f172a] border border-cyan-500/30 text-white text-[9px] rounded font-bold uppercase opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 shadow-lg shadow-cyan-500/10">
                                                 {item.label}
                                             </span>
@@ -376,7 +358,6 @@ export default function ZaeonComputerScienceRoom() {
                             </div>
                         </motion.aside>
 
-                        {/* CONTENT AREA */}
                         <AnimatePresence>
                             {!isMinimized && (
                                 <motion.main
@@ -388,7 +369,6 @@ export default function ZaeonComputerScienceRoom() {
                                         ${isFocusMode ? 'h-[96vh]' : 'h-[82vh]'}
                                     `}
                                 >
-                                    {/* HEADER DA JANELA (ESTILO MAC) */}
                                     <div className="p-10 pb-4 flex items-center gap-4 border-b dark:border-white/5 border-black/5">
                                         <div
                                             onClick={() => setIsMinimized(true)}
