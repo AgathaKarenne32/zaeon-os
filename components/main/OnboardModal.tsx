@@ -6,12 +6,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     User, BookOpen, ChevronUp, ChevronDown, Mars, Venus,
     Upload, Image as ImageIcon, Loader2, Maximize2,
-    ShieldCheck, FileText, Globe
+    ShieldCheck, FileText, Globe, Mail, Phone
 } from 'lucide-react';
 import Image from 'next/image';
 import { signIn } from 'next-auth/react';
 import { useDropzone } from 'react-dropzone';
-import { useTranslation } from 'react-i18next'; 
+import { useTranslation } from 'react-i18next';
 
 const ALL_COURSES = [
     "Ciência da Computação", "Engenharia de Software", "Sistemas de Informação", "Análise e Desenvolvimento de Sistemas", "Engenharia da Computação", "Redes de Computadores", "Segurança da Informação / Cibersegurança", "Banco de Dados", "Inteligência Artificial", "Ciência de Dados", "Computação em Nuvem", "Internet das Coisas", "Robótica", "Jogos Digitais", "Design Digital / UX / UI",
@@ -52,13 +52,17 @@ const ZaeonAuthModal = ({ isOpen, onClose, role }: ZaeonAuthModalProps) => {
     const [name, setName] = useState('');
     const [age, setAge] = useState<number>(27);
     const [gender, setGender] = useState<'male' | 'female' | 'other'>('female');
-    const [studyArea, setStudyArea] = useState(''); 
-    const [studentId, setStudentId] = useState(''); 
+    const [studyArea, setStudyArea] = useState('');
+    const [studentId, setStudentId] = useState('');
     const [institution, setInstitution] = useState<string | null>(null);
     const [verificationDoc, setVerificationDoc] = useState<string | null>(null);
     const [showDropdown, setShowDropdown] = useState(false);
     const [profileImage, setProfileImage] = useState<string | null>(null);
     const [torsoImage, setTorsoImage] = useState<string | null>(null);
+
+    // --- NOVOS ESTADOS PARA GUEST ACCOUNT ---
+    const [contactEmail, setContactEmail] = useState("");
+    const [phone, setPhone] = useState("");
 
     useEffect(() => {
         if (i18n?.language) {
@@ -73,11 +77,24 @@ const ZaeonAuthModal = ({ isOpen, onClose, role }: ZaeonAuthModalProps) => {
 
     const isAcademicRole = role === 'student' || role === 'professor';
     const isFastTrackInst = institution === 'unilab' || institution === 'ufc' || institution === 'ifce';
+    const isGuest = !isFastTrackInst;
+
     const hasAcademicProof = !isAcademicRole || (selectedCountry === 'br' && isFastTrackInst) || verificationDoc !== null;
-    const isReadyToSign = name.length > 2 && studyArea.length > 2 && hasAcademicProof && !isSubmitting;
+    const hasGuestContact = !isGuest || (contactEmail.includes('@') && phone.length > 5);
+    const isReadyToSign = name.length > 2 && studyArea.length > 2 && hasAcademicProof && hasGuestContact && !isSubmitting;
 
     const filteredCourses = ALL_COURSES.filter(c => c.toLowerCase().includes(studyArea.toLowerCase()));
     const activeCountryData = COUNTRIES.find(c => c.id === selectedCountry) || COUNTRIES[0];
+
+    const getPhonePrefix = () => {
+        switch (selectedCountry) {
+            case 'br': return '+55';
+            case 'cn': return '+86';
+            case 'fr': return '+33';
+            case 'kr': return '+82';
+            default: return '+1'; // US e outros
+        }
+    };
 
     const convertToBase64 = (file: File): Promise<string> => {
         return new Promise((resolve, reject) => {
@@ -125,16 +142,46 @@ const ZaeonAuthModal = ({ isOpen, onClose, role }: ZaeonAuthModalProps) => {
         onDrop: onDropVerification, accept: { 'application/pdf': [], 'image/*': [] }, maxFiles: 1
     });
 
+    // --- NOVA LÓGICA DE LOGIN HÍBRIDO ---
     const handleInitialize = async () => {
         setIsSubmitting(true);
         const onboardingData = {
             name, age, gender, course: studyArea, identityId: studentId, role,
             institution, verificationDoc,
             image: profileImage, torsoImage: torsoImage,
-            countryCode: selectedCountry
+            countryCode: selectedCountry,
+            contactEmail, phone: `${getPhonePrefix()} ${phone}`
         };
-        localStorage.setItem('zaeon_onboarding', JSON.stringify(onboardingData));
-        await signIn('google', { callbackUrl: '/workstation' });
+
+        if (isFastTrackInst) {
+            // FLUXO NORMAL (GOOGLE)
+            localStorage.setItem('zaeon_onboarding', JSON.stringify(onboardingData));
+            await signIn('google', { callbackUrl: '/workstation' });
+        } else {
+            // NOVO FLUXO (GUEST)
+            try {
+                // 1. Cria o usuário no banco
+                const res = await fetch('/api/auth/guest-register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(onboardingData)
+                });
+
+                if (res.ok) {
+                    // 2. Faz o login silencioso usando as credenciais criadas
+                    await signIn('credentials', {
+                        email: contactEmail,
+                        callbackUrl: '/workstation'
+                    });
+                } else {
+                    alert("Falha ao criar acesso Guest.");
+                    setIsSubmitting(false);
+                }
+            } catch (error) {
+                console.error("Erro no Guest Auth:", error);
+                setIsSubmitting(false);
+            }
+        }
     };
 
     useEffect(() => {
@@ -189,7 +236,7 @@ const ZaeonAuthModal = ({ isOpen, onClose, role }: ZaeonAuthModalProps) => {
 
     if (!mounted || !isOpen) return null;
 
-    let loginButtonText = "Sign in with Google";
+    let loginButtonText = "Ingressar no Lounge (Guest)";
     if (selectedCountry === 'br' && institution === 'unilab') loginButtonText = "Sign in with UNILAB (.edu account)";
     else if (selectedCountry === 'br' && institution === 'ufc') loginButtonText = "Sign in with UFC (.edu account)";
     else if (selectedCountry === 'br' && institution === 'ifce') loginButtonText = "Sign in with IFCE (.edu account)";
@@ -248,20 +295,18 @@ const ZaeonAuthModal = ({ isOpen, onClose, role }: ZaeonAuthModalProps) => {
                                             <div className="flex-1">
                                                 <label className="text-[9px] text-gray-500 uppercase font-bold tracking-wider ml-1">Biometrics</label>
                                                 <div className="relative flex h-11 bg-gray-100 dark:bg-[#0f172a] rounded-lg p-1 border cursor-pointer border-gray-200 dark:border-white/10">
-                                                    {/* Slider dinâmico para 3 posições */}
-                                                    <motion.div 
-                                                        className={`absolute top-1 bottom-1 w-[calc(33.33%-4px)] rounded-md transition-all ${
-                                                            gender === 'male' ? 'bg-blue-500' : 
-                                                            gender === 'other' ? 'bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500' : 
-                                                            'bg-pink-500'
-                                                        }`} 
-                                                        animate={{ 
-                                                            left: gender === 'male' ? '4px' : gender === 'other' ? '33.33%' : '66.66%' 
+                                                    <motion.div
+                                                        className={`absolute top-1 bottom-1 w-[calc(33.33%-4px)] rounded-md transition-all ${gender === 'male' ? 'bg-blue-500' :
+                                                                gender === 'other' ? 'bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500' :
+                                                                    'bg-pink-500'
+                                                            }`}
+                                                        animate={{
+                                                            left: gender === 'male' ? '4px' : gender === 'other' ? '33.33%' : '66.66%'
                                                         }}
                                                     />
                                                     <button onClick={() => setGender('male')} className="flex-1 z-10 flex justify-center items-center"><Mars size={18} className={gender === 'male' ? 'text-white' : 'text-gray-500'} /></button>
                                                     <button onClick={() => setGender('other')} className="flex-1 z-10 flex justify-center items-center">
-                                                        <div className={`w-4 h-4 rounded-sm transition-opacity ${gender === 'other' ? 'opacity-100 ring-1 ring-white/50' : 'opacity-40 grayscale'}`} style={{ background: 'linear-gradient(180deg, #FF0018 0%, #FF8D00 20%, #FFED00 40%, #008026 60%, #004CFF 80%, #732982 100%)'}} />
+                                                        <div className={`w-4 h-4 rounded-sm transition-opacity ${gender === 'other' ? 'opacity-100 ring-1 ring-white/50' : 'opacity-40 grayscale'}`} style={{ background: 'linear-gradient(180deg, #FF0018 0%, #FF8D00 20%, #FFED00 40%, #008026 60%, #004CFF 80%, #732982 100%)' }} />
                                                     </button>
                                                     <button onClick={() => setGender('female')} className="flex-1 z-10 flex justify-center items-center"><Venus size={18} className={gender === 'female' ? 'text-white' : 'text-gray-500'} /></button>
                                                 </div>
@@ -282,11 +327,10 @@ const ZaeonAuthModal = ({ isOpen, onClose, role }: ZaeonAuthModalProps) => {
                                                 <button
                                                     key={c.id}
                                                     onClick={() => setSelectedCountry(c.id)}
-                                                    className={`w-6 h-6 flex items-center justify-center rounded-full text-xs transition-all duration-300 ${
-                                                        selectedCountry === c.id 
-                                                        ? 'bg-white dark:bg-white/20 shadow-sm scale-110 ring-1 ring-purple-500/50' 
-                                                        : 'opacity-50 hover:opacity-100 hover:bg-white/50 dark:hover:bg-white/10'
-                                                    }`}
+                                                    className={`w-6 h-6 flex items-center justify-center rounded-full text-xs transition-all duration-300 ${selectedCountry === c.id
+                                                            ? 'bg-white dark:bg-white/20 shadow-sm scale-110 ring-1 ring-purple-500/50'
+                                                            : 'opacity-50 hover:opacity-100 hover:bg-white/50 dark:hover:bg-white/10'
+                                                        }`}
                                                     title={c.langMatch.toUpperCase()}
                                                 >
                                                     {c.flag}
@@ -295,23 +339,23 @@ const ZaeonAuthModal = ({ isOpen, onClose, role }: ZaeonAuthModalProps) => {
                                         </div>
                                     </div>
                                     <div className="relative">
-                                        <input 
-                                            type="text" 
-                                            value={studyArea} 
+                                        <input
+                                            type="text"
+                                            value={studyArea}
                                             onChange={(e) => {
                                                 setStudyArea(e.target.value);
                                                 setShowDropdown(true);
                                             }}
                                             onFocus={() => setShowDropdown(true)}
-                                            onBlur={() => setTimeout(() => setShowDropdown(false), 200)} 
-                                            placeholder={activeCountryData.placeholder} 
-                                            className="w-full bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded px-3 py-2 text-xs focus:border-purple-500 outline-none text-slate-800 dark:text-white transition-all" 
+                                            onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+                                            placeholder={activeCountryData.placeholder}
+                                            className="w-full bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded px-3 py-2 text-xs focus:border-purple-500 outline-none text-slate-800 dark:text-white transition-all"
                                         />
                                         <AnimatePresence>
                                             {showDropdown && studyArea.length > 0 && (
-                                                <motion.ul 
-                                                    initial={{ opacity: 0, y: -5 }} 
-                                                    animate={{ opacity: 1, y: 0 }} 
+                                                <motion.ul
+                                                    initial={{ opacity: 0, y: -5 }}
+                                                    animate={{ opacity: 1, y: 0 }}
                                                     exit={{ opacity: 0, y: -5 }}
                                                     className="absolute top-full left-0 right-0 mt-2 max-h-40 overflow-y-auto bg-white dark:bg-[#0f172a] border border-gray-200 dark:border-white/10 rounded-lg shadow-xl z-50 custom-scrollbar"
                                                 >
@@ -328,8 +372,49 @@ const ZaeonAuthModal = ({ isOpen, onClose, role }: ZaeonAuthModalProps) => {
                                     </div>
                                 </motion.div>
 
+                                {/* NOVOS BLOCOS: INFORMAÇÕES DE CONTATO PARA CONVIDADOS */}
+                                {isGuest && (
+                                    <motion.div drag dragConstraints={{ left: -10, right: 10 }} className="relative z-20 w-full bg-white dark:bg-[#1e293b] rounded-xl p-4 border border-gray-100 dark:border-white/10 shadow-md">
+                                        <div className="flex flex-col gap-4">
+                                            <div className="bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 p-3 rounded-xl flex flex-col gap-2">
+                                                <label className="text-[9px] font-black uppercase tracking-widest text-purple-600 dark:text-purple-400">
+                                                    Email de Acesso (Guest)
+                                                </label>
+                                                <div className="flex items-center gap-3">
+                                                    <Mail size={16} className="text-gray-400" />
+                                                    <input
+                                                        type="email"
+                                                        placeholder="seu.email@exemplo.com"
+                                                        value={contactEmail}
+                                                        onChange={(e) => setContactEmail(e.target.value)}
+                                                        className="bg-transparent w-full text-xs outline-none text-slate-800 dark:text-white placeholder:text-slate-400/50"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 p-3 rounded-xl flex flex-col gap-2">
+                                                <label className="text-[9px] font-black uppercase tracking-widest text-purple-600 dark:text-purple-400">
+                                                    Comms Link (WhatsApp/Telegram)
+                                                </label>
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-xs font-mono font-bold text-gray-500 dark:text-white/50 bg-gray-200 dark:bg-white/5 px-2 py-1 rounded-md">
+                                                        {getPhonePrefix()}
+                                                    </span>
+                                                    <input
+                                                        type="tel"
+                                                        placeholder="(11) 99999-9999"
+                                                        value={phone}
+                                                        onChange={(e) => setPhone(e.target.value)}
+                                                        className="bg-transparent w-full text-xs outline-none font-mono text-slate-800 dark:text-white placeholder:text-slate-400/50"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                )}
+
                                 {isAcademicRole && (
-                                    <div className="relative z-20 w-full flex flex-col gap-6">
+                                    <div className="relative z-10 w-full flex flex-col gap-6">
                                         <motion.div drag dragConstraints={{ left: -10, right: 10 }} className={`${selectedCountry === 'br' ? 'w-5/6 mx-auto' : 'w-full'} bg-white dark:bg-[#1e293b] rounded-xl p-4 border border-gray-100 dark:border-white/10 shadow-md transition-all duration-500`}>
                                             <div className="flex items-center justify-between mb-3">
                                                 <div className="flex items-center gap-2">
@@ -338,7 +423,7 @@ const ZaeonAuthModal = ({ isOpen, onClose, role }: ZaeonAuthModalProps) => {
                                                 </div>
                                                 {selectedCountry !== 'br' && (
                                                     <div className="flex items-center gap-1 opacity-50">
-                                                        <Globe size={12} className="text-gray-400"/><span className="text-[8px] uppercase font-bold text-gray-400">Global Student</span>
+                                                        <Globe size={12} className="text-gray-400" /><span className="text-[8px] uppercase font-bold text-gray-400">Global Student</span>
                                                     </div>
                                                 )}
                                             </div>
@@ -380,9 +465,25 @@ const ZaeonAuthModal = ({ isOpen, onClose, role }: ZaeonAuthModalProps) => {
 
                                 <div className="w-full mt-4">
                                     <button onClick={handleInitialize} disabled={!isReadyToSign} className={`w-full relative group font-bold py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-3 border ${isReadyToSign ? 'bg-white text-black hover:scale-[1.02] border-gray-200' : 'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 border-transparent cursor-not-allowed'}`}>
-                                        {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <Image src="https://authjs.dev/img/providers/google.svg" alt="G" width={20} height={20} />}
+                                        {isSubmitting ? (
+                                            <Loader2 className="animate-spin" size={18} />
+                                        ) : isGuest ? (
+                                            <ShieldCheck size={18} className="text-black" />
+                                        ) : (
+                                            <Image src="https://authjs.dev/img/providers/google.svg" alt="G" width={20} height={20} />
+                                        )}
                                         <span className="text-xs tracking-wider uppercase">{loginButtonText}</span>
                                     </button>
+
+                                    {/* MENSAGEM DE AVISO PARA GUESTS */}
+                                    {isGuest && (
+                                        <div className="mt-4 p-3 bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-500/20 rounded-xl text-center">
+                                            <p className="text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest leading-relaxed">
+                                                Sua conta passará por verificação pelos agentes da Zaeon. <br />
+                                                Interaja nas salas e fóruns para manter seu acesso ativo.
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
