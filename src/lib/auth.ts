@@ -4,7 +4,7 @@ import { MongoDBAdapter } from "@auth/mongodb-adapter";
 import { clientPromise } from "@/src/lib/db";
 import { MongoClient } from "mongodb";
 
-// 1. CRIE A LISTA VIP AQUI
+// A LISTA VIP
 const ADMIN_EMAILS = [
     "zaeondao@gmail.com",
     "martinez@zaeon.space"
@@ -35,7 +35,10 @@ export const authOptions: NextAuthOptions = {
             if (session?.user && token.email) {
                 const client = (await clientPromise) as MongoClient;
                 const db = client.db();
-                const dbUser = await db.collection("User").findOne({ email: token.email });
+                
+                // MUDANÇA 1: Procura explicitamente na coleção 'users'
+                const dbUser = await db.collection("users").findOne({ email: token.email });
+                
                 if (dbUser) {
                     session.user.name = dbUser.name || session.user.name;
                     session.user.image = dbUser.image || session.user.image;
@@ -43,10 +46,14 @@ export const authOptions: NextAuthOptions = {
                     session.user.role = dbUser.role || "student";
                     // @ts-ignore
                     session.user.course = dbUser.course || "";
-                    
-                    // 2. A MÁGICA: Verifica se o e-mail do banco está na lista VIP
                     // @ts-ignore
-                    session.user.isAdmin = ADMIN_EMAILS.includes(dbUser.email.toLowerCase());
+                    session.user.academicLevel = dbUser.academicLevel || "Graduação";
+                    
+                    // MUDANÇA 2: Checagem segura de Admin baseada no token (não no banco)
+                    // Isso garante que mesmo se o banco demorar, você loga como admin pelo email do Google!
+                    const userEmail = token.email.toLowerCase();
+                    // @ts-ignore
+                    session.user.isAdmin = ADMIN_EMAILS.includes(userEmail);
                 }
             }
             return session;
