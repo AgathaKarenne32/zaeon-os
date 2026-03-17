@@ -1,11 +1,11 @@
 import type { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
-import CredentialsProvider from "next-auth/providers/credentials"; // <-- NOVO: Importação do Provedor de Convidados
+import CredentialsProvider from "next-auth/providers/credentials"; 
 import { MongoDBAdapter } from "@auth/mongodb-adapter";
 import { clientPromise } from "@/src/lib/db";
 import { MongoClient } from "mongodb";
 
-// 1. A LISTA VIP (Intacta!)
+// A LISTA VIP
 const ADMIN_EMAILS = [
     "zaeondao@gmail.com",
     "martinez@zaeon.space"
@@ -14,14 +14,12 @@ const ADMIN_EMAILS = [
 export const authOptions: NextAuthOptions = {
     adapter: MongoDBAdapter(clientPromise),
     providers: [
-        // A Porta Principal (Google)
         GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID!,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-            checks: ['none'], //allowDangerousEmailAccountLinking: true, quando formos transicionar os usuários. 
+            checks: ['none'],
         }),
         
-        // --- NOVO: A Porta Lateral para Convidados (Shadow Accounts) ---
         CredentialsProvider({
             name: "Guest",
             credentials: {
@@ -33,34 +31,39 @@ export const authOptions: NextAuthOptions = {
                 const client = (await clientPromise) as MongoClient;
                 const db = client.db();
                 
-                // Busca se o email do convidado já foi inserido no banco
                 const user = await db.collection("users").findOne({ email: credentials.email.toLowerCase() });
 
-                // Se existir, o NextAuth gera um Token JWT e deixa ele entrar!
                 if (user) {
                     return {
                         id: user._id.toString(),
                         name: user.name,
                         email: user.email,
-                        image: user.image,
+                        // 🔥 A CORREÇÃO ESTÁ AQUI: NÃO retornamos a imagem para o NextAuth!
+                        // Deixamos a imagem no banco. O cookie ficará ultra-leve.
                         role: user.role
                     };
                 }
                 
-                return null; // Se não existir, falha silenciosamente
+                return null;
             }
         })
     ],
     session: { strategy: "jwt" },
     callbacks: {
-        async jwt({ token, user, trigger, session }) {
+        async jwt({ token, user }) {
             if (user) {
                 token.id = user.id;
                 token.email = user.email;
                 // @ts-ignore
                 token.role = user.role || "student";
             }
-            if (trigger === "update" && session) return { ...token, ...session };
+            
+            // 🔥 BLINDAGEM MÁXIMA: Garante que NENHUMA imagem entre no token,
+            // nem do Google, nem de lugar nenhum. 
+            // O cookie nunca passará de 1KB.
+            delete token.picture;
+            delete token.image;
+            
             return token;
         },
         async session({ session, token }) {
@@ -68,12 +71,13 @@ export const authOptions: NextAuthOptions = {
                 const client = (await clientPromise) as MongoClient;
                 const db = client.db();
                 
-                // MUDANÇA 1: Procura explicitamente na coleção 'users'
                 const dbUser = await db.collection("users").findOne({ email: token.email });
                 
                 if (dbUser) {
                     session.user.name = dbUser.name || session.user.name;
-                    session.user.image = dbUser.image || session.user.image;
+                    // 🔥 Aqui nós pegamos a foto gigante DIRETO DO BANCO para mostrar na tela, 
+                    // sem precisar trafegar ela no Cookie!
+                    session.user.image = dbUser.image || null;
                     // @ts-ignore
                     session.user.role = dbUser.role || "student";
                     // @ts-ignore
@@ -81,10 +85,9 @@ export const authOptions: NextAuthOptions = {
                     // @ts-ignore
                     session.user.academicLevel = dbUser.academicLevel || "Graduação";
                     
-                    // MUDANÇA 2: Checagem segura de Admin baseada no token (não no banco)
                     const userEmail = token.email.toLowerCase();
                     // @ts-ignore
-                    session.user.isAdmin = ADMIN_EMAILS.includes(userEmail); // Sua chave mestra continua intocável!
+                    session.user.isAdmin = ADMIN_EMAILS.includes(userEmail);
                 }
             }
             return session;

@@ -93,6 +93,7 @@ export default function WorkStationPage() {
     const [mounted, setMounted] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
     const [activeSkill, setActiveSkill] = useState<string | null>(null);
+    const [isUploading, setIsUploading] = useState(false); // Estado novo para controlar o loading do upload
 
     // --- LEITURA DA CHAVE MESTRA (ADMIN) ---
     // @ts-ignore
@@ -139,13 +140,68 @@ export default function WorkStationPage() {
         if (mounted) syncOnboardingData();
     }, [mounted, status, update]);
 
-    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => setUserImage(reader.result as string);
-            reader.readAsDataURL(file);
+    // --- Sincronizador de Imagem: Garante que a tela sempre reflita o banco de dados ---
+    useEffect(() => {
+        if (session?.user?.image) {
+            setUserImage(session.user.image);
         }
+    }, [session?.user?.image]);
+
+    // --- Compressor e Sincronizador de Upload ---
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsUploading(true);
+
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new window.Image();
+            img.src = event.target?.result as string;
+            img.onload = async () => {
+                const canvas = document.createElement("canvas");
+                const MAX_WIDTH = 400; // Tamanho ideal para avatares
+                const MAX_HEIGHT = 400;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+                } else {
+                    if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext("2d");
+                ctx?.drawImage(img, 0, 0, width, height);
+
+                const compressedBase64 = canvas.toDataURL("image/jpeg", 0.7);
+                setUserImage(compressedBase64); // Atualiza visualmente na hora
+
+                try {
+                    const res = await fetch('/api/user/avatar', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ image: compressedBase64 })
+                    });
+
+                    if (res.ok) {
+                        // Sincroniza com o NextAuth e o banco
+                        await update({ image: compressedBase64 });
+                    } else {
+                        const err = await res.json();
+                        alert("Falha ao salvar no banco: " + err.error);
+                    }
+                } catch (error) {
+                    console.error("Erro na API:", error);
+                    alert("Erro de conexão ao salvar a imagem.");
+                } finally {
+                    setIsUploading(false);
+                }
+            };
+        };
     };
 
     if (!mounted || status === "loading" || isSyncing) {
@@ -175,12 +231,12 @@ export default function WorkStationPage() {
                         <div className="relative w-[180px] h-full rounded-[100px] border-[3px] border-white/60 dark:border-white/10 bg-white/30 dark:bg-cyan-900/10 backdrop-blur-md shadow-[0_0_50px_rgba(34,211,238,0.15)] dark:shadow-[0_0_40px_rgba(34,211,238,0.2)] flex flex-col items-center justify-center z-20">
                             <RealisticDNA />
                             <motion.div animate={{ y: [-8, 8, -8] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }} className="relative z-30">
-                                <label className="relative block w-28 h-28 rounded-full border-4 border-cyan-500/80 dark:border-cyan-400 p-1 bg-white dark:bg-black shadow-[0_0_30px_rgba(34,211,238,0.4)] cursor-pointer group/avatar">
-                                    <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+                                <label className={`relative block w-28 h-28 rounded-full border-4 border-cyan-500/80 dark:border-cyan-400 p-1 bg-white dark:bg-black shadow-[0_0_30px_rgba(34,211,238,0.4)] cursor-pointer group/avatar ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                                    <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} disabled={isUploading} />
                                     <Image src={userImage} alt="Avatar" fill className="object-cover rounded-full" />
                                     <div className="absolute inset-0 bg-black/60 rounded-full flex flex-col items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity">
-                                        <CameraIcon className="w-8 h-8 text-white mb-1" />
-                                        <span className="text-[7px] uppercase font-bold text-white tracking-widest">Change</span>
+                                        {isUploading ? <ArrowPathIcon className="w-6 h-6 text-white animate-spin mb-1" /> : <CameraIcon className="w-8 h-8 text-white mb-1" />}
+                                        <span className="text-[7px] uppercase font-bold text-white tracking-widest">{isUploading ? 'Saving...' : 'Change'}</span>
                                     </div>
                                 </label>
                             </motion.div>
