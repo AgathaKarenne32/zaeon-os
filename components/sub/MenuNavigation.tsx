@@ -19,11 +19,11 @@ const MENU_ITEMS = [
   { labelKey: "menu.manual", href: "/workstation/admin" },
 ];
 
+// --- PERFIS AJUSTADOS: Apenas 3 (Lembre-se de adicionar "roles.professor" no seu arquivo i18n) ---
 const ROLES = [
   { slug: "student", key: "roles.student" },
-  { slug: "researcher", key: "roles.researcher" },
+  { slug: "professor", key: "roles.professor" },
   { slug: "professional", key: "roles.professional" },
-  { slug: "entrepreneur", key: "roles.entrepreneur" },
 ] as const;
 
 export default function MenuNavigation() {
@@ -38,22 +38,17 @@ export default function MenuNavigation() {
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
 
   const isLoggedIn = status === "authenticated";
-  const isAdmin = session?.user?.email === "zaeondao@gmail.com";
+  // @ts-ignore
+  const isAdmin = !!session?.user?.isAdmin;
 
   const visibleMenuItems = MENU_ITEMS.filter(item => {
     if (item.labelKey === "menu.manual") return isAdmin;
     return true;
   });
 
-  // --- CLASSES ESTILO APPLE GLASS REFINADO ---
   const panelClass = "w-full mt-24 rounded-[32px] overflow-hidden backdrop-blur-2xl transition-all duration-500 bg-cyan-950/10 border border-white/10 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] flex flex-col";
-  
-  // Reduzi a min-h de 64px para 52px e o padding lateral
   const cardBase = "group relative overflow-hidden flex items-center justify-between rounded-2xl px-4 min-h-[52px] w-full transition-all duration-300 cursor-pointer font-medium text-slate-950 dark:text-white bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 hover:border-cyan-400/30";
-  
   const cardSelected = "bg-cyan-400/10 border-cyan-400/40 text-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.15)]";
-  
-  // Barra de acento agora é flutuante e menor (estilo iOS)
   const accentBar = (active: boolean) => `absolute left-1 top-1/2 -translate-y-1/2 h-6 w-[3px] rounded-full transition-all duration-500 ${active ? "bg-cyan-400 opacity-100 scale-y-100" : "bg-transparent opacity-0 scale-y-0"}`;
 
   return (
@@ -66,7 +61,7 @@ export default function MenuNavigation() {
               initial={{ opacity: 0, y: 10 }} 
               animate={{ opacity: 1, y: 0 }} 
               exit={{ opacity: 0, y: -10 }} 
-              className="flex flex-col gap-2 w-full" // Gap reduzido para colagem mais bonita
+              className="flex flex-col gap-2 w-full"
             >
               
               <li className="w-full" onMouseEnter={() => setIndex(0)} onClick={() => !isLoggedIn && setPickerOpen(true)}>
@@ -85,7 +80,14 @@ export default function MenuNavigation() {
                           setRoleIndex(r => (r - 1 + ROLES.length) % ROLES.length); 
                         }} 
                       />
-                      <span className="text-[10px] min-w-[90px] text-center uppercase font-bold tracking-widest select-none">
+                      {/* O NOME DO PERFIL AGORA É CLICÁVEL PARA ABRIR O MODAL DE ONBOARD */}
+                      <span 
+                        className="text-[10px] min-w-[90px] text-center uppercase font-bold tracking-widest select-none hover:text-cyan-300 transition-colors cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOnboardOpen(true);
+                        }}
+                      >
                         {t(ROLES[roleIndex].key)}
                       </span>
                       <ChevronRightIcon 
@@ -146,6 +148,7 @@ export default function MenuNavigation() {
                    <option value="es">Español</option>
                    <option value="zh">中文</option>
                    <option value="ko">한국어</option>
+
                  </select>
                  <ChevronRightIcon className="h-4 w-4 opacity-30" />
                </div>

@@ -33,10 +33,6 @@ export default function GraphicContent() {
   return (
     <main className="w-full min-h-screen flex justify-start items-start relative px-4 md:pl-20 py-12 overflow-hidden bg-transparent transition-colors duration-700">
 
-      {/* A IMAGEM 'computer.png' E AS CAMADAS DE GLITCH FORAM REMOVIDAS DAQUI 
-          PARA DAR DESTAQUE TOTAL AO FUNDO DINÂMICO DO ZAEON OS.
-      */}
-
       {/* 3. CONTEÚDO PRINCIPAL (COLUNA DA ESQUERDA) */}
       <div className="flex flex-col items-start z-20 w-full max-w-[420px]">
         {/* Menu Navigation */}

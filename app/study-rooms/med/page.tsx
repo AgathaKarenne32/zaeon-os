@@ -18,7 +18,6 @@ const LoadingModule = () => (
     </div>
 );
 
-// IMPORTANTE: Ajuste os caminhos abaixo para apontar para os arquivos reais da sala Med
 const ClassesModule = dynamic(() => import('../med/classes/page').then(mod => mod.default), { loading: LoadingModule });
 const ExamsModule = dynamic(() => import('../med/exams/page').then(mod => mod.default), { loading: LoadingModule });
 const ProjectsModule = dynamic(() => import('../med/projects/page').then(mod => mod.default), { loading: LoadingModule });
@@ -29,13 +28,21 @@ const NewsModule = dynamic(() => import('../med/news/page').then(mod => mod.defa
 
 export default function ZaeonMedLabRoom() {
 
+    // --- ESTADOS GERAIS ---
     const [isLoaded, setIsLoaded] = useState(false);
+    
+    // NOVO: Estado que controla quando a UI principal deve aparecer
+    const [showUI, setShowUI] = useState(false); 
+    const hasTriggeredUIRef = useRef(false);
+
+    // --- ESTADOS DA UI ---
     const [activeTab, setActiveTab] = useState("classes");
     const [isFocusMode, setIsFocusMode] = useState(false);
     const [isMinimized, setIsMinimized] = useState(false);
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
+    // --- TABS BASE ---
     const baseTabs = [
         { id: 'community', label: 'Network', icon: <Users size={18} /> },
         { id: 'classes', label: 'Classes', icon: <BookOpen size={18} /> },
@@ -48,6 +55,7 @@ export default function ZaeonMedLabRoom() {
 
     const [tabs, setTabs] = useState(baseTabs);
 
+    // --- COMUNICAÇÃO DE MODO FOCO COM NAVBAR GLOBAL ---
     useEffect(() => {
         window.dispatchEvent(new CustomEvent("zaeon-focus-mode", { detail: isFocusMode }));
         return () => {
@@ -55,6 +63,7 @@ export default function ZaeonMedLabRoom() {
         };
     }, [isFocusMode]);
 
+    // --- RECUPERAR LAYOUT DO USUÁRIO ---
     useEffect(() => {
         const fetchSavedOrder = async () => {
             try {
@@ -89,12 +98,14 @@ export default function ZaeonMedLabRoom() {
         }
     };
 
+    // --- INIT DO FUNDO ---
     useEffect(() => {
-        const timer = setTimeout(() => setIsLoaded(true), 800);
+        // Reduzido para o fundo aparecer rapidamente e preparar o palco
+        const timer = setTimeout(() => setIsLoaded(true), 100);
         return () => clearTimeout(timer);
     }, []);
 
-    // --- ENGINE DE ECG / HOLTER (CORRIGIDO PARA SEM PISCAR E MAIS VIVO) ---
+    // --- ENGINE DE ECG / HOLTER (BACKGROUND CANVA) ---
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
@@ -106,14 +117,13 @@ export default function ZaeonMedLabRoom() {
         const resize = () => { 
             canvas.width = window.innerWidth; 
             canvas.height = window.innerHeight; 
-            // Limpa o canvas ao redimensionar
             ctx.clearRect(0, 0, canvas.width, canvas.height);
         };
         window.addEventListener('resize', resize);
         resize();
 
         let x = 0;
-        const speed = 3;
+        const speed = 3.5; // Levemente mais rápido para um fluxo natural
         const centerY = canvas.height / 2 + 50;
         
         const beatPattern = [
@@ -128,14 +138,11 @@ export default function ZaeonMedLabRoom() {
         let isBeating = false;
         let lastY = centerY;
 
-        // Inicia com a tela transparente
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         const animate = () => {
             if (!ctx || !canvas) return;
 
-            // Apaga um quadrado vertical logo à frente da linha desenhada,
-            // criando o efeito clássico de "varredura" do Holter, sem escurecer a tela toda.
             ctx.clearRect(x + 2, 0, 80, canvas.height);
 
             ctx.beginPath();
@@ -157,14 +164,18 @@ export default function ZaeonMedLabRoom() {
             }
 
             nextY += (Math.random() - 0.5) * 4;
-
             x += speed;
+
+            // NOVO: Gatilho de Cinematografia (Quando chegar em 45% da tela)
+            if (!hasTriggeredUIRef.current && x >= canvas.width * 0.45) {
+                hasTriggeredUIRef.current = true;
+                setShowUI(true); // Dispara o surgimento suave da interface
+            }
 
             ctx.lineTo(x, nextY);
             
-            // CORES MAIS VIVAS (VERMELHO NEON) E SEM RASTRO FANTASMA
             ctx.lineWidth = 3;
-            ctx.strokeStyle = '#ff003c'; // Um vermelho mais aberto e elétrico
+            ctx.strokeStyle = '#ff003c'; 
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
             
@@ -172,7 +183,6 @@ export default function ZaeonMedLabRoom() {
             ctx.shadowColor = '#ff2a5f';
             ctx.stroke();
             
-            // Ponto brilhante
             ctx.beginPath();
             ctx.arc(x, nextY, 3, 0, Math.PI * 2);
             ctx.fillStyle = '#ffffff';
@@ -182,7 +192,6 @@ export default function ZaeonMedLabRoom() {
 
             lastY = nextY;
 
-            // Se chegou na borda direita da tela, volta pro início e limpa a tela de novo
             if (x >= canvas.width) {
                 x = 0;
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -221,11 +230,12 @@ export default function ZaeonMedLabRoom() {
             <canvas ref={canvasRef} className="absolute inset-0 z-0 pointer-events-none opacity-80" />
 
             <AnimatePresence>
-                {isLoaded && (
+                {showUI && (
                     <motion.div
                         layout
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0, transition: { delay: 0.2, duration: 0.8 } }}
+                        // Animação suavizada e relaxante com leve blur e transição longa (1.5s)
+                        initial={{ opacity: 0, y: 30, filter: "blur(10px)" }}
+                        animate={{ opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 1.5, ease: "easeOut" } }}
                         className={`flex items-start justify-start px-4 gap-6 w-full h-full relative z-10 transition-all duration-700 ${isFocusMode ? 'pt-4' : 'pt-32'}`}
                     >
                         <motion.aside

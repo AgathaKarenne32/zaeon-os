@@ -1,16 +1,40 @@
-'use client';
+"use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    X, User, BookOpen, Fingerprint,
-    ChevronUp, ChevronDown, Mars, Venus, Lock,
-    Upload, Copy, Move, Image as ImageIcon, Loader2, Minus, Maximize2
+    User, BookOpen, ChevronUp, ChevronDown, Mars, Venus,
+    Upload, Image as ImageIcon, Loader2, Maximize2,
+    ShieldCheck, FileText, Globe
 } from 'lucide-react';
 import Image from 'next/image';
 import { signIn } from 'next-auth/react';
 import { useDropzone } from 'react-dropzone';
+import { useTranslation } from 'react-i18next'; 
+
+const ALL_COURSES = [
+    "Ciência da Computação", "Engenharia de Software", "Sistemas de Informação", "Análise e Desenvolvimento de Sistemas", "Engenharia da Computação", "Redes de Computadores", "Segurança da Informação / Cibersegurança", "Banco de Dados", "Inteligência Artificial", "Ciência de Dados", "Computação em Nuvem", "Internet das Coisas", "Robótica", "Jogos Digitais", "Design Digital / UX / UI",
+    "Computer Science", "Software Engineering", "Information Systems",
+    "Medicina", "Enfermagem", "Odontologia", "Farmácia", "Fisioterapia", "Nutrição", "Psicologia", "Fonoaudiologia", "Terapia Ocupacional", "Biomedicina", "Educação Física",
+    "Ciências Biológicas", "Biologia", "Biotecnologia", "Bioquímica", "Bioinformática", "Ecologia",
+    "Matemática", "Matemática Aplicada", "Estatística", "Física", "Astronomia", "Astrofísica", "Geofísica", "Meteorologia",
+    "História", "Geografia", "Filosofia", "Sociologia", "Antropologia", "Ciência Política", "Relações Internacionais", "Letras", "Linguística", "Pedagogia", "Artes", "Música", "Teatro", "Dança", "Cinema e Audiovisual", "Arquivologia", "Biblioteconomia", "Museologia", "Serviço Social", "Comunicação Social", "Jornalismo", "Publicidade e Propaganda", "Editoração", "Produção Cultural", "Direito", "Teologia"
+].sort();
+
+const PARTNER_INSTITUTIONS = [
+    { id: 'unilab', name: 'UNILAB', logo: '/assets/unilab-logo.png' },
+    { id: 'ufc', name: 'UFC', logo: '/assets/ufc-logo.png' },
+    { id: 'ifce', name: 'IFCE', logo: '/assets/ifce-logo.png' },
+];
+
+const COUNTRIES = [
+    { id: 'br', flag: '🇧🇷', langMatch: 'pt', placeholder: 'Ex: Engenharia de Software' },
+    { id: 'cn', flag: '🇨🇳', langMatch: 'zh', placeholder: 'Ex: 计算机科学' },
+    { id: 'us', flag: '🇺🇸', langMatch: 'en', placeholder: 'Ex: Computer Science' },
+    { id: 'fr', flag: '🇫🇷', langMatch: 'fr', placeholder: 'Ex: Informatique' },
+    { id: 'kr', flag: '🇰🇷', langMatch: 'ko', placeholder: 'Ex: 컴퓨터 공학' },
+];
 
 interface ZaeonAuthModalProps {
     isOpen: boolean;
@@ -19,24 +43,42 @@ interface ZaeonAuthModalProps {
 }
 
 const ZaeonAuthModal = ({ isOpen, onClose, role }: ZaeonAuthModalProps) => {
+    const { i18n } = useTranslation();
     const [mounted, setMounted] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isMinimized, setIsMinimized] = useState(false);
+    const [selectedCountry, setSelectedCountry] = useState('br');
 
-    // --- ESTADOS SINCRONIZADOS COM BANCO DE DADOS ---
     const [name, setName] = useState('');
     const [age, setAge] = useState<number>(27);
-    const [gender, setGender] = useState<'male' | 'female'>('female');
-    const [studyArea, setStudyArea] = useState(''); // Mapeia para 'course' no Prisma
-    const [studentId, setStudentId] = useState(''); // Mapeia para 'identityId' no Prisma
-
-    // Fotos em Base64 para persistência no MongoDB
+    const [gender, setGender] = useState<'male' | 'female' | 'other'>('female');
+    const [studyArea, setStudyArea] = useState(''); 
+    const [studentId, setStudentId] = useState(''); 
+    const [institution, setInstitution] = useState<string | null>(null);
+    const [verificationDoc, setVerificationDoc] = useState<string | null>(null);
+    const [showDropdown, setShowDropdown] = useState(false);
     const [profileImage, setProfileImage] = useState<string | null>(null);
     const [torsoImage, setTorsoImage] = useState<string | null>(null);
 
-    const isReadyToSign = name.length > 2 && studyArea.length > 2 && !isSubmitting;
+    useEffect(() => {
+        if (i18n?.language) {
+            const matchedCountry = COUNTRIES.find(c => i18n.language.startsWith(c.langMatch));
+            if (matchedCountry) setSelectedCountry(matchedCountry.id);
+        }
+    }, [i18n?.language]);
 
-    // Helper: Converte arquivo para string Base64
+    useEffect(() => {
+        if (selectedCountry !== 'br' && institution !== 'other') setInstitution(null);
+    }, [selectedCountry, institution]);
+
+    const isAcademicRole = role === 'student' || role === 'professor';
+    const isFastTrackInst = institution === 'unilab' || institution === 'ufc' || institution === 'ifce';
+    const hasAcademicProof = !isAcademicRole || (selectedCountry === 'br' && isFastTrackInst) || verificationDoc !== null;
+    const isReadyToSign = name.length > 2 && studyArea.length > 2 && hasAcademicProof && !isSubmitting;
+
+    const filteredCourses = ALL_COURSES.filter(c => c.toLowerCase().includes(studyArea.toLowerCase()));
+    const activeCountryData = COUNTRIES.find(c => c.id === selectedCountry) || COUNTRIES[0];
+
     const convertToBase64 = (file: File): Promise<string> => {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -46,7 +88,6 @@ const ZaeonAuthModal = ({ isOpen, onClose, role }: ZaeonAuthModalProps) => {
         });
     };
 
-    // --- CONFIGURAÇÃO DOS DROPZONES ---
     const onDropProfile = useCallback(async (acceptedFiles: File[]) => {
         const file = acceptedFiles[0];
         if (file) {
@@ -63,6 +104,15 @@ const ZaeonAuthModal = ({ isOpen, onClose, role }: ZaeonAuthModalProps) => {
         }
     }, []);
 
+    const onDropVerification = useCallback(async (acceptedFiles: File[]) => {
+        const file = acceptedFiles[0];
+        if (file) {
+            const base64 = await convertToBase64(file);
+            setVerificationDoc(base64);
+            setInstitution('other');
+        }
+    }, []);
+
     const { getRootProps: getProfileProps, getInputProps: getProfileInput } = useDropzone({
         onDrop: onDropProfile, accept: { 'image/*': [] }, maxFiles: 1, noClick: !!profileImage
     });
@@ -71,28 +121,22 @@ const ZaeonAuthModal = ({ isOpen, onClose, role }: ZaeonAuthModalProps) => {
         onDrop: onDropTorso, accept: { 'image/*': [] }, maxFiles: 1, noDragEventsBubbling: true
     });
 
-    // --- ENVIO PARA API ---
+    const { getRootProps: getVerifProps, getInputProps: getVerifInput } = useDropzone({
+        onDrop: onDropVerification, accept: { 'application/pdf': [], 'image/*': [] }, maxFiles: 1
+    });
+
     const handleInitialize = async () => {
         setIsSubmitting(true);
         const onboardingData = {
             name, age, gender, course: studyArea, identityId: studentId, role,
-            image: profileImage, torsoImage: torsoImage
+            institution, verificationDoc,
+            image: profileImage, torsoImage: torsoImage,
+            countryCode: selectedCountry
         };
-
-        try {
-            await fetch('/api/auth/onboarding', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(onboardingData),
-            });
-            await signIn('google', { callbackUrl: '/dashboard' });
-        } catch (error) {
-            console.error("Erro na sincronização:", error);
-            setIsSubmitting(false);
-        }
+        localStorage.setItem('zaeon_onboarding', JSON.stringify(onboardingData));
+        await signIn('google', { callbackUrl: '/workstation' });
     };
 
-    // --- EFEITOS E GESTÃO DE JANELA ---
     useEffect(() => {
         setMounted(true);
         if (isOpen && !isMinimized) document.body.style.overflow = 'hidden';
@@ -100,7 +144,6 @@ const ZaeonAuthModal = ({ isOpen, onClose, role }: ZaeonAuthModalProps) => {
         return () => { document.body.style.overflow = 'auto'; };
     }, [isOpen, isMinimized]);
 
-    // Physics Engine (Partículas)
     const canvasRef = useRef<HTMLCanvasElement>(null);
     useEffect(() => {
         if (!isOpen || !mounted || isMinimized) return;
@@ -146,6 +189,11 @@ const ZaeonAuthModal = ({ isOpen, onClose, role }: ZaeonAuthModalProps) => {
 
     if (!mounted || !isOpen) return null;
 
+    let loginButtonText = "Sign in with Google";
+    if (selectedCountry === 'br' && institution === 'unilab') loginButtonText = "Sign in with UNILAB (.edu account)";
+    else if (selectedCountry === 'br' && institution === 'ufc') loginButtonText = "Sign in with UFC (.edu account)";
+    else if (selectedCountry === 'br' && institution === 'ifce') loginButtonText = "Sign in with IFCE (.edu account)";
+
     const modalContent = (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 md:p-0">
             <AnimatePresence mode="wait">
@@ -164,20 +212,17 @@ const ZaeonAuthModal = ({ isOpen, onClose, role }: ZaeonAuthModalProps) => {
                         className="relative z-10 w-full max-w-[950px] h-[720px] bg-gray-200/90 dark:bg-[#0f172a] rounded-2xl shadow-2xl overflow-hidden border border-white/50 dark:border-white/10 grid grid-cols-1 md:grid-cols-[1.3fr_0.7fr]"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {/* TRAFFIC LIGHTS */}
                         <div className="absolute top-4 left-4 z-50 flex items-center gap-2 group/traffic">
                             <button onClick={onClose} className="w-3 h-3 rounded-full bg-[#ff5f56] border border-[#e0443e] hover:brightness-90 transition-all shadow-sm" />
                             <button onClick={() => setIsMinimized(true)} className="w-3 h-3 rounded-full bg-[#ffbd2e] border border-[#dea123] hover:brightness-90 transition-all shadow-sm" />
                             <button className="w-3 h-3 rounded-full bg-[#27c93f] border border-[#1aab29] hover:brightness-90 transition-all shadow-sm" />
                         </div>
 
-                        {/* --- LADO ESQUERDO --- */}
-                        <div className="relative h-full p-8 flex flex-col items-center pt-14 overflow-y-auto no-scrollbar scroll-smooth">
+                        <div className="relative h-full p-8 flex flex-col items-center pt-14 overflow-y-auto custom-scrollbar scroll-smooth">
                             <div className="absolute top-6 left-6 opacity-5 dark:opacity-10 text-5xl font-black uppercase tracking-tighter -rotate-12 pointer-events-none select-none text-black dark:text-white">{role}</div>
 
-                            <div className="w-full flex flex-col gap-6 pb-24 mt-2">
-                                {/* DADOS PESSOAIS */}
-                                <motion.div drag dragConstraints={{ left: -30, right: 30, top: -30, bottom: 30 }} className="relative z-30 w-full bg-white dark:bg-[#1e293b] rounded-xl p-5 border border-gray-100 dark:border-white/10 shadow-lg">
+                            <div className="w-full flex flex-col gap-6 pb-8 mt-2">
+                                <motion.div drag dragConstraints={{ left: -30, right: 30, top: -30, bottom: 30 }} className="relative z-40 w-full bg-white dark:bg-[#1e293b] rounded-xl p-5 border border-gray-100 dark:border-white/10 shadow-lg">
                                     <StringLine height={70} />
                                     <div className="flex items-center gap-2 mb-4 border-b border-dashed border-gray-200 pb-2">
                                         <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
@@ -186,7 +231,7 @@ const ZaeonAuthModal = ({ isOpen, onClose, role }: ZaeonAuthModalProps) => {
                                     <div className="space-y-4">
                                         <div>
                                             <label className="text-[9px] text-gray-500 uppercase font-bold tracking-wider ml-1">Full Name</label>
-                                            <div className="flex items-center bg-gray-50 dark:bg-black/30 rounded-lg border border-gray-200 px-3 py-1">
+                                            <div className="flex items-center bg-gray-50 dark:bg-black/30 rounded-lg border border-gray-200 dark:border-white/10 px-3 py-1 focus-within:border-purple-500 transition-colors">
                                                 <User size={14} className="text-gray-400" />
                                                 <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Subject Name" className="w-full bg-transparent border-none text-sm p-2 focus:ring-0 text-gray-900 dark:text-gray-200 outline-none" />
                                             </div>
@@ -203,40 +248,147 @@ const ZaeonAuthModal = ({ isOpen, onClose, role }: ZaeonAuthModalProps) => {
                                             <div className="flex-1">
                                                 <label className="text-[9px] text-gray-500 uppercase font-bold tracking-wider ml-1">Biometrics</label>
                                                 <div className="relative flex h-11 bg-gray-100 dark:bg-[#0f172a] rounded-lg p-1 border cursor-pointer border-gray-200 dark:border-white/10">
-                                                    <motion.div className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-md transition-all ${gender === 'male' ? 'bg-blue-500' : 'bg-pink-500 left-[50%]'}`} />
-                                                    <button onClick={() => setGender('male')} className="flex-1 z-10 flex justify-center"><Mars size={16} className={gender === 'male' ? 'text-white' : 'text-gray-500'} /></button>
-                                                    <button onClick={() => setGender('female')} className="flex-1 z-10 flex justify-center"><Venus size={16} className={gender === 'female' ? 'text-white' : 'text-gray-500'} /></button>
+                                                    {/* Slider dinâmico para 3 posições */}
+                                                    <motion.div 
+                                                        className={`absolute top-1 bottom-1 w-[calc(33.33%-4px)] rounded-md transition-all ${
+                                                            gender === 'male' ? 'bg-blue-500' : 
+                                                            gender === 'other' ? 'bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500' : 
+                                                            'bg-pink-500'
+                                                        }`} 
+                                                        animate={{ 
+                                                            left: gender === 'male' ? '4px' : gender === 'other' ? '33.33%' : '66.66%' 
+                                                        }}
+                                                    />
+                                                    <button onClick={() => setGender('male')} className="flex-1 z-10 flex justify-center items-center"><Mars size={18} className={gender === 'male' ? 'text-white' : 'text-gray-500'} /></button>
+                                                    <button onClick={() => setGender('other')} className="flex-1 z-10 flex justify-center items-center">
+                                                        <div className={`w-4 h-4 rounded-sm transition-opacity ${gender === 'other' ? 'opacity-100 ring-1 ring-white/50' : 'opacity-40 grayscale'}`} style={{ background: 'linear-gradient(180deg, #FF0018 0%, #FF8D00 20%, #FFED00 40%, #008026 60%, #004CFF 80%, #732982 100%)'}} />
+                                                    </button>
+                                                    <button onClick={() => setGender('female')} className="flex-1 z-10 flex justify-center items-center"><Venus size={18} className={gender === 'female' ? 'text-white' : 'text-gray-500'} /></button>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 </motion.div>
 
-                                {/* ÁREA */}
-                                <motion.div drag dragConstraints={{ left: -30, right: 30 }} className="relative z-20 w-full bg-white dark:bg-[#1e293b] rounded-xl p-5 border border-gray-100 dark:border-white/10 shadow-lg">
+                                <motion.div drag dragConstraints={{ left: -30, right: 30 }} className="relative z-30 w-full bg-white dark:bg-[#1e293b] rounded-xl p-5 border border-gray-100 dark:border-white/10 shadow-lg">
                                     <StringLine height={40} />
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <BookOpen size={14} className="text-purple-500" />
-                                        <span className="text-[9px] uppercase tracking-widest text-gray-500 font-bold">Knowledge Base</span>
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div className="flex items-center gap-2">
+                                            <BookOpen size={14} className="text-purple-500" />
+                                            <span className="text-[9px] uppercase tracking-widest text-gray-500 font-bold">Knowledge Base</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 bg-gray-100 dark:bg-black/40 p-1 rounded-full border border-gray-200 dark:border-white/10">
+                                            {COUNTRIES.map(c => (
+                                                <button
+                                                    key={c.id}
+                                                    onClick={() => setSelectedCountry(c.id)}
+                                                    className={`w-6 h-6 flex items-center justify-center rounded-full text-xs transition-all duration-300 ${
+                                                        selectedCountry === c.id 
+                                                        ? 'bg-white dark:bg-white/20 shadow-sm scale-110 ring-1 ring-purple-500/50' 
+                                                        : 'opacity-50 hover:opacity-100 hover:bg-white/50 dark:hover:bg-white/10'
+                                                    }`}
+                                                    title={c.langMatch.toUpperCase()}
+                                                >
+                                                    {c.flag}
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
-                                    <input type="text" value={studyArea} onChange={(e) => setStudyArea(e.target.value)} placeholder="Ex: Software Engineering" className="w-full bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded px-3 py-2 text-xs focus:border-purple-500 outline-none text-slate-800 dark:text-white" />
+                                    <div className="relative">
+                                        <input 
+                                            type="text" 
+                                            value={studyArea} 
+                                            onChange={(e) => {
+                                                setStudyArea(e.target.value);
+                                                setShowDropdown(true);
+                                            }}
+                                            onFocus={() => setShowDropdown(true)}
+                                            onBlur={() => setTimeout(() => setShowDropdown(false), 200)} 
+                                            placeholder={activeCountryData.placeholder} 
+                                            className="w-full bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded px-3 py-2 text-xs focus:border-purple-500 outline-none text-slate-800 dark:text-white transition-all" 
+                                        />
+                                        <AnimatePresence>
+                                            {showDropdown && studyArea.length > 0 && (
+                                                <motion.ul 
+                                                    initial={{ opacity: 0, y: -5 }} 
+                                                    animate={{ opacity: 1, y: 0 }} 
+                                                    exit={{ opacity: 0, y: -5 }}
+                                                    className="absolute top-full left-0 right-0 mt-2 max-h-40 overflow-y-auto bg-white dark:bg-[#0f172a] border border-gray-200 dark:border-white/10 rounded-lg shadow-xl z-50 custom-scrollbar"
+                                                >
+                                                    {filteredCourses.length > 0 ? filteredCourses.map(course => (
+                                                        <li key={course} onClick={() => { setStudyArea(course); setShowDropdown(false); }} className="px-4 py-2.5 text-xs cursor-pointer hover:bg-purple-50 dark:hover:bg-white/5 text-slate-700 dark:text-gray-300 border-b border-gray-100 dark:border-white/5 last:border-none transition-colors">
+                                                            {course}
+                                                        </li>
+                                                    )) : (
+                                                        <li className="px-4 py-2.5 text-xs text-gray-400 italic">Course not found in Zaeon Registry.</li>
+                                                    )}
+                                                </motion.ul>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
                                 </motion.div>
-                            </div>
 
-                            {/* FOOTER BOTÃO GOOGLE */}
-                            <div className="absolute bottom-6 w-full px-12 z-50">
-                                <button onClick={handleInitialize} disabled={!isReadyToSign} className={`w-full relative group font-bold py-3 rounded-xl shadow-lg transition-all flex items-center justify-center gap-3 border ${isReadyToSign ? 'bg-white text-black hover:scale-[1.02] border-gray-200' : 'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 border-transparent cursor-not-allowed'}`}>
-                                    {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <Image src="https://authjs.dev/img/providers/google.svg" alt="G" width={20} height={20} />}
-                                    <span className="text-sm">Sign in with Google</span>
-                                </button>
+                                {isAcademicRole && (
+                                    <div className="relative z-20 w-full flex flex-col gap-6">
+                                        <motion.div drag dragConstraints={{ left: -10, right: 10 }} className={`${selectedCountry === 'br' ? 'w-5/6 mx-auto' : 'w-full'} bg-white dark:bg-[#1e293b] rounded-xl p-4 border border-gray-100 dark:border-white/10 shadow-md transition-all duration-500`}>
+                                            <div className="flex items-center justify-between mb-3">
+                                                <div className="flex items-center gap-2">
+                                                    <FileText size={14} className="text-emerald-500" />
+                                                    <span className="text-[9px] uppercase tracking-widest text-gray-500 font-bold">{selectedCountry === 'br' ? 'Manual Verification' : 'Academic Verification'}</span>
+                                                </div>
+                                                {selectedCountry !== 'br' && (
+                                                    <div className="flex items-center gap-1 opacity-50">
+                                                        <Globe size={12} className="text-gray-400"/><span className="text-[8px] uppercase font-bold text-gray-400">Global Student</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div {...getVerifProps()} className={`w-full border-2 border-dashed rounded-lg p-3 flex flex-col items-center justify-center cursor-pointer transition-colors ${verificationDoc ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/10' : 'border-gray-300 dark:border-white/20 hover:border-emerald-400 dark:hover:border-emerald-500'}`}>
+                                                <input {...getVerifInput()} />
+                                                {verificationDoc ? (
+                                                    <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">Document Attached</span>
+                                                ) : (
+                                                    <>
+                                                        <Upload size={16} className="text-gray-400 mb-1" />
+                                                        <span className="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase text-center">Upload {role === 'student' ? 'Student ID' : 'Faculty ID'}</span>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </motion.div>
+
+                                        {selectedCountry === 'br' && (
+                                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+                                                <div className="flex items-center w-full px-2 mb-6">
+                                                    <div className="flex-1 border-t border-gray-200 dark:border-white/10"></div>
+                                                    <span className="px-4 text-[9px] font-bold text-gray-400 uppercase tracking-widest">OR ACCESS VIA PARTNER</span>
+                                                    <div className="flex-1 border-t border-gray-200 dark:border-white/10"></div>
+                                                </div>
+                                                <div className="grid grid-cols-3 gap-3 w-full px-1">
+                                                    {PARTNER_INSTITUTIONS.map(inst => (
+                                                        <button key={inst.id} onClick={() => { setInstitution(inst.id); setVerificationDoc(null); }} className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${institution === inst.id ? 'bg-emerald-50 border-emerald-500 shadow-md dark:bg-emerald-900/20 dark:border-emerald-500' : 'bg-white border-gray-200 hover:border-emerald-300 dark:bg-[#1e293b] dark:border-white/10 dark:hover:border-emerald-500/50'}`}>
+                                                            <div className="relative w-16 h-16 mb-2 bg-white rounded-lg p-2 border border-gray-100 shadow-sm flex items-center justify-center">
+                                                                <Image src={inst.logo} alt={inst.name} width={48} height={48} className="object-contain" />
+                                                            </div>
+                                                            <span className="text-[10px] font-bold uppercase tracking-widest text-gray-700 dark:text-gray-200">{inst.name}</span>
+                                                            <span className="text-[8px] text-gray-400 mt-1 uppercase text-center leading-tight font-medium">{role === 'student' ? 'Student' : 'Professor'}</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </div>
+                                )}
+
+                                <div className="w-full mt-4">
+                                    <button onClick={handleInitialize} disabled={!isReadyToSign} className={`w-full relative group font-bold py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-3 border ${isReadyToSign ? 'bg-white text-black hover:scale-[1.02] border-gray-200' : 'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 border-transparent cursor-not-allowed'}`}>
+                                        {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <Image src="https://authjs.dev/img/providers/google.svg" alt="G" width={20} height={20} />}
+                                        <span className="text-xs tracking-wider uppercase">{loginButtonText}</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
-                        {/* --- LADO DIREITO (PREVIEW CARD) --- */}
                         <div {...getTorsoProps()} className="relative hidden md:block border-l border-white/50 h-full overflow-hidden bg-gray-200/50 dark:bg-[#080d16] group cursor-pointer">
                             <input {...getTorsoInput()} />
-                            
-                            {/* Placeholder / Torso Image Container */}
                             {torsoImage ? (
                                 <Image src={torsoImage} alt="Torso" fill className="object-cover transition-all duration-700 group-hover:scale-105" priority />
                             ) : (
@@ -245,10 +397,7 @@ const ZaeonAuthModal = ({ isOpen, onClose, role }: ZaeonAuthModalProps) => {
                                     <span className="text-[10px] font-black uppercase tracking-widest bg-white/50 dark:bg-black/30 px-4 py-2 rounded-full border border-white/40 dark:border-white/10 backdrop-blur-sm">Drop Cover Photo</span>
                                 </div>
                             )}
-
                             <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80 pointer-events-none" />
-
-                            {/* FACE CIRCLE */}
                             <div {...getProfileProps()} className="absolute top-[15%] right-[28%] z-30 w-32 h-32 rounded-full border-2 border-blue-400 bg-blue-50/80 dark:bg-blue-900/50 backdrop-blur-md flex flex-col items-center justify-center text-center p-2 shadow-2xl group/circle cursor-pointer overflow-visible hover:scale-105 transition-transform">
                                 <input {...getProfileInput()} />
                                 {profileImage ? (
@@ -261,7 +410,6 @@ const ZaeonAuthModal = ({ isOpen, onClose, role }: ZaeonAuthModalProps) => {
                                 )}
                                 <div className="absolute -bottom-3 bg-blue-600 p-1.5 rounded-full shadow-lg border-2 border-white/20 pointer-events-none"><Upload size={14} className="text-white" /></div>
                             </div>
-
                             <div className="absolute bottom-10 left-8 right-8 text-white z-10 pointer-events-none">
                                 <div className="inline-block px-2 py-1 bg-green-500/20 border border-green-500/30 rounded text-[10px] text-green-400 font-mono mb-2 backdrop-blur-md">
                                     SYSTEM: {(studyArea || role).toUpperCase()}_MODE
@@ -273,7 +421,6 @@ const ZaeonAuthModal = ({ isOpen, onClose, role }: ZaeonAuthModalProps) => {
                     </motion.div>
                 )}
 
-                {/* MINIMIZED VIEW */}
                 {isMinimized && (
                     <motion.div initial={{ y: 100 }} animate={{ y: 0 }} className="fixed bottom-6 right-6 z-[10000] pointer-events-auto">
                         <div onClick={() => setIsMinimized(false)} className="flex items-center gap-3 bg-gray-900/90 backdrop-blur-xl border border-white/10 p-3 pr-5 rounded-full shadow-2xl cursor-pointer hover:bg-gray-800 transition-colors border-l-4 border-l-green-500">

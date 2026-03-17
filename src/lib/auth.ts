@@ -4,6 +4,12 @@ import { MongoDBAdapter } from "@auth/mongodb-adapter";
 import { clientPromise } from "@/src/lib/db";
 import { MongoClient } from "mongodb";
 
+// 1. CRIE A LISTA VIP AQUI
+const ADMIN_EMAILS = [
+    "zaeondao@gmail.com",
+    "martinez@zaeon.space"
+];
+
 export const authOptions: NextAuthOptions = {
     adapter: MongoDBAdapter(clientPromise),
     providers: [
@@ -37,8 +43,10 @@ export const authOptions: NextAuthOptions = {
                     session.user.role = dbUser.role || "student";
                     // @ts-ignore
                     session.user.course = dbUser.course || "";
+                    
+                    // 2. A MÁGICA: Verifica se o e-mail do banco está na lista VIP
                     // @ts-ignore
-                    session.user.isAdmin = dbUser.email === "[EMAIL_ADDRESS]";
+                    session.user.isAdmin = ADMIN_EMAILS.includes(dbUser.email.toLowerCase());
                 }
             }
             return session;

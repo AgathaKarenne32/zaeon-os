@@ -1,435 +1,321 @@
-
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
-    PaperAirplaneIcon,
-    PlayIcon,
-    ArrowDownTrayIcon,
-    CommandLineIcon,
-    EyeIcon,
-    PowerIcon,
-    UserCircleIcon,
-    RocketLaunchIcon,
-    XMarkIcon,
-    ShieldCheckIcon
+    ChevronRightIcon, UserGroupIcon, BeakerIcon,
+    CpuChipIcon, ShieldCheckIcon, SparklesIcon,
+    ArrowPathIcon, ChartBarIcon, BookOpenIcon,
+    CameraIcon, PencilSquareIcon, EyeIcon,
+    HandRaisedIcon, LockClosedIcon,
+    AcademicCapIcon, UserGroupIcon as CollabIcon
 } from "@heroicons/react/24/outline";
 import MatrixRain from "@/components/main/star-background";
 
-// --- NEXT AUTH & TRANSLATION ---
-import { useSession, signIn } from "next-auth/react";
-import { useTranslation } from "react-i18next";
+// --- MAPEAMENTO DE CURSOS PARA SALAS ---
+const ROOM_MAPPING: Record<string, string[]> = {
+    cyber: ["Ciência da Computação", "Engenharia de Software", "Sistemas de Informação", "Análise e Desenvolvimento de Sistemas", "Engenharia da Computação", "Redes de Computadores", "Segurança da Informação / Cibersegurança", "Banco de Dados", "Inteligência Artificial", "Ciência de Dados", "Computação em Nuvem", "Internet das Coisas", "Robótica", "Jogos Digitais", "Design Digital / UX / UI", "Computer Science", "Software Engineering"],
+    med: ["Medicina", "Enfermagem", "Odontologia", "Farmácia", "Fisioterapia", "Nutrição", "Psicologia", "Fonoaudiologia", "Terapia Ocupacional", "Biomedicina", "Educação Física"],
+    bio: ["Ciências Biológicas", "Biologia", "Biotecnologia", "Bioquímica", "Bioinformática", "Ecologia"],
+    quantic: ["Matemática", "Matemática Aplicada", "Estatística", "Física", "Astronomia", "Astrofísica", "Geofísica", "Meteorologia"],
+    humanities: ["História", "Geografia", "Filosofia", "Sociologia", "Antropologia", "Ciência Política", "Relações Internacionais", "Letras", "Linguística", "Pedagogia", "Artes", "Música", "Teatro", "Dança", "Cinema e Audiovisual", "Arquivologia", "Biblioteconomia", "Museologia", "Serviço Social", "Comunicação Social", "Jornalismo", "Publicidade e Propaganda", "Editoração", "Produção Cultural", "Direito", "Teologia"]
+};
 
-// --- UTILS ---
-// Se uploadToPinata depender de wallet, remova ou adapte.
-// Assumindo aqui que é uma função de utilidade pura ou backend.
-import { uploadToPinata } from "@/src/utils/ipfs";
+const ROOM_DETAILS = {
+    cyber: { id: "cyber", name: "Cyber Room", icon: CpuChipIcon, color: "text-cyan-600 dark:text-cyan-400", bg: "bg-cyan-50 dark:bg-cyan-500/10", border: "border-cyan-300 dark:border-cyan-500/30", route: "/study-rooms/cyber" },
+    med: { id: "med", name: "MedLab", icon: ChartBarIcon, color: "text-rose-600 dark:text-rose-400", bg: "bg-rose-50 dark:bg-rose-500/10", border: "border-rose-300 dark:border-rose-500/30", route: "/study-rooms/med" },
+    bio: { id: "bio", name: "Bio Room", icon: BeakerIcon, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-500/10", border: "border-emerald-300 dark:border-emerald-500/30", route: "/study-rooms/bio" },
+    quantic: { id: "quantic", name: "Quantic Room", icon: SparklesIcon, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-500/10", border: "border-blue-300 dark:border-blue-500/30", route: "/study-rooms/quantic" },
+    humanities: { id: "humanities", name: "Grand Archive", icon: BookOpenIcon, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-500/10", border: "border-amber-300 dark:border-amber-500/30", route: "/study-rooms/humanities" },
+};
 
-// --- ASSETS ---
-const ZENITA_IMAGE = "/assets/zenitta.png";
-const ZENITA_BOOSTER = "/assets/zenitta-booster.png";
+// --- ÁRVORE DE HABILIDADES GAMIFICADA (RANKS F -> SS) ---
+const UNIVERSAL_SKILLS = [
+    { id: "writing", name: "Academic Writing", icon: PencilSquareIcon, color: "text-purple-500", rank: "C", current: 4, next: 5, metricName: "Papers", locked: false },
+    { id: "focus", name: "Deep Focus", icon: EyeIcon, color: "text-cyan-500", rank: "E", current: 15, next: 50, metricName: "Hours", locked: false },
+    { id: "collab", name: "Collective Synergy", icon: CollabIcon, color: "text-blue-500", rank: "D", current: 4, next: 10, metricName: "Projects", locked: false },
+    { id: "participation", name: "Participation", icon: HandRaisedIcon, color: "text-emerald-500", rank: "F", current: 0, next: 5, metricName: "Validations", locked: true, note: "Teacher Controlled" }
+];
 
-// --- COMPONENTES AUXILIARES ---
-const IosLoader = ({ status }: { status: string }) => (
-    <div className="flex flex-col items-center justify-center space-y-4 py-4">
-        <div className="relative w-8 h-8">
-            {[...Array(8)].map((_, i) => (
-                <motion.div
-                    key={i}
-                    className="absolute w-[2px] h-[8px] bg-slate-400 rounded-full"
-                    style={{ left: "50%", top: "30%", transformOrigin: "50% 180%", rotate: i * 45 }}
-                    animate={{ opacity: [0.1, 1, 0.1] }}
-                    transition={{ repeat: Infinity, duration: 0.8, delay: i * 0.1 }}
-                />
-            ))}
+// --- COMPONENTE: GAVETA DE HABILIDADE ---
+const SkillDrawer = ({ skill, isOpen, onToggle }: any) => {
+    const progressPercent = Math.min((skill.current / skill.next) * 100, 100);
+    return (
+        <div className="relative z-40 group/drawer flex items-center">
+            <div className="w-6 h-[2px] bg-slate-400/50 dark:bg-cyan-500/30" />
+            <motion.button onClick={onToggle} className={`relative w-9 h-9 flex items-center justify-center border rounded-full transition-all z-50 shadow-md bg-white/80 dark:bg-[#0a0a0a] backdrop-blur-md hover:scale-110 ${skill.locked ? 'border-slate-300 dark:border-white/10 opacity-70' : 'border-slate-400 dark:border-cyan-500/50'}`}>
+                <skill.icon className={`w-4 h-4 ${skill.locked ? 'text-slate-400' : skill.color}`} />
+            </motion.button>
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div initial={{ x: -20, opacity: 0, scale: 0.8 }} animate={{ x: 10, opacity: 1, scale: 1 }} exit={{ x: -10, opacity: 0, scale: 0.8 }} transition={{ type: "spring", stiffness: 300, damping: 20 }} className="absolute left-full ml-2 w-56 bg-white/90 dark:bg-[#0a0a0a]/95 border border-slate-300 dark:border-cyan-500/30 p-4 rounded-2xl shadow-xl backdrop-blur-2xl z-50">
+                        <div className="flex justify-between items-start mb-3">
+                            <div className="flex flex-col">
+                                <span className={`text-[10px] font-black uppercase tracking-widest ${skill.color}`}>{skill.name}</span>
+                                <span className="text-xs font-black text-slate-800 dark:text-white mt-1">Rank {skill.rank}</span>
+                            </div>
+                            {skill.locked && <LockClosedIcon className="w-4 h-4 text-slate-400" title="Only teachers can inject XP" />}
+                        </div>
+                        <div className="flex justify-between items-end mb-1.5">
+                            <span className="text-[9px] uppercase font-bold text-slate-400 dark:text-white/40 tracking-widest">Progress</span>
+                            <span className="text-[10px] font-mono font-bold text-slate-700 dark:text-white/80">{skill.current} / {skill.next} <span className="text-[8px] uppercase">{skill.metricName}</span></span>
+                        </div>
+                        <div className="w-full h-2 bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden shadow-inner">
+                            <motion.div initial={{ width: 0 }} animate={{ width: `${progressPercent}%` }} className={`h-full ${skill.locked ? 'bg-emerald-500/50' : 'bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.8)]'}`} />
+                        </div>
+                        {skill.locked && <p className="text-[8px] text-emerald-600 dark:text-emerald-400 mt-2 uppercase tracking-widest font-bold">{skill.note}</p>}
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
-        <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] animate-pulse">{status}</span>
-    </div>
+    );
+};
+
+// --- COMPONENTE: DNA 3D AVANÇADO ---
+const RealisticDNA = () => (
+    <motion.div animate={{ opacity: [0.4, 0.8, 0.4], scale: [0.98, 1.02, 0.98] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }} className="absolute inset-0 flex flex-col items-center justify-around py-12 pointer-events-none z-10 mix-blend-multiply dark:mix-blend-screen" style={{ perspective: "1000px" }}>
+        {[...Array(22)].map((_, i) => (
+            <motion.div key={i} className="relative w-16 h-[2px] flex items-center justify-between" animate={{ rotateY: [0, 360] }} transition={{ duration: 8, repeat: Infinity, ease: "linear", delay: i * 0.15 }}>
+                <div className="w-2 h-2 rounded-full bg-blue-500 dark:bg-indigo-500 shadow-[0_0_10px_#4f46e5]" />
+                <div className="flex-1 h-px bg-gradient-to-r from-blue-500/50 to-cyan-500/50 dark:from-indigo-500/50 dark:to-cyan-400/50" />
+                <div className="w-2 h-2 rounded-full bg-cyan-500 dark:bg-cyan-400 shadow-[0_0_10px_#06b6d4]" />
+            </motion.div>
+        ))}
+    </motion.div>
 );
 
 export default function WorkStationPage() {
-    const { data: session, status } = useSession();
+    const { data: session, status, update } = useSession();
     const router = useRouter();
-    const { t } = useTranslation();
-
     const [mounted, setMounted] = useState(false);
-    const [activeSection, setActiveSection] = useState<"doc" | "chat" | "terminal" | null>(null);
-    const [prompt, setPrompt] = useState("");
-    const [docTitle, setDocTitle] = useState("Untitled_Research_Paper.txt");
-    const [docContent, setDocContent] = useState("");
-    const [terminalLogs, setTerminalLogs] = useState<string[]>([]);
-    const [isSystemProcessing, setIsSystemProcessing] = useState(false); // Renomeado de BlockchainProcessing
+    const [isSyncing, setIsSyncing] = useState(false);
+    const [activeSkill, setActiveSkill] = useState<string | null>(null);
 
-    // Agente Único: Zenita
-    const activeConfig = {
-        name: "Zenita",
-        role: "Technology & AI",
-        icon: CommandLineIcon,
-        color: "text-cyan-400",
-        bg: "bg-cyan-500/20",
-        border: "border-cyan-500/50",
-        image: ZENITA_IMAGE,
-        boosterImage: ZENITA_BOOSTER,
-        contentPadding: "pl-[290px]"
+    // --- LEITURA DA CHAVE MESTRA (ADMIN) ---
+    // @ts-ignore
+    const isSuperAdmin = !!session?.user?.isAdmin;
+
+    const userCourse = (session?.user as any)?.course || "";
+    const kycStatus = (session?.user as any)?.kycStatus || "pending";
+    const academicLevel = (session?.user as any)?.academicLevel || "Graduação";
+    const [userImage, setUserImage] = useState(session?.user?.image || "/assets/default-avatar.png");
+
+    const getTargetRoom = () => {
+        if (kycStatus === "rejected") return null;
+        for (const [room, courses] of Object.entries(ROOM_MAPPING)) {
+            if (courses.includes(userCourse)) return room as keyof typeof ROOM_DETAILS;
+        }
+        return null;
     };
 
-    const [isImageLoading, setIsImageLoading] = useState(false);
-    const [chatHistory, setChatHistory] = useState<{ role: 'user' | 'ai', text: string }[]>([]);
-    const [isTyping, setIsTyping] = useState(false);
-    const [isFocusMode, setIsFocusMode] = useState(false);
-    const [isBoosterOpen, setIsBoosterOpen] = useState(false);
+    const targetRoomKey = getTargetRoom();
+    const targetRoom = targetRoomKey ? ROOM_DETAILS[targetRoomKey] : null;
 
-    const chatContainerRef = useRef<HTMLDivElement>(null);
-    const terminalRef = useRef<HTMLDivElement>(null);
-
-    // --- BLINDAGEM DA PÁGINA ---
-    useEffect(() => {
-        if (status === "loading") return;
-
-        if (status === "unauthenticated") {
-            router.replace("/");
-            return;
-        }
-
-        if (status === "authenticated") {
-            const isAdmin = (session?.user as any)?.isAdmin;
-            const userRole = (session?.user as any)?.role;
-
-            if (isAdmin) return;
-
-            if (userRole === "student" || userRole === "researcher") {
-                router.replace("/homework");
-            }
-        }
-    }, [status, session, router]);
+    useEffect(() => { setMounted(true); }, []);
 
     useEffect(() => {
-        setMounted(true);
-        setTimeout(() => addLog("System initialized. Zenita Agent ready."), 100);
-    }, []);
-
-    const addLog = (msg: string) => {
-        setTerminalLogs(prev => [...prev, `zaeon@root:~$ ${msg}`]);
-    };
-
-    const scrollToBottom = () => {
-        if (chatContainerRef.current) {
-            chatContainerRef.current.scrollTo({ top: chatContainerRef.current.scrollHeight, behavior: "smooth" });
-        }
-        if (terminalRef.current) {
-            terminalRef.current.scrollTo({ top: terminalRef.current.scrollHeight, behavior: "smooth" });
-        }
-    };
-
-    // Load Session
-    useEffect(() => {
-        const loadSession = async () => {
-            const userId = session?.user?.email;
-            if (userId) {
-                addLog(`Loading workspace for ${userId}...`);
+        const syncOnboardingData = async () => {
+            const savedData = localStorage.getItem('zaeon_onboarding');
+            if (savedData && status === "authenticated") {
+                setIsSyncing(true);
                 try {
-                    const res = await fetch(`/api/workspace?userId=${userId}`);
-                    const json = await res.json();
-                    if (json.data) {
-                        if (json.data.title) setDocTitle(json.data.title);
-                        if (json.data.content) setDocContent(json.data.content);
-                        if (json.data.chatHistory) setChatHistory(json.data.chatHistory);
-                        addLog("Session restored successfully from Neural Cloud.");
+                    const onboardingPayload = JSON.parse(savedData);
+                    const res = await fetch('/api/auth/onboarding', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(onboardingPayload)
+                    });
+                    if (res.ok) {
+                        localStorage.removeItem('zaeon_onboarding');
+                        await update();
                     }
-                } catch (e) { console.error(e); }
+                } catch (error) { console.error(error); }
+                finally { setIsSyncing(false); }
             }
         };
-        if (mounted && session) loadSession();
-    }, [mounted, session]);
+        if (mounted) syncOnboardingData();
+    }, [mounted, status, update]);
 
-    useEffect(() => { if (mounted) scrollToBottom(); }, [chatHistory, terminalLogs, mounted, isTyping]);
-
-    const handleSend = async () => {
-        if (!prompt.trim()) return;
-        const currentPrompt = prompt;
-        setChatHistory(prev => [...prev, { role: 'user', text: currentPrompt }]);
-        setPrompt("");
-        setIsTyping(true);
-        try {
-            const response = await fetch('/api/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: currentPrompt, agent: "zenita" })
-            });
-            const data = await response.json();
-            setChatHistory(prev => [...prev, { role: 'ai', text: data.text }]);
-        } catch (error) {
-            addLog("Error connecting to AI API.");
-        } finally { setIsTyping(false); }
-    };
-
-    const handleBoostAndSave = async () => {
-        setIsSystemProcessing(true);
-        addLog("🚀 Initiating System Synchronization...");
-
-        try {
-            await new Promise(r => setTimeout(r, 1500)); // Delay visual
-            addLog("✅ Data Integrity Verified.");
-
-            const userId = session?.user?.email;
-
-            if (!userId) {
-                throw new Error("User session invalid.");
-            }
-
-            const res = await fetch('/api/workspace', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userId,
-                    title: docTitle,
-                    content: docContent,
-                    agent: "zenita",
-                    chatHistory,
-                    terminalLogs
-                })
-            });
-
-            if (res.ok) {
-                addLog("✅ Session saved to Neural Cloud.");
-                setIsBoosterOpen(false);
-            } else {
-                throw new Error("API Response not OK");
-            }
-        } catch (error: any) {
-            addLog(`❌ Save Error: ${error.message || "Unknown error"}`);
-        } finally {
-            setIsSystemProcessing(false);
+    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => setUserImage(reader.result as string);
+            reader.readAsDataURL(file);
         }
     };
 
-    const handleGenerateProtocol = async () => {
-        setIsSystemProcessing(true);
-        addLog(`Generating protocol via ${activeConfig.name}...`);
-
-        const generatedText = `RESEARCH PAPER: ${docTitle}\n\nAUTHOR: ${activeConfig.name} (AI Agent)\nDATE: ${new Date().toISOString()}\n\nANALYSIS: Verified via Zaeon Protocol.`;
-        setDocContent(generatedText);
-
-        try {
-            const ipfsHash = await uploadToPinata({
-                title: docTitle,
-                topic: docTitle,
-                agent: activeConfig.name,
-                content: generatedText
-            });
-            if (ipfsHash) addLog(`IPFS Success: ${ipfsHash}`);
-        } catch (e) {
-            addLog("❌ IPFS Upload failed.");
-        } finally {
-            setIsSystemProcessing(false);
-        }
-    };
-
-    // --- RENDERIZAÇÃO CONDICIONAL ---
-    if (!mounted || status === "loading") {
+    if (!mounted || status === "loading" || isSyncing) {
         return (
-            <div className="w-full h-screen bg-[#030014] flex items-center justify-center z-[999]">
-                <IosLoader status="SINCRONIZANDO WORKSTATION..." />
+            <div className="w-full h-screen bg-slate-100/50 dark:bg-[#030014] flex flex-col items-center justify-center z-[999]">
+                <ArrowPathIcon className="w-8 h-8 text-cyan-600 dark:text-cyan-500 animate-spin mb-4" />
+                <span className="text-[10px] font-black text-cyan-600 dark:text-cyan-500 uppercase tracking-[0.3em] animate-pulse">
+                    {isSyncing ? "Neural Sync in Progress..." : "Loading Workstation..."}
+                </span>
             </div>
         );
     }
 
-    const isAdmin = (session?.user as any)?.isAdmin;
-    const isAuthorized = isAdmin || (session?.user as any)?.role === "professional" || (session?.user as any)?.role === "entrepreneur";
+    if (status === "unauthenticated") { router.replace("/"); return null; }
 
-    if (status === "unauthenticated" || !isAuthorized) return null;
-
-    const panelStyle = "relative overflow-hidden backdrop-blur-2xl border border-white/10 shadow-[0_0_40px_rgba(34,211,238,0.12)] bg-[linear-gradient(135deg,rgba(7,38,77,0.4),rgba(11,58,164,0.3),rgba(7,38,77,0.4))] rounded-[24px] transition-all duration-300";
+    const cardBaseStyle = "relative overflow-hidden backdrop-blur-2xl transition-all duration-500 border shadow-xl flex flex-col cursor-pointer group shrink-0";
 
     return (
-        <div className={`relative w-full h-screen bg-background dark:bg-[#030014] overflow-hidden flex flex-col justify-end items-center pb-2 px-4 transition-all duration-500 ${isFocusMode ? 'z-[100] !bg-[#030014]' : ''}`}>
+        <div className="w-full h-screen bg-slate-200/30 dark:bg-[#030014] overflow-hidden relative flex items-center justify-center transition-colors duration-1000 text-slate-800 dark:text-white font-mono">
+            <div className="absolute inset-0 z-0 opacity-40 dark:opacity-100 pointer-events-none"><MatrixRain /></div>
 
-            <div className="absolute inset-0 z-0 pointer-events-none">
-                <MatrixRain />
-            </div>
+            <div className="z-20 w-full max-w-[1400px] h-[85vh] grid grid-cols-1 lg:grid-cols-12 gap-12 relative px-8 mt-16">
 
-            {/* --- FOCUS MODE BAR --- */}
-            <div className="fixed top-[18px] right-2 z-[150] flex flex-col items-center">
-                <div onClick={() => setIsFocusMode(!isFocusMode)} className={`w-8 h-14 rounded-full border transition-all duration-300 cursor-pointer backdrop-blur-xl shadow-lg flex flex-col items-center p-1 ${isFocusMode ? "bg-cyan-900/80 border-cyan-500/50 shadow-[0_0_15px_rgba(8,145,178,0.4)]" : "bg-white/80 border-slate-300 dark:bg-white/10 dark:border-white/20"}`}>
-                    <motion.div className={`w-5 h-5 rounded-full shadow-sm flex items-center justify-center ${isFocusMode ? "bg-cyan-400 text-black" : "bg-slate-400 dark:bg-white/40 text-white"}`} animate={{ y: isFocusMode ? 0 : 26 }} transition={{ type: "spring", stiffness: 400, damping: 25 }}>
-                        {isFocusMode ? <EyeIcon className="w-3 h-3" /> : <PowerIcon className="w-3 h-3" />}
-                    </motion.div>
-                </div>
-            </div>
-
-            {/* --- ADMIN GATEWAY --- */}
-            {isAdmin && (
-                <div className="fixed top-[85px] right-2 z-[150] flex flex-col items-center">
-                    <div onClick={() => router.push('/workstation/admin')} title="Admin Control Room" className="w-8 h-14 rounded-full border border-red-500/30 bg-red-900/20 cursor-pointer backdrop-blur-xl shadow-lg flex flex-col items-center justify-center p-1 hover:bg-red-900/40 hover:border-red-500/60 transition-all group">
-                        <ShieldCheckIcon className="w-4 h-4 text-red-400 group-hover:text-red-200 transition-colors" />
-                    </div>
-                </div>
-            )}
-
-            <div className="z-20 w-full max-w-[1700px] h-[88vh] grid grid-cols-12 gap-6">
-
-                {/* --- CHAT WINDOW --- */}
-                <div onClick={() => setActiveSection('chat')} className={`col-span-7 ${panelStyle} flex flex-col ${activeSection === 'chat' ? 'ring-1 ring-cyan-400/50' : ''} relative h-full`}>
-
-                    {/* AUTH HEADER */}
-                    <div className="absolute top-4 left-4 z-40 flex gap-3">
-                        <div className="flex items-center gap-3 bg-cyan-950/30 border border-cyan-500/20 px-4 py-2 rounded-2xl backdrop-blur-md shadow-lg">
-                            {session?.user?.image && <Image src={session.user.image} alt="User" width={32} height={32} className="w-8 h-8 rounded-full border border-cyan-400/50" />}
-                            <div className="flex flex-col">
-                                <span className="text-[9px] text-cyan-400 font-bold uppercase tracking-widest leading-none mb-1">CONNECTED</span>
-                                <span className="text-[11px] text-white font-mono leading-none truncate max-w-[120px]">{session?.user?.name}</span>
+                {/* --- LADO ESQUERDO: HUD DO PERSONAGEM --- */}
+                <div className="lg:col-span-6 h-full relative flex items-center justify-start pl-4 lg:pl-10">
+                    <div className="relative flex items-center h-[85%]">
+                        <div className="relative w-[180px] h-full rounded-[100px] border-[3px] border-white/60 dark:border-white/10 bg-white/30 dark:bg-cyan-900/10 backdrop-blur-md shadow-[0_0_50px_rgba(34,211,238,0.15)] dark:shadow-[0_0_40px_rgba(34,211,238,0.2)] flex flex-col items-center justify-center z-20">
+                            <RealisticDNA />
+                            <motion.div animate={{ y: [-8, 8, -8] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }} className="relative z-30">
+                                <label className="relative block w-28 h-28 rounded-full border-4 border-cyan-500/80 dark:border-cyan-400 p-1 bg-white dark:bg-black shadow-[0_0_30px_rgba(34,211,238,0.4)] cursor-pointer group/avatar">
+                                    <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+                                    <Image src={userImage} alt="Avatar" fill className="object-cover rounded-full" />
+                                    <div className="absolute inset-0 bg-black/60 rounded-full flex flex-col items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity">
+                                        <CameraIcon className="w-8 h-8 text-white mb-1" />
+                                        <span className="text-[7px] uppercase font-bold text-white tracking-widest">Change</span>
+                                    </div>
+                                </label>
+                            </motion.div>
+                            <div className="absolute bottom-10 z-30 flex flex-col items-center bg-white/70 dark:bg-black/50 border border-white/50 dark:border-white/10 px-4 py-2 rounded-2xl backdrop-blur-xl shadow-lg">
+                                <span className="text-[9px] uppercase font-black tracking-widest text-cyan-600 dark:text-cyan-400">{isSuperAdmin ? "Root Admin" : "Subject Node"}</span>
+                                <span className="text-sm font-bold truncate max-w-[120px] text-slate-900 dark:text-white">{session?.user?.name}</span>
                             </div>
                         </div>
-                    </div>
 
-                    {/* AGENT RENDER */}
-                    <div className="absolute bottom-6 left-6 z-30 flex flex-col items-center">
-                        <div className="relative transition-all duration-500 flex justify-center items-end w-64 h-auto">
-                            <AnimatePresence mode="wait">
-                                {isImageLoading ? (
-                                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-48 w-full flex items-center justify-center">
-                                        <div className="animate-spin text-white/50 w-8 h-8 rounded-full border-2 border-white/20 border-t-cyan-500"></div>
-                                    </motion.div>
-                                ) : (
-                                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full flex justify-center">
-                                        <Image src={activeConfig.image} alt={activeConfig.name} width={400} height={600} className="w-full h-auto object-contain object-bottom drop-shadow-[0_0_35px_rgba(34,211,238,0.25)] max-h-[550px]" />
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
-
-                        <div className="mt-2 flex items-center gap-3 bg-[#0a0a0a]/60 border border-white/10 backdrop-blur-md rounded-full pl-2 pr-4 py-2 shadow-lg">
-                            <div className={`p-1.5 rounded-full ${activeConfig.bg} ${activeConfig.color} border ${activeConfig.border}`}><activeConfig.icon className="w-4 h-4" /></div>
-                            <span className="text-xs font-bold text-white tracking-wide">{activeConfig.name}</span>
-                        </div>
-                    </div>
-
-                    <div ref={chatContainerRef} className="flex-1 relative p-6 overflow-y-auto custom-scrollbar flex flex-col z-0 pt-16">
-                        <div className="flex-1" />
-                        <div className="space-y-6 pb-2">
-                            {chatHistory.map((msg, i) => (
-                                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : `justify-start transition-all duration-300 ${activeConfig.contentPadding}`}`}>
-                                    <div className={`max-w-[85%] rounded-2xl px-5 py-3 text-sm font-light shadow-lg relative ${msg.role === 'user' ? 'bg-cyan-900/40 text-cyan-50 border border-cyan-500/30' : 'bg-[#0a0a0a]/80 text-white/90 border border-white/10'}`}>{msg.text}</div>
+                        <div className="absolute left-[100%] flex flex-col gap-6 z-10">
+                            <motion.div initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.3 }} className="relative flex items-center">
+                                <div className="w-6 h-[2px] bg-slate-400/50 dark:bg-cyan-500/50" />
+                                <div className="bg-white/80 dark:bg-[#0a0a0a]/90 border border-white/60 dark:border-cyan-500/30 px-5 py-3 rounded-2xl backdrop-blur-xl shadow-xl flex items-center gap-3">
+                                    <AcademicCapIcon className={`w-6 h-6 ${isSuperAdmin ? 'text-yellow-500' : 'text-emerald-600 dark:text-cyan-400'}`} />
+                                    <div>
+                                        <div className="text-[8px] text-slate-500 dark:text-cyan-500/70 uppercase font-black tracking-widest">Level</div>
+                                        <div className="text-xs font-bold uppercase text-slate-900 dark:text-white">{isSuperAdmin ? "Architect (Max)" : academicLevel}</div>
+                                    </div>
                                 </div>
-                            ))}
-                            {isTyping && (
-                                <div className={`flex justify-start transition-all duration-300 ${activeConfig.contentPadding}`}>
-                                    <div className="bg-[#0a0a0a]/60 border border-white/5 px-4 py-2 rounded-xl flex gap-1"><span className="w-1.5 h-1.5 bg-white/40 rounded-full animate-bounce" /><span className="w-1.5 h-1.5 bg-white/40 rounded-full animate-bounce [animation-delay:0.1s]" /><span className="w-1.5 h-1.5 bg-white/40 rounded-full animate-bounce [animation-delay:0.2s]" /></div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
+                            </motion.div>
 
-                    <div className="p-5 bg-black/60 border-t border-white/10 flex flex-col gap-3 shrink-0 backdrop-blur-xl z-20 relative rounded-b-[24px]">
-                        <div className={`flex gap-3 items-center transition-all duration-300 ${activeConfig.contentPadding}`}>
-                            <input type="text" value={prompt} onChange={(e) => setPrompt(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} placeholder={`Ask ${activeConfig.name}...`} className="flex-1 bg-black/50 border border-white/10 rounded-xl py-3 px-4 text-white placeholder:text-white/40 focus:outline-none font-mono text-sm" />
-                            <button onClick={handleSend} className="bg-cyan-500 text-black px-6 rounded-xl font-bold text-xs uppercase hover:bg-cyan-400 active:scale-95 transition-all h-11">Send</button>
+                            <motion.div initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.5 }} className="relative flex flex-col items-start mt-4">
+                                <div className="flex items-center">
+                                    <div className="w-10 h-[2px] bg-slate-400/50 dark:bg-cyan-500/50" />
+                                    <div className="bg-white/80 dark:bg-[#0a0a0a]/90 border border-white/60 dark:border-cyan-500/30 px-5 py-3 rounded-2xl backdrop-blur-xl shadow-xl flex items-center gap-3 relative z-20">
+                                        <BookOpenIcon className="w-6 h-6 text-cyan-600 dark:text-cyan-400" />
+                                        <div>
+                                            <div className="text-[8px] text-slate-500 dark:text-cyan-500/70 uppercase font-black tracking-widest">Knowledge Base</div>
+                                            <div className="text-xs font-bold uppercase truncate max-w-[180px] text-slate-900 dark:text-white">{isSuperAdmin ? "Omniscient" : userCourse || "Undeclared"}</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col gap-4 mt-4 ml-16 relative z-10 border-l-[2px] border-slate-300 dark:border-cyan-500/30 pl-4 py-2">
+                                    {UNIVERSAL_SKILLS.map((skill) => (
+                                        <SkillDrawer key={skill.id} skill={skill} isOpen={activeSkill === skill.id} onToggle={() => setActiveSkill(activeSkill === skill.id ? null : skill.id)} />
+                                    ))}
+                                </div>
+                            </motion.div>
                         </div>
                     </div>
                 </div>
 
-                {/* --- DOC & TERMINAL --- */}
-                <div className="col-span-5 flex flex-col gap-4 h-full">
-                    <div onClick={() => setActiveSection('doc')} className={`${panelStyle} flex-1 flex flex-col ${activeSection === 'doc' ? 'ring-1 ring-cyan-400/50' : ''}`}>
-                        <div className="h-14 bg-black/40 border-b border-white/10 flex items-center px-6">
-                            <input value={docTitle} onChange={(e) => setDocTitle(e.target.value)} className="bg-transparent text-white/90 text-sm font-mono focus:outline-none w-full" />
-                        </div>
-                        <textarea value={docContent} onChange={(e) => setDocContent(e.target.value)} className="flex-1 p-8 font-mono text-sm text-slate-900 bg-[#f1f5f9] outline-none resize-none" />
+                {/* --- LADO DIREITO: PORTAS DE ACESSO --- */}
+                <div className="lg:col-span-6 flex flex-col justify-start items-start gap-5 z-30 max-w-[480px] ml-auto w-full h-[80vh] pt-4">
 
-                        <div className="p-4 bg-[#f1f5f9] flex justify-end gap-3 rounded-b-[24px]">
-                            <button onClick={() => setIsBoosterOpen(true)} className="px-4 py-2 rounded-xl text-[11px] font-bold border transition flex items-center gap-2 bg-blue-100 text-blue-700 border-blue-400 hover:bg-blue-200 uppercase tracking-wider">
-                                <ArrowDownTrayIcon className="w-4 h-4" /> Save Session
-                            </button>
-                            <button onClick={handleGenerateProtocol} disabled={isSystemProcessing} className={`px-4 py-2 rounded-xl text-[11px] font-bold border transition flex items-center gap-2 uppercase tracking-wider ${isSystemProcessing ? 'bg-yellow-100 text-yellow-700 border-yellow-400' : 'bg-green-100 text-green-700 border-green-400 hover:bg-green-200'}`}>
-                                <PlayIcon className="w-4 h-4" /> {isSystemProcessing ? "Processing..." : "Generate"}
-                            </button>
-                        </div>
+                    <div className="mb-2 shrink-0">
+                        <h1 className="text-4xl font-black uppercase tracking-tighter mb-1 text-slate-900 dark:text-white drop-shadow-md">Workspace</h1>
+                        <p className="text-[11px] text-slate-600 dark:text-white/50 font-mono tracking-widest uppercase flex items-center gap-2">
+                            Select destination protocol.
+                            {isSuperAdmin && <span className="text-yellow-600 dark:text-yellow-400 font-bold bg-yellow-400/10 px-2 py-0.5 rounded border border-yellow-400/20">ROOT ACCESS</span>}
+                        </p>
                     </div>
 
-                    {!isFocusMode && (
-                        <div onClick={() => setActiveSection('terminal')} className={`${panelStyle} h-[28%] flex flex-col shrink-0`}>
-                            <div className="h-9 bg-[#0a0a0a] border-b border-white/5 flex items-center px-4 shrink-0 justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-2 h-2 rounded-full shadow-[0_0_8px_currentColor] bg-emerald-500 text-emerald-500" />
-                                    <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest">SYSTEM ONLINE</span>
-                                </div>
-                                <span className="text-[8px] text-white/20 font-mono tracking-[0.2em] uppercase">Zaeon Neural Node v2.0.26</span>
-                            </div>
+                    {/* Container com scroll para caber todas as salas do Admin */}
+                    <div className="w-full flex flex-col gap-5 overflow-y-auto custom-scrollbar pr-2 pb-10">
 
-                            <div ref={terminalRef} className="flex-1 p-4 font-mono text-xs text-green-500/80 bg-black/60 overflow-y-auto custom-scrollbar rounded-b-[24px]">
-                                {terminalLogs.map((log, idx) => (<div key={idx} className="mb-1">{log}</div>))}
-                                <p>zaeon@root:~$ <span className="animate-pulse">_</span></p>
+                        <div onClick={() => router.push('/study-rooms/lounge')} className={`${cardBaseStyle} w-full bg-white/40 dark:bg-white/5 border-white/60 dark:border-white/10 hover:border-cyan-400 dark:hover:border-cyan-500/50 p-6 rounded-[32px]`}>
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="flex items-center gap-4">
+                                    <div className="p-3 bg-white/60 dark:bg-white/10 rounded-2xl shadow-sm"><UserGroupIcon className="w-6 h-6 text-slate-800 dark:text-white" /></div>
+                                    <div>
+                                        <h2 className="text-xl font-bold uppercase tracking-tight text-slate-900 dark:text-white">Lounge & Network</h2>
+                                        <p className="text-[10px] text-cyan-600 dark:text-cyan-400 uppercase tracking-widest font-bold">General Access</p>
+                                    </div>
+                                </div>
+                                <ChevronRightIcon className="w-6 h-6 text-slate-400 dark:text-white/30 group-hover:text-cyan-500 group-hover:translate-x-2 transition-all" />
                             </div>
+                            <p className="text-sm text-slate-700 dark:text-white/60 leading-relaxed font-sans">
+                                Área de convivência global. Conecte-se com alunos e inicie projetos colaborativos.
+                            </p>
                         </div>
-                    )}
-                </div>
-            </div>
 
-            {/* --- SESSION BOOSTER MODAL (DATABASE ONLY) --- */}
-            <AnimatePresence>
-                {isBoosterOpen && (
-                    <div className="fixed inset-0 z-[300] flex items-center justify-center p-6">
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsBoosterOpen(false)} className="absolute inset-0 bg-[#030014]/90 backdrop-blur-md cursor-pointer" />
-
-                        <motion.div initial={{ opacity: 0, scale: 0.9, y: 40 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 40 }}
-                                    className="relative w-full max-w-5xl bg-[#0a0a0a] border border-cyan-500/20 rounded-[40px] overflow-hidden shadow-[0_0_100px_rgba(34,211,238,0.2)] flex flex-col md:flex-row min-h-[500px]"
-                        >
-                            <button onClick={() => setIsBoosterOpen(false)} className="absolute top-6 right-6 z-50 text-white/30 hover:text-white transition-colors">
-                                <XMarkIcon className="w-6 h-6" />
-                            </button>
-
-                            <div className="w-full md:w-1/2 relative min-h-[400px] bg-black">
-                                <motion.div key={activeConfig.boosterImage} initial={{ opacity: 0, scale: 1.1, filter: "blur(20px)" }} animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }} transition={{ duration: 0.8, ease: "easeOut" }} className="relative w-full h-full">
-                                    <Image src={activeConfig.boosterImage} alt="Neural Booster" fill className="object-cover" priority />
-                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#0a0a0a] hidden md:block" />
-                                </motion.div>
-                            </div>
-
-                            <div className="w-full md:w-1/2 p-12 flex flex-col justify-center">
-                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-[10px] font-bold uppercase tracking-[0.2em] mb-6">
-                                    <RocketLaunchIcon className="w-3 h-3" /> System Uplink
+                        {/* RENDERIZAÇÃO CONDICIONAL DA MASTER KEY */}
+                        {isSuperAdmin ? (
+                            // Renderiza TODAS as salas se for Admin
+                            Object.values(ROOM_DETAILS).map((room) => (
+                                <div key={room.id} onClick={() => router.push(room.route)} className={`${cardBaseStyle} w-full bg-white/50 dark:${room.bg} border-yellow-400/50 hover:border-yellow-400 p-6 rounded-[32px]`}>
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div className="flex items-center gap-4">
+                                            <div className={`p-3 bg-white/80 dark:bg-black/40 rounded-2xl border border-white/50 dark:border-white/10 shadow-sm`}>
+                                                <room.icon className={`w-6 h-6 ${room.color}`} />
+                                            </div>
+                                            <div>
+                                                <h2 className="text-xl font-bold uppercase tracking-tight text-slate-900 dark:text-white">{room.name}</h2>
+                                                <div className="flex items-center gap-2 mt-0.5">
+                                                    <p className={`text-[10px] ${room.color} uppercase tracking-widest font-bold`}>Specialized Lab</p>
+                                                    <span className="text-[8px] font-black uppercase text-yellow-600 dark:text-yellow-400 border border-yellow-400/30 px-2 py-0.5 rounded-full bg-yellow-400/10">Admin Override</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <ChevronRightIcon className={`w-6 h-6 text-yellow-500 opacity-50 group-hover:opacity-100 group-hover:translate-x-2 transition-all`} />
+                                    </div>
+                                    <p className="text-sm text-slate-700 dark:text-white/60 leading-relaxed font-sans">
+                                        Acesso desbloqueado via Master Key. Circulação livre autorizada.
+                                    </p>
                                 </div>
-                                <h2 className="text-4xl font-bold text-white mb-6 leading-tight">
-                                    {/* CORREÇÃO ESLINT: Escaped single quote */}
-                                    Sync {activeConfig.name}&apos;s <span className="text-cyan-400">Memory Core</span>
-                                </h2>
-                                <p className="text-slate-400 text-sm leading-relaxed mb-10">
-                                    Seu agente atingiu o limite de buffers neurais. Sincronize os dados desta sessão com o banco de dados central para garantir a persistência e o aprendizado contínuo.
+                            ))
+                        ) : targetRoom ? (
+                            // Renderiza APENAS a sala do curso se for um usuário normal
+                            <div onClick={() => router.push(targetRoom.route)} className={`${cardBaseStyle} w-full bg-white/50 dark:${targetRoom.bg} border-white/60 dark:${targetRoom.border} hover:border-${targetRoom.color.split('-')[1]}-400 p-6 rounded-[32px]`}>
+                                <div className="flex justify-between items-start mb-4">
+                                    <div className="flex items-center gap-4">
+                                        <div className={`p-3 bg-white/80 dark:bg-black/40 rounded-2xl border border-white/50 dark:border-white/10 shadow-sm`}><targetRoom.icon className={`w-6 h-6 ${targetRoom.color}`} /></div>
+                                        <div>
+                                            <h2 className="text-xl font-bold uppercase tracking-tight text-slate-900 dark:text-white">{targetRoom.name}</h2>
+                                            <p className={`text-[10px] ${targetRoom.color} uppercase tracking-widest font-bold`}>Specialized Lab</p>
+                                        </div>
+                                    </div>
+                                    <ChevronRightIcon className={`w-6 h-6 ${targetRoom.color} opacity-50 group-hover:opacity-100 group-hover:translate-x-2 transition-all`} />
+                                </div>
+                                <p className="text-sm text-slate-700 dark:text-white/60 leading-relaxed font-sans">
+                                    Laboratório restrito aprovado para <span className="font-bold text-slate-900 dark:text-white">{userCourse}</span>.
                                 </p>
-
-                                <div className="flex flex-col gap-4">
-                                    <button
-                                        onClick={handleBoostAndSave}
-                                        disabled={isSystemProcessing}
-                                        className="w-full bg-cyan-500 hover:bg-cyan-400 text-black font-black py-4 rounded-2xl transition-all shadow-[0_0_20px_rgba(34,211,238,0.4)] flex items-center justify-center gap-3 uppercase tracking-widest text-xs group disabled:opacity-50"
-                                    >
-                                        {isSystemProcessing ? (
-                                            <div className="animate-spin border-t-black border-2 w-5 h-5 rounded-full" />
-                                        ) : (
-                                            <>
-                                                <RocketLaunchIcon className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                                                Save Session Data
-                                            </>
-                                        )}
-                                    </button>
-                                    <button onClick={() => setIsBoosterOpen(false)} className="w-full py-2 text-white/30 text-[10px] uppercase font-bold tracking-widest hover:text-white transition-colors">
-                                        Back to Station
-                                    </button>
-                                </div>
                             </div>
-                        </motion.div>
+                        ) : (
+                            // Renderiza a caixa de bloqueio caso não tenha KYC ou curso mapeado
+                            <div className="w-full p-6 rounded-[32px] border border-red-300 dark:border-red-500/20 bg-red-50/80 dark:bg-red-500/5 backdrop-blur-xl shadow-lg shrink-0">
+                                <h2 className="text-sm font-bold text-red-600 dark:text-red-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                    <ShieldCheckIcon className="w-5 h-5" /> Acesso Restrito
+                                </h2>
+                                <p className="text-xs text-slate-700 dark:text-white/60 leading-relaxed font-sans">
+                                    Seu perfil atual não concede acesso aos laboratórios especializados.
+                                </p>
+                            </div>
+                        )}
                     </div>
-                )}
-            </AnimatePresence>
+                </div>
+            </div>
 
             <style jsx global>{`
-                .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+                .custom-scrollbar::-webkit-scrollbar { width: 4px; }
                 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-                .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
-                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(34,211,238,0.4); }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(34, 211, 238, 0.2); border-radius: 10px; }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(34, 211, 238, 0.5); }
             `}</style>
         </div>
     );

@@ -12,80 +12,87 @@ generator client {
 
 // --- MODELO DE USUÁRIO ---
 model User {
-  id            String    @id @default(auto()) @map("_id") @db.ObjectId
-  name          String?
-  email         String?   @unique
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  name            String?
+  email           String?   @unique
   emailVerified DateTime?
-  image         String?   
+  image           String?   
   
   // Profile
-  course        String?   
-  bio           String?   
-  age           Int?
-  gender        String?
-  torsoImage    String?   
-  role          String?   
-  phone         String?   
+  course          String?   
+  bio             String?   
+  age             Int?
+  gender          String?
+  countryCode     String?   // <--- NOVO: Salva a bandeira escolhida no onboarding
+  torsoImage      String?   
+  role            String?   
+  phone           String?   
   
-  // Gamification
-  level         Int       @default(1)
-  streak        Int       @default(0)
-  xp            Int       @default(0)
+  // Gamification & Skill Tree
+  level           Int       @default(1)
+  streak          Int       @default(0)
+  xp              Int       @default(0)
+  skills          Json?     // <--- NOVO: O motor do RPG acadêmico (Ranks F-SS)
   
   // Identity
-  identityId    String?   
-  idType        String?   
+  identityId      String?   
+  idType          String?   
   walletAddress String?   
   
-  // Admin
-  kycStatus     String    @default("pending")
-  documents     Json?     
-  institution   String?   
+  // Admin & Verification
+  kycStatus         String  @default("pending")
+  academicLevel     String  @default("Graduação") // <--- NOVO: Graduação, Mestrado, Doutorado... (Definido pelo Admin)
+  documents         Json?   
+  institution       String?   
+  verificationDoc String? 
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   // Relations
-  accounts      Account[]
-  sessions      Session[]
-  posts         Post[]
-  comments      Comment[]
+  accounts        Account[]
+  sessions        Session[]
+  posts           Post[]
+  comments        Comment[]
   userSpaceData UserSpaceData?
+
+  // 🔥 CRÍTICO: Sincroniza o Prisma com o NextAuth (coleção 'users')
+  @@map("users") 
 }
 
 // --- MEMÓRIA DO LOUNGE & SALAS ---
 model UserSpaceData {
-  id            String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId        String   @unique @db.ObjectId
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String   @unique @db.ObjectId
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   // Base UI
-  layout        Json?    // Armazena janelas abertas e posições
-  settings      Json?    // Armazena tema e preferências
+  layout          Json?    // Armazena janelas abertas e posições
+  settings        Json?    // Armazena tema e preferências
   
   // State Persistence
-  layoutState     Json?    
-  schedule        Json?    
-  stickyNote      String?  
+  layoutState       Json?    
+  schedule          Json?    
+  stickyNote        String?  
   
   // Modules & History
-  chatHistory     Json?    
-  zaeonChat       Json?    
-  library         Json?    
-  fabricator      Json?    
+  chatHistory       Json?    
+  zaeonChat         Json?    
+  library           Json?    
+  fabricator        Json?    
   personalModules Json?    
 
   // Profile & Objectives
-  objectives      Json?    
+  objectives        Json?    
 
   // Legacy/Work
-  activeProject   Json?    
-  citations       Json?    
-  workContent     String?  
-  workTitle       String?  
+  activeProject     Json?    
+  citations         Json?    
+  workContent       String?  
+  workTitle         String?  
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt 
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt 
 }
 
 model SystemSetting {
@@ -168,7 +175,11 @@ model Account {
   id_token           String? @db.String
   session_state      String?
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
   @@unique([provider, providerAccountId])
+
+  // 🔥 CRÍTICO: Sincroniza o Prisma com o NextAuth (coleção 'accounts')
+  @@map("accounts")
 }
 
 model Session {
@@ -177,6 +188,9 @@ model Session {
   userId       String   @db.ObjectId
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // 🔥 CRÍTICO: Sincroniza o Prisma com o NextAuth (coleção 'sessions')
+  @@map("sessions")
 }
 
 model SystemLog {

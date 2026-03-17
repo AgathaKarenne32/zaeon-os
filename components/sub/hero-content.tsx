@@ -37,21 +37,6 @@ export default function HeroPage() {
   return (
     <main className="w-full min-h-screen flex justify-start items-start relative px-4 md:pl-20 py-12 overflow-hidden bg-white dark:bg-[#05080a] transition-colors duration-700">
 
-      {/* 2. IMAGEM LATERAL */}
-      <motion.div
-        initial={{ x: "100%", opacity: 0 }}
-        animate={{ x: show ? 0 : "100%", opacity: show ? 1 : 0 }}
-        transition={transition}
-        className="absolute -right-80 top-20 bottom-0 w-[85vw] h-[900px] max-w-none pointer-events-none z-10 hidden lg:block overflow-hidden"
-      >
-        <Image
-          src="/assets/zaeon-ai.png"
-          alt="Workstation Image"
-          fill
-          className="object-right object-top object-contain opacity-95"
-          priority
-        />
-      </motion.div>
 
       {/* 3. CONTEÚDO PRINCIPAL (TRAVADO EM 520px) */}
       {/* AQUI ESTÁ A CORREÇÃO: w-full max-w-[520px] força a largura da coluna */}

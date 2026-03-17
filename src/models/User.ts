@@ -6,22 +6,29 @@ const UserSchema = new Schema({
     image: String,
     emailVerified: Date,
 
-    // --- CAMPOS PERSONALIZADOS ZAEON (O que o Admin gerencia) ---
-    role: {
-        type: String,
-        enum: ["student", "researcher", "professional", "entrepreneur"],
-        default: "student"
-    },
-    phone: String,
-    identityId: String, // O ID que ele digita no modal
-    identityType: String, // 'wallet' ou 'role_id'
+    // --- DADOS DO ONBOARDING & RPG ACADÊMICO ---
+    role: { type: String, default: "student" }, // Removido o enum estrito para evitar bloqueios de novas roles
+    course: String,
+    age: Number,
+    gender: String,
+    countryCode: String,
+    academicLevel: { type: String, default: "Graduação" },
 
-    // KYC & Compliance (Dados Institucionais)
+    // O motor do RPG (XP e Barras de Rank) - Salvo como JSON livre
+    skills: { type: Schema.Types.Mixed },
+
+    // O Documento Principal (Base64 da Imagem ou PDF)
+    verificationDoc: String,
+
+    // --- DADOS DE IDENTIDADE ---
+    phone: String,
+    identityId: String,
+    identityType: String,
     institution: String,
     bio: String,
     walletAddress: String,
 
-    // Array de Documentos para sua análise no Painel Admin
+    // Array antigo de Documentos (mantido para compatibilidade se você usou antes)
     documents: [
         {
             name: String,
@@ -30,19 +37,22 @@ const UserSchema = new Schema({
         }
     ],
 
-    // Controle de Status pelo Founder
+    // --- CONTROLE DE STATUS DO ADMIN ---
     kycStatus: {
         type: String,
-        enum: ["pending", "approved", "rejected"],
+        // CORREÇÃO CRUCIAL: Adicionado o "verified" que o nosso Admin Room envia
+        enum: ["pending", "verified", "rejected"],
         default: "pending"
     },
 
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
 }, {
-    // O MongoDB Adapter do NextAuth às vezes insere campos extras;
-    // strict: false garante que isso não quebre o código.
-    strict: false
+    // Permite que campos não mapeados não quebrem o sistema
+    strict: false,
+    // Garante que campos não mapeados também sejam enviados nas respostas JSON
+    toJSON: { virtuals: true, strict: false },
+    toObject: { virtuals: true, strict: false }
 });
 
 const User = models.User || model("User", UserSchema);
