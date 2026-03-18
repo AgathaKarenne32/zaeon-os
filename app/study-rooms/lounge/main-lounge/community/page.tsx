@@ -35,23 +35,29 @@ const ROOM_MAPPING: Record<string, string[]> = {
 };
 
 // --- TYPES (Espelhando o Prisma) ---
-interface Comment { id: string; user: string; content: string; createdAt: string; }
-interface Post { 
-    id: string; 
-    user: string; 
-    userEmail: string; // <-- Essencial para a lixeira saber de quem é o post
-    userImage?: string; 
-    content: string; 
-    createdAt: string; 
-    likes: string[]; 
-    room: string; 
-    comments: Comment[]; 
+interface Comment {
+    id: string;
+    user: string;
+    userEmail?: string; // <-- A Lixeira precisa saber de quem é o comentário
+    content: string;
+    createdAt: string;
+}
+interface Post {
+    id: string;
+    user: string;
+    userEmail?: string;
+    userImage?: string;
+    content: string;
+    createdAt: string;
+    likes: string[];
+    room: string;
+    comments: Comment[];
 }
 
 // --- 1. GLOBO 3D (VISUAL & INTERATIVO) ---
 const COLOR_TECH_BLUE = new THREE.Color("#001a2c");
 const COLOR_WIRE_BLUE = new THREE.Color("#00d2ff");
-const COLOR_DOT       = new THREE.Color("#22d3ee");
+const COLOR_DOT = new THREE.Color("#22d3ee");
 
 const latLonToVector3 = (lat: number, lon: number, radius: number) => {
     const phi = (90 - lat) * (Math.PI / 180);
@@ -69,7 +75,7 @@ const LocationMarker = ({ lat, lon, label, cost, onClick }: any) => {
 
     useFrame(({ clock }) => {
         if (ref.current) {
-            ref.current.lookAt(0, 0, 8); 
+            ref.current.lookAt(0, 0, 8);
             const scale = hovered ? 1.3 : 1 + Math.sin(clock.getElapsedTime() * 3) * 0.1;
             ref.current.scale.set(scale, scale, scale);
         }
@@ -118,12 +124,12 @@ const CyberGlobe = () => {
             </Sphere>
             <group ref={wireframeGroupRef}>
                 <Sphere args={[1.51, 32, 32]}><meshBasicMaterial color={COLOR_WIRE_BLUE} wireframe transparent opacity={0.12} /></Sphere>
-                <LocationMarker lat={37.09} lon={-95.71} label="USA" cost="HIGH" onClick={() => {}} />
-                <LocationMarker lat={-14.23} lon={-51.92} label="BRAZIL" cost="LOW" onClick={() => {}} />
-                <LocationMarker lat={51.16} lon={10.45} label="GERMANY" cost="MED" onClick={() => {}} />
-                <LocationMarker lat={35.86} lon={104.19} label="CHINA" cost="MED" onClick={() => {}} />
-                <LocationMarker lat={-25.27} lon={133.77} label="AUSTRALIA" cost="HIGH" onClick={() => {}} />
-                <LocationMarker lat={35.67} lon={139.65} label="JAPAN" cost="HIGH" onClick={() => {}} />
+                <LocationMarker lat={37.09} lon={-95.71} label="USA" cost="HIGH" onClick={() => { }} />
+                <LocationMarker lat={-14.23} lon={-51.92} label="BRAZIL" cost="LOW" onClick={() => { }} />
+                <LocationMarker lat={51.16} lon={10.45} label="GERMANY" cost="MED" onClick={() => { }} />
+                <LocationMarker lat={35.86} lon={104.19} label="CHINA" cost="MED" onClick={() => { }} />
+                <LocationMarker lat={-25.27} lon={133.77} label="AUSTRALIA" cost="HIGH" onClick={() => { }} />
+                <LocationMarker lat={35.67} lon={139.65} label="JAPAN" cost="HIGH" onClick={() => { }} />
             </group>
         </group>
     );
@@ -153,18 +159,17 @@ const AppleSpinner = () => (
 // --- COMPONENTE DA PÁGINA ---
 export default function LoungeEarth() {
     const { data: session } = useSession();
-    
-    // Identifica o curso e a sala nativa do usuário logado
+
     const userCourse = (session?.user as any)?.course || "";
     const isSuperAdmin = (session?.user as any)?.isAdmin === true;
     const currentUserEmail = session?.user?.email || "";
-    
+
     const getUserHomeRoom = () => {
         const courseStr = String(userCourse).toLowerCase().trim();
         for (const [room, courses] of Object.entries(ROOM_MAPPING)) {
             if (courses.some(c => c.toLowerCase().trim() === courseStr)) return room;
         }
-        return "lounge"; 
+        return "lounge";
     };
 
     const userHomeRoom = getUserHomeRoom();
@@ -175,7 +180,7 @@ export default function LoungeEarth() {
     const [posts, setPosts] = useState<Post[]>([]);
     const [newPost, setNewPost] = useState("");
 
-    // --- REGRA DE NEGÓCIO: Pode postar? ---
+    // --- REGRA DE NEGÓCIO: Pode postar tópico raiz? ---
     const canPost = activeRoom === 'lounge' || activeRoom === userHomeRoom || isSuperAdmin;
 
     useEffect(() => {
@@ -183,7 +188,6 @@ export default function LoungeEarth() {
         loadFeed("lounge");
     }, []);
 
-    // --- FETCH REAL NA API ---
     const loadFeed = async (room: string) => {
         setIsLoadingFeed(true);
         setActiveRoom(room);
@@ -193,7 +197,7 @@ export default function LoungeEarth() {
                 const data = await res.json();
                 setPosts(data);
             } else {
-                setPosts([]); 
+                setPosts([]);
             }
         } catch (error) {
             console.error("Erro ao puxar dados da Matrix:", error);
@@ -203,13 +207,12 @@ export default function LoungeEarth() {
         }
     };
 
-    // --- POST REAL NA API ---
     const handlePostSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newPost.trim() || !canPost) return;
 
         const content = newPost;
-        setNewPost(""); 
+        setNewPost("");
 
         try {
             const res = await fetch('/api/posts', {
@@ -222,32 +225,21 @@ export default function LoungeEarth() {
                 const savedPost = await res.json();
                 setPosts([savedPost, ...posts]);
             } else {
-                alert("Falha de transmissão. A API ainda não está conectada.");
+                alert("Falha de transmissão.");
             }
         } catch (error) {
             console.error("Falha ao transmitir:", error);
-            alert("Falha de transmissão. Verifique a conexão com o Core.");
         }
     };
 
-    // --- LÓGICA DE EXCLUSÃO (LIXEIRA) ---
     const handleDeletePost = async (postId: string) => {
         if (!confirm("Tem certeza que deseja desintegrar este sinal da rede?")) return;
-        
         try {
             const res = await fetch(`/api/posts?id=${postId}`, { method: 'DELETE' });
-            if (res.ok) {
-                // Remove o post da tela imediatamente
-                setPosts(posts.filter(p => p.id !== postId));
-            } else {
-                alert("Erro de permissão ou falha ao excluir.");
-            }
-        } catch (error) {
-            console.error("Erro ao deletar post:", error);
-        }
+            if (res.ok) setPosts(posts.filter(p => p.id !== postId));
+        } catch (error) { console.error("Erro ao deletar post:", error); }
     };
 
-    // --- BOTÕES E ÍCONES DAS SALAS ADAPTADOS ---
     const rooms = [
         { id: 'lounge', label: 'Global', icon: <GlobeAltIcon className="w-5 h-5" />, color: 'slate' },
         { id: 'med', label: 'MedLab', icon: <PlusCircleIcon className="w-5 h-5" />, color: 'rose' },
@@ -259,7 +251,7 @@ export default function LoungeEarth() {
 
     return (
         <div className="relative w-full min-h-screen font-sans bg-transparent">
-            
+
             <div className="fixed inset-0 z-0 flex flex-col items-center pointer-events-auto bg-transparent">
                 <div className="absolute top-10 w-full flex flex-col items-center z-10 pointer-events-none">
                     <h1 className="text-[10px] font-black uppercase tracking-[1em] text-slate-500 dark:text-white/40 flex items-center gap-4 drop-shadow-md">
@@ -314,7 +306,6 @@ export default function LoungeEarth() {
                                 <EnergyCord startX="50%" startY="0%" endX="83%" endY="100%" delay={0.8} />
                             </div>
 
-                            {/* Atualizado para grid-cols-6 no desktop para acomodar todos perfeitamente */}
                             <div className="grid grid-cols-3 md:grid-cols-6 gap-3 relative z-10">
                                 {rooms.map((room) => (
                                     <motion.button
@@ -324,8 +315,8 @@ export default function LoungeEarth() {
                                         whileTap={{ scale: 0.95 }}
                                         className={`
                                             relative h-20 rounded-2xl border backdrop-blur-md flex flex-col items-center justify-center gap-1.5 transition-all duration-300 shadow-lg overflow-hidden group
-                                            ${activeRoom === room.id 
-                                                ? `bg-${room.color}-500/30 border-${room.color}-500/50 shadow-[0_0_20px_rgba(var(--${room.color}-rgb),0.3)]` 
+                                            ${activeRoom === room.id
+                                                ? `bg-${room.color}-500/30 border-${room.color}-500/50 shadow-[0_0_20px_rgba(var(--${room.color}-rgb),0.3)]`
                                                 : 'bg-white/20 dark:bg-white/5 border-slate-200/50 dark:border-white/10 hover:bg-white/40 dark:hover:bg-white/10'
                                             }
                                         `}
@@ -361,15 +352,15 @@ export default function LoungeEarth() {
                                     </div>
                                 ) : (
                                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }} className="space-y-6">
-                                        
+
                                         {canPost ? (
                                             <form onSubmit={handlePostSubmit} className="mb-8 relative group">
-                                                <input 
-                                                    type="text" 
-                                                    value={newPost} 
-                                                    onChange={(e) => setNewPost(e.target.value)} 
-                                                    placeholder={`Transmit quick text to ${activeRoom.toUpperCase()}...`} 
-                                                    className="w-full bg-white/60 dark:bg-white/5 border border-slate-200/50 dark:border-cyan-500/30 rounded-2xl py-4 pl-6 pr-12 text-sm text-slate-800 dark:text-white placeholder:text-slate-500 dark:placeholder:text-cyan-500/40 focus:outline-none focus:border-cyan-500 focus:bg-white dark:focus:bg-black/40 transition-all shadow-inner backdrop-blur-md" 
+                                                <input
+                                                    type="text"
+                                                    value={newPost}
+                                                    onChange={(e) => setNewPost(e.target.value)}
+                                                    placeholder={`Transmit quick text to ${activeRoom.toUpperCase()}...`}
+                                                    className="w-full bg-white/60 dark:bg-white/5 border border-slate-200/50 dark:border-cyan-500/30 rounded-2xl py-4 pl-6 pr-12 text-sm text-slate-800 dark:text-white placeholder:text-slate-500 dark:placeholder:text-cyan-500/40 focus:outline-none focus:border-cyan-500 focus:bg-white dark:focus:bg-black/40 transition-all shadow-inner backdrop-blur-md"
                                                 />
                                                 <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-cyan-600 dark:text-cyan-400 hover:scale-110 transition-transform">
                                                     <PaperAirplaneIcon className="w-5 h-5" />
@@ -384,11 +375,11 @@ export default function LoungeEarth() {
                                                 </div>
                                             </div>
                                         )}
-                                        
+
                                         {posts.length > 0 ? posts.map((post) => (
-                                            <FeedPost 
-                                                key={post.id} 
-                                                post={post} 
+                                            <FeedPost
+                                                key={post.id}
+                                                post={post}
                                                 currentUserEmail={currentUserEmail}
                                                 isSuperAdmin={isSuperAdmin}
                                                 onDelete={handleDeletePost}
@@ -397,7 +388,7 @@ export default function LoungeEarth() {
                                             <div className="flex flex-col items-center justify-center py-16 opacity-50">
                                                 <SignalIcon className="w-12 h-12 text-slate-400 mb-4" />
                                                 <div className="text-center text-slate-500 dark:text-white/40 text-[10px] uppercase tracking-widest border-2 border-dashed border-slate-300/50 dark:border-white/10 p-6 rounded-xl backdrop-blur-sm">
-                                                    No signals detected in the Zaeon Database. <br/> Be the first to broadcast.
+                                                    No signals detected in the Zaeon Database. <br /> Be the first to broadcast.
                                                 </div>
                                             </div>
                                         )}
@@ -413,12 +404,88 @@ export default function LoungeEarth() {
     );
 }
 
-// --- SUB-COMPONENTE: POST INDIVIDUAL ---
+// --- SUB-COMPONENTE: POST INDIVIDUAL (COM ESTADO DE LIKES E COMMENTS) ---
 function FeedPost({ post, currentUserEmail, isSuperAdmin, onDelete }: { post: Post, currentUserEmail: string, isSuperAdmin: boolean, onDelete: (id: string) => void }) {
     const dateDisplay = post.createdAt ? new Date(post.createdAt).toLocaleDateString() : 'Just now';
-    
-    // Regra da Lixeira: Pode apagar se for dono do post OU se for Super Admin
     const canDelete = isSuperAdmin || (currentUserEmail === post.userEmail);
+
+    const [likes, setLikes] = useState<string[]>(post.likes || []);
+    const [comments, setComments] = useState<Comment[]>(post.comments || []);
+    const [showComments, setShowComments] = useState(false);
+    const [newComment, setNewComment] = useState("");
+    const [isLiking, setIsLiking] = useState(false);
+
+    const isLikedByMe = likes.includes(currentUserEmail);
+
+    const handleToggleLike = async () => {
+        if (!currentUserEmail || isLiking) return;
+        setIsLiking(true);
+
+        if (isLikedByMe) {
+            setLikes(likes.filter(email => email !== currentUserEmail));
+        } else {
+            setLikes([...likes, currentUserEmail]);
+        }
+
+        try {
+            await fetch('/api/posts/like', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ postId: post.id })
+            });
+        } catch (error) {
+            console.error("Falha ao registrar like", error);
+        } finally {
+            setIsLiking(false);
+        }
+    };
+
+    const handleAddComment = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newComment.trim() || !currentUserEmail) return;
+
+        const commentText = newComment;
+        setNewComment("");
+
+        const tempComment: Comment = {
+            id: Date.now().toString(),
+            user: "Você",
+            userEmail: currentUserEmail,
+            content: commentText,
+            createdAt: new Date().toISOString()
+        };
+        setComments([...comments, tempComment]);
+
+        try {
+            const res = await fetch('/api/posts/comment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ postId: post.id, content: commentText })
+            });
+
+            if (res.ok) {
+                const finalComment = await res.json();
+                setComments(prev => prev.map(c => c.id === tempComment.id ? finalComment : c));
+            }
+        } catch (error) {
+            console.error("Falha ao registrar comentário", error);
+        }
+    };
+
+    const handleDeleteComment = async (commentId: string) => {
+        if (!confirm("Tem certeza que deseja desintegrar este comentário?")) return;
+
+        try {
+            const res = await fetch(`/api/posts/comment?id=${commentId}`, { method: 'DELETE' });
+            if (res.ok) {
+                setComments(comments.filter(c => c.id !== commentId));
+            } else {
+                alert("Falha de permissão ao tentar excluir.");
+            }
+        } catch (error) {
+            console.error("Falha ao excluir comentário", error);
+        }
+    };
 
     return (
         <div className="bg-white/60 dark:bg-white/5 backdrop-blur-md border border-slate-200/50 dark:border-white/10 p-5 rounded-3xl transition-all hover:bg-white hover:shadow-lg dark:hover:bg-white/10 hover:scale-[1.01] relative group/post">
@@ -426,15 +493,14 @@ function FeedPost({ post, currentUserEmail, isSuperAdmin, onDelete }: { post: Po
                 <div className="w-10 h-10 rounded-2xl bg-white/80 dark:bg-white/10 overflow-hidden flex items-center justify-center shrink-0 border border-slate-200/50 dark:border-white/10">
                     {post.userImage ? <img src={post.userImage} alt="" className="w-full h-full object-cover" /> : <UserCircleIcon className="w-6 h-6 text-slate-500 dark:text-white/50" />}
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 w-full overflow-hidden">
                     <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2">
-                            <span className="text-xs font-black text-slate-800 dark:text-white/90">{post.user}</span>
-                            <span className="text-[8px] text-slate-600 dark:text-white/60 font-mono uppercase bg-white/60 dark:bg-white/10 px-2 py-0.5 rounded border border-slate-200/50 dark:border-white/10">{post.room}</span>
+                            <span className="text-xs font-black text-slate-800 dark:text-white/90 truncate">{post.user}</span>
+                            <span className="text-[8px] text-slate-600 dark:text-white/60 font-mono uppercase bg-white/60 dark:bg-white/10 px-2 py-0.5 rounded border border-slate-200/50 dark:border-white/10 shrink-0">{post.room}</span>
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 shrink-0">
                             <span className="text-[9px] text-slate-500 dark:text-white/40 font-mono">{dateDisplay}</span>
-                            {/* O BOTÃO DA LIXEIRA */}
                             {canDelete && (
                                 <button onClick={() => onDelete(post.id)} className="text-slate-400 hover:text-red-500 transition-colors opacity-0 group-hover/post:opacity-100" title="Desintegrar Post">
                                     <TrashIcon className="w-4 h-4" />
@@ -443,17 +509,74 @@ function FeedPost({ post, currentUserEmail, isSuperAdmin, onDelete }: { post: Po
                         </div>
                     </div>
                     <p className="text-xs text-slate-700 dark:text-white/80 leading-relaxed font-medium mt-1 pr-6">{post.content}</p>
+
                     <div className="flex gap-5 mt-4">
-                        <button className="flex items-center gap-1.5 text-slate-500 dark:text-white/40 hover:text-red-500 transition-colors group">
-                            <HeartIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                            <span className="text-[10px] font-mono font-bold">{post.likes?.length || 0}</span>
+                        <button
+                            onClick={handleToggleLike}
+                            className={`flex items-center gap-1.5 transition-colors group ${isLikedByMe ? 'text-red-500' : 'text-slate-500 dark:text-white/40 hover:text-red-500'}`}
+                        >
+                            {isLikedByMe ? <HeartSolid className="w-4 h-4" /> : <HeartIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />}
+                            <span className="text-[10px] font-mono font-bold">{likes.length}</span>
                         </button>
-                        <button className="flex items-center gap-1.5 text-slate-500 dark:text-white/40 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors group">
+
+                        <button
+                            onClick={() => setShowComments(!showComments)}
+                            className={`flex items-center gap-1.5 transition-colors group ${showComments ? 'text-cyan-500' : 'text-slate-500 dark:text-white/40 hover:text-cyan-600 dark:hover:text-cyan-400'}`}
+                        >
                             <ChatBubbleLeftRightIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                            <span className="text-[10px] font-mono font-bold">{post.comments?.length || 0}</span>
+                            <span className="text-[10px] font-mono font-bold">{comments.length}</span>
                             <span className="text-[9px] ml-1 opacity-0 group-hover:opacity-100 transition-opacity">Reply</span>
                         </button>
                     </div>
+
+                    <AnimatePresence>
+                        {showComments && (
+                            <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                className="overflow-hidden mt-4 pt-4 border-t border-slate-200/50 dark:border-white/10 flex flex-col gap-4"
+                            >
+                                {comments.map((comment) => {
+                                    const canDeleteComment = isSuperAdmin || (currentUserEmail === comment.userEmail);
+
+                                    return (
+                                        <div key={comment.id} className="flex gap-3 items-start bg-slate-50/50 dark:bg-black/20 p-3 rounded-2xl border border-slate-100 dark:border-white/5 relative group/comment">
+                                            <UserCircleIcon className="w-6 h-6 text-slate-400 shrink-0" />
+                                            <div className="flex flex-col w-full">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-[10px] font-bold text-slate-700 dark:text-white/70">{comment.user}</span>
+                                                    {canDeleteComment && (
+                                                        <button
+                                                            onClick={() => handleDeleteComment(comment.id)}
+                                                            className="text-slate-400 hover:text-red-500 transition-colors opacity-0 group-hover/comment:opacity-100"
+                                                            title="Apagar Comentário"
+                                                        >
+                                                            <TrashIcon className="w-3 h-3" />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                <p className="text-[11px] text-slate-600 dark:text-white/50 leading-relaxed pr-4 mt-0.5">{comment.content}</p>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+
+                                <form onSubmit={handleAddComment} className="relative mt-2">
+                                    <input
+                                        type="text"
+                                        value={newComment}
+                                        onChange={(e) => setNewComment(e.target.value)}
+                                        placeholder="Adicionar resposta à rede..."
+                                        className="w-full bg-white dark:bg-white/5 border border-slate-200 dark:border-cyan-500/20 rounded-xl py-2 pl-4 pr-10 text-xs text-slate-800 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-cyan-500 transition-all"
+                                    />
+                                    <button type="submit" disabled={!newComment.trim()} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-cyan-600 disabled:opacity-30 disabled:cursor-not-allowed hover:scale-110 transition-transform">
+                                        <PaperAirplaneIcon className="w-4 h-4" />
+                                    </button>
+                                </form>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
             </div>
         </div>

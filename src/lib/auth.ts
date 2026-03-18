@@ -84,6 +84,8 @@ export const authOptions: NextAuthOptions = {
                     session.user.course = dbUser.course || "";
                     // @ts-ignore
                     session.user.academicLevel = dbUser.academicLevel || "Graduação";
+                    // @ts-ignore
+                    session.user.gender = dbUser.gender || "unspecified";
                     
                     const userEmail = token.email.toLowerCase();
                     // @ts-ignore
