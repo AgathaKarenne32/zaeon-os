@@ -1,94 +1,98 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/src/lib/prisma"; // Verifique se o caminho do prisma está correto
+import { prisma } from "@/src/lib/prisma";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/src/lib/auth"; // Verifique se o caminho do authOptions está correto
+import { authOptions } from "@/src/lib/auth";
+import redis from "@/backend/src/lib/redis";
+import clientPromise from "@/src/lib/db";
+import mongoose from "mongoose";
 
-export async function GET() {
-    const session = await getServerSession(authOptions);
-    const currentUserEmail = session?.user?.email || "";
+export async function GET(req: Request) {
+    const { searchParams } = new URL(req.url);
+    const room = searchParams.get("room") || "lounge";
 
     try {
+        // 1. TENTA BUSCAR NO CACHE (Diferenciando por sala)
+        const cacheKey = `feed_cache_${room}`;
+        const cachedData = await redis.get(cacheKey);
+
+        if (cachedData) {
+            console.log(`🛰️ Telemetria: Dados [${room}] recuperados do Redis`);
+            return NextResponse.json(JSON.parse(cachedData));
+        }
+
+        // 2. BUSCA NO BANCO
         const posts = await prisma.post.findMany({
+            where: { room },
             orderBy: { createdAt: 'desc' },
             include: {
-                comments: { orderBy: { createdAt: 'asc' } },
-                author: true // <--- Busca a imagem e dados do autor no banco
+                author: true,
+                comments: { orderBy: { createdAt: 'asc' } }
             }
         });
 
         const formattedPosts = posts.map((post: any) => ({
             id: post.id,
             user: post.user,
-            userImage: post.author?.image || null, // <--- Foto dinâmica para o frontend
+            userImage: post.author?.image || post.userImage || null,
             content: post.content,
-            time: new Date(post.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            room: post.room,
+            createdAt: post.createdAt,
             likes: post.likes || [],
-            isLiked: (post.likes || []).includes(currentUserEmail),
-            comments: post.comments.map((c: any) => ({
-                id: c.id,
-                user: c.user,
-                content: c.content,
-                time: new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            }))
+            comments: post.comments || []
         }));
+
+        // 3. SALVA NO REDIS
+        await redis.set(cacheKey, JSON.stringify(formattedPosts), 'EX', 3600);
 
         return NextResponse.json(formattedPosts);
     } catch (error) {
         console.error("Erro no GET Feed:", error);
-        return NextResponse.json({ error: "Erro ao carregar feed" }, { status: 500 });
+        return NextResponse.json({ error: "Erro ao carregar" }, { status: 500 });
     }
 }
 
 export async function POST(req: Request) {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-        return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+
+    if (!session || !session.user) {
+        return NextResponse.json(
+            { error: "⚠️ Transmissão interrompida: Identidade não verificada." },
+            { status: 401 }
+        );
     }
 
     try {
-        const { content } = await req.json();
+        const { content, room } = await req.json();
 
-        // Buscamos o ID do usuário para criar o vínculo (relação)
-        const dbUser = await prisma.user.findUnique({
-            where: { email: session.user.email }
-        });
+        // Conexão garantida
+        if (mongoose.connection.readyState !== 1) {
+            await mongoose.connect(process.env.MONGODB_URI!);
+        }
+        const db = mongoose.connection.db;
+        if (!db) throw new Error("Database offline");
 
-        const newPost = await prisma.post.create({
-            data: {
-                user: session.user.name || "Agente",
-                content: content,
-                userId: dbUser?.id, // <--- Vincula o post ao perfil para puxar a foto depois
-                likes: []
-            }
-        });
+        // 2. IDENTIDADE DO POST (Pegando direto do NextAuth)
+        const newPost = {
+            user: session.user.name,
+            userImage: session.user.image,
+            userEmail: session.user.email,
+            content: content,
+            room: room || "lounge",
+            likes: [],
+            createdAt: new Date(),
+        };
+
+        await db.collection("Post").insertOne(newPost);
+
+        // 3. SINCRONIZAÇÃO REDIS
+        const keys = await redis.keys('feed_cache_*');
+        if (keys.length > 0) await redis.del(...keys);
+
+        console.log(`🛰️ Transmissão confirmada para: ${session.user.name}`);
 
         return NextResponse.json(newPost);
-    } catch (error) {
-        console.error("Erro no POST Feed:", error);
-        return NextResponse.json({ error: "Erro ao postar" }, { status: 500 });
-    }
-}
-
-export async function DELETE(req: Request) {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get("id");
-
-    if (!id) return NextResponse.json({ error: "ID necessário" }, { status: 400 });
-
-    try {
-        const post = await prisma.post.findUnique({ where: { id } });
-
-        // Só permite deletar se o nome do usuário bater com o autor
-        if (post?.user !== session.user?.name) {
-            return NextResponse.json({ error: "Proibido" }, { status: 403 });
-        }
-
-        await prisma.post.delete({ where: { id } });
-        return NextResponse.json({ success: true });
-    } catch (error) {
-        return NextResponse.json({ error: "Erro ao deletar" }, { status: 500 });
+    } catch (error: any) {
+        console.error("❌ Erro no POST Feed:", error.message);
+        return NextResponse.json({ error: "Falha na rede neural" }, { status: 500 });
     }
 }

@@ -36,22 +36,22 @@ const ROOM_MAPPING: Record<string, string[]> = {
 
 // --- TYPES (Espelhando o Prisma) ---
 interface Comment { id: string; user: string; content: string; createdAt: string; }
-interface Post { 
-    id: string; 
-    user: string; 
+interface Post {
+    id: string;
+    user: string;
     userEmail: string; // <-- Essencial para a lixeira saber de quem é o post
-    userImage?: string; 
-    content: string; 
-    createdAt: string; 
-    likes: string[]; 
-    room: string; 
-    comments: Comment[]; 
+    userImage?: string;
+    content: string;
+    createdAt: string;
+    likes: string[];
+    room: string;
+    comments: Comment[];
 }
 
 // --- 1. GLOBO 3D (VISUAL & INTERATIVO) ---
 const COLOR_TECH_BLUE = new THREE.Color("#001a2c");
 const COLOR_WIRE_BLUE = new THREE.Color("#00d2ff");
-const COLOR_DOT       = new THREE.Color("#22d3ee");
+const COLOR_DOT = new THREE.Color("#22d3ee");
 
 const latLonToVector3 = (lat: number, lon: number, radius: number) => {
     const phi = (90 - lat) * (Math.PI / 180);
@@ -69,7 +69,7 @@ const LocationMarker = ({ lat, lon, label, cost, onClick }: any) => {
 
     useFrame(({ clock }) => {
         if (ref.current) {
-            ref.current.lookAt(0, 0, 8); 
+            ref.current.lookAt(0, 0, 8);
             const scale = hovered ? 1.3 : 1 + Math.sin(clock.getElapsedTime() * 3) * 0.1;
             ref.current.scale.set(scale, scale, scale);
         }
@@ -118,12 +118,12 @@ const CyberGlobe = () => {
             </Sphere>
             <group ref={wireframeGroupRef}>
                 <Sphere args={[1.51, 32, 32]}><meshBasicMaterial color={COLOR_WIRE_BLUE} wireframe transparent opacity={0.12} /></Sphere>
-                <LocationMarker lat={37.09} lon={-95.71} label="USA" cost="HIGH" onClick={() => {}} />
-                <LocationMarker lat={-14.23} lon={-51.92} label="BRAZIL" cost="LOW" onClick={() => {}} />
-                <LocationMarker lat={51.16} lon={10.45} label="GERMANY" cost="MED" onClick={() => {}} />
-                <LocationMarker lat={35.86} lon={104.19} label="CHINA" cost="MED" onClick={() => {}} />
-                <LocationMarker lat={-25.27} lon={133.77} label="AUSTRALIA" cost="HIGH" onClick={() => {}} />
-                <LocationMarker lat={35.67} lon={139.65} label="JAPAN" cost="HIGH" onClick={() => {}} />
+                <LocationMarker lat={37.09} lon={-95.71} label="USA" cost="HIGH" onClick={() => { }} />
+                <LocationMarker lat={-14.23} lon={-51.92} label="BRAZIL" cost="LOW" onClick={() => { }} />
+                <LocationMarker lat={51.16} lon={10.45} label="GERMANY" cost="MED" onClick={() => { }} />
+                <LocationMarker lat={35.86} lon={104.19} label="CHINA" cost="MED" onClick={() => { }} />
+                <LocationMarker lat={-25.27} lon={133.77} label="AUSTRALIA" cost="HIGH" onClick={() => { }} />
+                <LocationMarker lat={35.67} lon={139.65} label="JAPAN" cost="HIGH" onClick={() => { }} />
             </group>
         </group>
     );
@@ -153,18 +153,18 @@ const AppleSpinner = () => (
 // --- COMPONENTE DA PÁGINA ---
 export default function LoungeEarth() {
     const { data: session } = useSession();
-    
+
     // Identifica o curso e a sala nativa do usuário logado
     const userCourse = (session?.user as any)?.course || "";
     const isSuperAdmin = (session?.user as any)?.isAdmin === true;
     const currentUserEmail = session?.user?.email || "";
-    
+
     const getUserHomeRoom = () => {
         const courseStr = String(userCourse).toLowerCase().trim();
         for (const [room, courses] of Object.entries(ROOM_MAPPING)) {
             if (courses.some(c => c.toLowerCase().trim() === courseStr)) return room;
         }
-        return "lounge"; 
+        return "lounge";
     };
 
     const userHomeRoom = getUserHomeRoom();
@@ -179,25 +179,28 @@ export default function LoungeEarth() {
     const canPost = activeRoom === 'lounge' || activeRoom === userHomeRoom || isSuperAdmin;
 
     useEffect(() => {
-        setTimeout(() => { setGlobalMessage("System Update 4.0: Quantum coherence achieved. Welcome to the Zaeon Network."); }, 1500);
         loadFeed("lounge");
     }, []);
 
-    // --- FETCH REAL NA API ---
     const loadFeed = async (room: string) => {
         setIsLoadingFeed(true);
         setActiveRoom(room);
         try {
-            const res = await fetch(`/api/posts?room=${room}`);
+            const res = await fetch(`/api/feed?room=${room}`);
+
             if (res.ok) {
                 const data = await res.json();
                 setPosts(data);
+
+                setGlobalMessage("UPLINK ESTABELECIDO // REDIS CORE ATIVO // SINCRONIZADO");
             } else {
-                setPosts([]); 
+                setPosts([]);
+                setGlobalMessage("KERNEL ERROR: Falha na sincronização de dados.");
             }
         } catch (error) {
             console.error("Erro ao puxar dados da Matrix:", error);
             setPosts([]);
+            setGlobalMessage("OFFLINE: Link neural interrompido.");
         } finally {
             setIsLoadingFeed(false);
         }
@@ -209,18 +212,17 @@ export default function LoungeEarth() {
         if (!newPost.trim() || !canPost) return;
 
         const content = newPost;
-        setNewPost(""); 
+        setNewPost("");
 
         try {
-            const res = await fetch('/api/posts', {
+            const res = await fetch('/api/feed', { // <-- Rota correta sincronizada com Redis
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ content, room: activeRoom })
             });
 
             if (res.ok) {
-                const savedPost = await res.json();
-                setPosts([savedPost, ...posts]);
+                await loadFeed(activeRoom);
             } else {
                 alert("Falha de transmissão. A API ainda não está conectada.");
             }
@@ -233,11 +235,11 @@ export default function LoungeEarth() {
     // --- LÓGICA DE EXCLUSÃO (LIXEIRA) ---
     const handleDeletePost = async (postId: string) => {
         if (!confirm("Tem certeza que deseja desintegrar este sinal da rede?")) return;
-        
+
         try {
-            const res = await fetch(`/api/posts?id=${postId}`, { method: 'DELETE' });
+            // Agora usamos a rota /api/feed que invalida o cache do Redis ao deletar
+            const res = await fetch(`/api/feed?id=${postId}`, { method: 'DELETE' });
             if (res.ok) {
-                // Remove o post da tela imediatamente
                 setPosts(posts.filter(p => p.id !== postId));
             } else {
                 alert("Erro de permissão ou falha ao excluir.");
@@ -259,7 +261,7 @@ export default function LoungeEarth() {
 
     return (
         <div className="relative w-full min-h-screen font-sans bg-transparent">
-            
+
             <div className="fixed inset-0 z-0 flex flex-col items-center pointer-events-auto bg-transparent">
                 <div className="absolute top-10 w-full flex flex-col items-center z-10 pointer-events-none">
                     <h1 className="text-[10px] font-black uppercase tracking-[1em] text-slate-500 dark:text-white/40 flex items-center gap-4 drop-shadow-md">
@@ -324,8 +326,8 @@ export default function LoungeEarth() {
                                         whileTap={{ scale: 0.95 }}
                                         className={`
                                             relative h-20 rounded-2xl border backdrop-blur-md flex flex-col items-center justify-center gap-1.5 transition-all duration-300 shadow-lg overflow-hidden group
-                                            ${activeRoom === room.id 
-                                                ? `bg-${room.color}-500/30 border-${room.color}-500/50 shadow-[0_0_20px_rgba(var(--${room.color}-rgb),0.3)]` 
+                                            ${activeRoom === room.id
+                                                ? `bg-${room.color}-500/30 border-${room.color}-500/50 shadow-[0_0_20px_rgba(var(--${room.color}-rgb),0.3)]`
                                                 : 'bg-white/20 dark:bg-white/5 border-slate-200/50 dark:border-white/10 hover:bg-white/40 dark:hover:bg-white/10'
                                             }
                                         `}
@@ -361,15 +363,15 @@ export default function LoungeEarth() {
                                     </div>
                                 ) : (
                                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }} className="space-y-6">
-                                        
+
                                         {canPost ? (
                                             <form onSubmit={handlePostSubmit} className="mb-8 relative group">
-                                                <input 
-                                                    type="text" 
-                                                    value={newPost} 
-                                                    onChange={(e) => setNewPost(e.target.value)} 
-                                                    placeholder={`Transmit quick text to ${activeRoom.toUpperCase()}...`} 
-                                                    className="w-full bg-white/60 dark:bg-white/5 border border-slate-200/50 dark:border-cyan-500/30 rounded-2xl py-4 pl-6 pr-12 text-sm text-slate-800 dark:text-white placeholder:text-slate-500 dark:placeholder:text-cyan-500/40 focus:outline-none focus:border-cyan-500 focus:bg-white dark:focus:bg-black/40 transition-all shadow-inner backdrop-blur-md" 
+                                                <input
+                                                    type="text"
+                                                    value={newPost}
+                                                    onChange={(e) => setNewPost(e.target.value)}
+                                                    placeholder={`Transmit quick text to ${activeRoom.toUpperCase()}...`}
+                                                    className="w-full bg-white/60 dark:bg-white/5 border border-slate-200/50 dark:border-cyan-500/30 rounded-2xl py-4 pl-6 pr-12 text-sm text-slate-800 dark:text-white placeholder:text-slate-500 dark:placeholder:text-cyan-500/40 focus:outline-none focus:border-cyan-500 focus:bg-white dark:focus:bg-black/40 transition-all shadow-inner backdrop-blur-md"
                                                 />
                                                 <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-cyan-600 dark:text-cyan-400 hover:scale-110 transition-transform">
                                                     <PaperAirplaneIcon className="w-5 h-5" />
@@ -384,11 +386,11 @@ export default function LoungeEarth() {
                                                 </div>
                                             </div>
                                         )}
-                                        
+
                                         {posts.length > 0 ? posts.map((post) => (
-                                            <FeedPost 
-                                                key={post.id} 
-                                                post={post} 
+                                            <FeedPost
+                                                key={post.id}
+                                                post={post}
                                                 currentUserEmail={currentUserEmail}
                                                 isSuperAdmin={isSuperAdmin}
                                                 onDelete={handleDeletePost}
@@ -397,7 +399,7 @@ export default function LoungeEarth() {
                                             <div className="flex flex-col items-center justify-center py-16 opacity-50">
                                                 <SignalIcon className="w-12 h-12 text-slate-400 mb-4" />
                                                 <div className="text-center text-slate-500 dark:text-white/40 text-[10px] uppercase tracking-widest border-2 border-dashed border-slate-300/50 dark:border-white/10 p-6 rounded-xl backdrop-blur-sm">
-                                                    No signals detected in the Zaeon Database. <br/> Be the first to broadcast.
+                                                    No signals detected in the Zaeon Database. <br /> Be the first to broadcast.
                                                 </div>
                                             </div>
                                         )}
@@ -416,7 +418,7 @@ export default function LoungeEarth() {
 // --- SUB-COMPONENTE: POST INDIVIDUAL ---
 function FeedPost({ post, currentUserEmail, isSuperAdmin, onDelete }: { post: Post, currentUserEmail: string, isSuperAdmin: boolean, onDelete: (id: string) => void }) {
     const dateDisplay = post.createdAt ? new Date(post.createdAt).toLocaleDateString() : 'Just now';
-    
+
     // Regra da Lixeira: Pode apagar se for dono do post OU se for Super Admin
     const canDelete = isSuperAdmin || (currentUserEmail === post.userEmail);
 
