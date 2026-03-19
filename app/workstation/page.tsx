@@ -30,10 +30,11 @@ const ROOM_DETAILS = {
     humanities: { id: "humanities", name: "Grand Archive", icon: BookOpenIcon, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-500/10", border: "border-amber-300 dark:border-amber-500/30", route: "/study-rooms/humanities" },
 };
 
-const UNIVERSAL_SKILLS = [
-    { id: "writing", name: "Academic Writing", icon: PencilSquareIcon, rank: "C", current: 4, next: 5, metricName: "Papers", locked: false },
-    { id: "focus", name: "Deep Focus", icon: EyeIcon, rank: "E", current: 15, next: 50, metricName: "Hours", locked: false },
-    { id: "collab", name: "Collective Synergy", icon: CollabIcon, rank: "D", current: 4, next: 10, metricName: "Projects", locked: false },
+// 🔥 Tabela Base Zerada para Mapeamento de Ícones 🔥
+const DEFAULT_SKILLS = [
+    { id: "writing", name: "Academic Writing", icon: PencilSquareIcon, rank: "F", current: 0, next: 50, metricName: "Papers", locked: false },
+    { id: "focus", name: "Deep Focus", icon: EyeIcon, rank: "F", current: 0, next: 50, metricName: "Hours", locked: false },
+    { id: "collab", name: "Collective Synergy", icon: CollabIcon, rank: "F", current: 0, next: 10, metricName: "Projects", locked: false },
     { id: "participation", name: "Participation", icon: HandRaisedIcon, rank: "F", current: 0, next: 5, metricName: "Validations", locked: true, note: "Teacher Controlled" }
 ];
 
@@ -111,6 +112,10 @@ export default function WorkStationPage() {
     const [activeSkill, setActiveSkill] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
 
+    // 🔥 Estado Real das Skills que virão do Banco de Dados 🔥
+    const [userSkills, setUserSkills] = useState<typeof DEFAULT_SKILLS>(DEFAULT_SKILLS);
+    const [isLoadingSkills, setIsLoadingSkills] = useState(true);
+
     // @ts-ignore
     const isSuperAdmin = !!session?.user?.isAdmin;
     const userCourse = (session?.user as any)?.course || "";
@@ -131,7 +136,6 @@ export default function WorkStationPage() {
     const targetRoomKey = getTargetRoom();
     const targetRoom = targetRoomKey ? ROOM_DETAILS[targetRoomKey] : null;
 
-    // 🔥 O CÉREBRO DAS CORES 🔥
     const getTheme = () => {
         const isFemale = userGender.toLowerCase() === "feminino" || userGender.toLowerCase() === "female";
         const isMale = userGender.toLowerCase() === "masculino" || userGender.toLowerCase() === "male";
@@ -217,7 +221,6 @@ export default function WorkStationPage() {
             };
         }
 
-        // Padrão
         return {
             pageBg: "bg-slate-200/30 dark:bg-[#030014]",
             matrixOpacity: "opacity-60",
@@ -247,6 +250,32 @@ export default function WorkStationPage() {
     const theme = getTheme();
 
     useEffect(() => { setMounted(true); }, []);
+
+    // 🔥 LOAD DAS SKILLS DO BANCO DE DADOS (Zera se não houver) 🔥
+    useEffect(() => {
+        const loadSkills = async () => {
+            if (status === "authenticated") {
+                try {
+                    const res = await fetch('/api/user/skills'); // <-- Rota Real Futura
+                    if (res.ok) {
+                        const dbSkills = await res.json();
+                        // Combina o ícone/nome estático do frontend com os valores do backend
+                        const mergedSkills = DEFAULT_SKILLS.map(defaultSkill => {
+                            const foundDbSkill = dbSkills.find((s: any) => s.id === defaultSkill.id);
+                            return foundDbSkill ? { ...defaultSkill, ...foundDbSkill } : defaultSkill;
+                        });
+                        setUserSkills(mergedSkills);
+                    }
+                } catch (error) {
+                    console.error("Falha ao carregar skills, usando defaults zerados.", error);
+                    // Falha silenciosa = usa a tabela zerada sem estressar o usuário
+                } finally {
+                    setIsLoadingSkills(false);
+                }
+            }
+        };
+        if (mounted) loadSkills();
+    }, [mounted, status]);
 
     useEffect(() => {
         const syncOnboardingData = async () => {
@@ -371,19 +400,15 @@ export default function WorkStationPage() {
                     {/* --- LADO ESQUERDO: HUD DO PERSONAGEM --- */}
                     <div className="lg:col-span-6 relative flex items-start justify-start pl-4 lg:pl-10 mt-16 lg:mt-24">
 
-                        {/* 🔥 NOVO CARD FLUTUANTE PESSOAL (Fora da Cápsula, Topo Direito) */}
+                        {/* 🔥 NOME DO PERFIL (Curso Removido da linha inferior) 🔥 */}
                         <div className="absolute right-0 top-10 flex flex-col items-end z-30">
                             <span className={`text-2xl font-black tracking-tighter drop-shadow-md ${theme.textStrong}`}>
                                 {session?.user?.name || "Unknown"}
                             </span>
-                            <div className={`w-full h-px my-1 ${theme.accentMuted}`} />
-                            <span className={`text-[10px] font-bold uppercase tracking-[0.3em] ${theme.textAccent}`}>
-                                {userCourse || "Undeclared"}
-                            </span>
                         </div>
 
                         <div className="relative flex items-start">
-                            {/* A CÁPSULA (Sem bg sólido, apenas reflexo e desfoque) */}
+                            {/* A CÁPSULA */}
                             <div className={`relative w-[180px] h-[500px] rounded-[100px] border-[3px] backdrop-blur-3xl flex flex-col items-center justify-center z-20 py-10 shadow-[0_0_50px_rgba(255,255,255,0.05)] ${theme.capsuleBorder}`}>
 
                                 <RealisticDNA theme={theme} />
@@ -398,7 +423,6 @@ export default function WorkStationPage() {
                                         </div>
                                     </label>
                                 </motion.div>
-                                {/* O CARD ANTIGO (Subject Node) FOI REMOVIDO DAQUI */}
                             </div>
 
                             <div className="absolute left-[100%] top-16 flex flex-col gap-6 z-10">
@@ -419,16 +443,25 @@ export default function WorkStationPage() {
                                         <div className={`border px-5 py-3 rounded-2xl backdrop-blur-md shadow-xl flex items-center gap-3 relative z-20 bg-black/20 ${theme.cardBorder}`}>
                                             <BookOpenIcon className={`w-6 h-6 ${theme.capsuleIconFill}`} />
                                             <div>
-                                                <div className={`text-[8px] uppercase font-black tracking-widest text-white/50`}>Knowledge Base</div>
+                                                {/* 🔥 TROCA NOME KNOWLEDGE BASE -> CURSO 🔥 */}
+                                                <div className={`text-[8px] uppercase font-black tracking-widest text-white/50`}>Curso</div>
                                                 <div className={`text-xs font-bold uppercase truncate max-w-[180px] text-white`}>{isSuperAdmin ? "Omniscient" : userCourse || "Undeclared"}</div>
                                             </div>
                                         </div>
                                     </div>
 
+                                    {/* 🔥 RENDERIZANDO A LISTA DE SKILLS (Reais ou Zeradas) 🔥 */}
                                     <div className={`flex flex-col gap-4 mt-4 ml-16 relative z-10 border-l-[2px] pl-4 py-2 ${theme.cardBorder}`}>
-                                        {UNIVERSAL_SKILLS.map((skill) => (
-                                            <SkillDrawer key={skill.id} skill={skill} isOpen={activeSkill === skill.id} onToggle={() => setActiveSkill(activeSkill === skill.id ? null : skill.id)} theme={theme} />
-                                        ))}
+                                        {isLoadingSkills ? (
+                                            <div className="flex items-center gap-2 px-2 opacity-50">
+                                                <ArrowPathIcon className="w-4 h-4 animate-spin text-white/50" />
+                                                <span className="text-[8px] text-white/50 uppercase tracking-widest">Sincronizando Skills...</span>
+                                            </div>
+                                        ) : (
+                                            userSkills.map((skill) => (
+                                                <SkillDrawer key={skill.id} skill={skill} isOpen={activeSkill === skill.id} onToggle={() => setActiveSkill(activeSkill === skill.id ? null : skill.id)} theme={theme} />
+                                            ))
+                                        )}
                                     </div>
                                 </motion.div>
                             </div>
@@ -483,7 +516,8 @@ export default function WorkStationPage() {
                     </div>
                 </div>
 
-                <div className={`w-full max-w-[1400px] border-t pt-16 mt-8 ${theme.cardBorder}`}>
+                {/* --- MURAL DE FOTOS 3D --- */}
+                <div className={`w-full max-w-[1400px] border-t mt-8 ${theme.cardBorder}`}>
                     <NetworkMural />
                 </div>
             </div>

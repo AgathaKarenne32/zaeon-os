@@ -12,11 +12,11 @@ generator client {
 
 // --- MODELO DE USUÁRIO ---
 model User {
-  id              String    @id @default(auto()) @map("_id") @db.ObjectId
-  name            String?
-  email           String?   @unique
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  name          String?
+  email         String?   @unique
   emailVerified DateTime?
-  image           String?   
+  image         String?   
   
   // Profile
   course          String?   
@@ -37,24 +37,25 @@ model User {
   // Identity
   identityId      String?   
   idType          String?   
-  walletAddress String?   
+  walletAddress   String?   
   
   // Admin & Verification
   kycStatus         String  @default("pending")
   academicLevel     String  @default("Graduação") // <--- NOVO: Graduação, Mestrado, Doutorado... (Definido pelo Admin)
   documents         Json?   
   institution       String?   
-  verificationDoc String? 
+  verificationDoc   String? 
 
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt       DateTime? @default(now())
+  updatedAt       DateTime? @updatedAt
 
   // Relations
   accounts        Account[]
   sessions        Session[]
   posts           Post[]
   comments        Comment[]
-  userSpaceData UserSpaceData?
+  userSpaceData   UserSpaceData?
+  personalPhotos  PersonalPhoto[] // 🔥 NOVO: Relação com as fotos do Mural (My Photos)
 
   // 🔥 CRÍTICO: Sincroniza o Prisma com o NextAuth (coleção 'users')
   @@map("users") 
@@ -80,7 +81,7 @@ model UserSpaceData {
   zaeonChat         Json?    
   library           Json?    
   fabricator        Json?    
-  personalModules Json?    
+  personalModules   Json?    
 
   // Profile & Objectives
   objectives        Json?    
@@ -198,5 +199,16 @@ model SystemLog {
   userId    String
   action    String   
   details   String?
+  createdAt DateTime @default(now())
+}
+
+// 🔥 NOVO: MODELO DE FOTOS DO MURAL (MY PHOTOS) 🔥
+model PersonalPhoto {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  subtitle  String
+  image     String   // Guardará a string em Base64
   createdAt DateTime @default(now())
 }

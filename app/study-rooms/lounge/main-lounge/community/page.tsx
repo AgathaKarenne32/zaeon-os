@@ -6,6 +6,7 @@ import { OrbitControls, Sphere, Html } from "@react-three/drei";
 import * as THREE from "three";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation"; // 🔥 IMPORTADO ROUTER PARA NAVEGAÇÃO
 import {
     ChatBubbleLeftRightIcon,
     UserCircleIcon,
@@ -25,7 +26,6 @@ import {
 } from "@heroicons/react/24/outline";
 import { HeartIcon as HeartSolid } from "@heroicons/react/24/solid";
 
-// --- MAPEAMENTO DE CURSOS (Para Controle de Permissão de Postagem) ---
 const ROOM_MAPPING: Record<string, string[]> = {
     cyber: ["Ciência da Computação", "Engenharia de Software", "Sistemas de Informação", "Análise e Desenvolvimento de Sistemas", "Engenharia da Computação", "Redes de Computadores", "Segurança da Informação / Cibersegurança", "Banco de Dados", "Inteligência Artificial", "Ciência de Dados", "Computação em Nuvem", "Internet das Coisas", "Robótica", "Jogos Digitais", "Design Digital / UX / UI", "Computer Science", "Software Engineering"],
     med: ["Medicina", "Enfermagem", "Odontologia", "Farmácia", "Fisioterapia", "Nutrição", "Psicologia", "Fonoaudiologia", "Terapia Ocupacional", "Biomedicina", "Educação Física"],
@@ -34,11 +34,13 @@ const ROOM_MAPPING: Record<string, string[]> = {
     humanities: ["História", "Geografia", "Filosofia", "Sociologia", "Antropologia", "Ciência Política", "Relações Internacionais", "Letras", "Linguística", "Pedagogia", "Artes", "Música", "Teatro", "Dança", "Cinema e Audiovisual", "Arquivologia", "Biblioteconomia", "Museologia", "Serviço Social", "Comunicação Social", "Jornalismo", "Publicidade e Propaganda", "Editoração", "Produção Cultural", "Direito", "Teologia"]
 };
 
-// --- TYPES (Espelhando o Prisma) ---
+// 🔥 TIPOS ATUALIZADOS COM USERID E USERIMAGE 🔥
 interface Comment {
     id: string;
     user: string;
-    userEmail?: string; // <-- A Lixeira precisa saber de quem é o comentário
+    userEmail?: string; 
+    userId?: string; 
+    userImage?: string; 
     content: string;
     createdAt: string;
 }
@@ -46,6 +48,7 @@ interface Post {
     id: string;
     user: string;
     userEmail?: string;
+    userId?: string; 
     userImage?: string;
     content: string;
     createdAt: string;
@@ -156,13 +159,17 @@ const AppleSpinner = () => (
     </div>
 );
 
-// --- COMPONENTE DA PÁGINA ---
 export default function LoungeEarth() {
     const { data: session } = useSession();
+    const router = useRouter(); // Roteador Global
 
     const userCourse = (session?.user as any)?.course || "";
     const isSuperAdmin = (session?.user as any)?.isAdmin === true;
     const currentUserEmail = session?.user?.email || "";
+    
+    // 🔥 Captura ID e Imagem do usuário logado para UX otimista 🔥
+    const currentUserId = (session?.user as any)?.id || ""; 
+    const currentUserImage = session?.user?.image || ""; 
 
     const getUserHomeRoom = () => {
         const courseStr = String(userCourse).toLowerCase().trim();
@@ -180,7 +187,6 @@ export default function LoungeEarth() {
     const [posts, setPosts] = useState<Post[]>([]);
     const [newPost, setNewPost] = useState("");
 
-    // --- REGRA DE NEGÓCIO: Pode postar tópico raiz? ---
     const canPost = activeRoom === 'lounge' || activeRoom === userHomeRoom || isSuperAdmin;
 
     useEffect(() => {
@@ -251,7 +257,7 @@ export default function LoungeEarth() {
 
     return (
         <div className="relative w-full min-h-screen font-sans bg-transparent">
-
+            {/* O Resto do seu Layout Global (Canvas e Cabeçalhos) continua idêntico aqui */}
             <div className="fixed inset-0 z-0 flex flex-col items-center pointer-events-auto bg-transparent">
                 <div className="absolute top-10 w-full flex flex-col items-center z-10 pointer-events-none">
                     <h1 className="text-[10px] font-black uppercase tracking-[1em] text-slate-500 dark:text-white/40 flex items-center gap-4 drop-shadow-md">
@@ -381,8 +387,11 @@ export default function LoungeEarth() {
                                                 key={post.id}
                                                 post={post}
                                                 currentUserEmail={currentUserEmail}
+                                                currentUserImage={currentUserImage} 
+                                                currentUserId={currentUserId} 
                                                 isSuperAdmin={isSuperAdmin}
                                                 onDelete={handleDeletePost}
+                                                router={router}
                                             />
                                         )) : (
                                             <div className="flex flex-col items-center justify-center py-16 opacity-50">
@@ -404,8 +413,16 @@ export default function LoungeEarth() {
     );
 }
 
-// --- SUB-COMPONENTE: POST INDIVIDUAL (COM ESTADO DE LIKES E COMMENTS) ---
-function FeedPost({ post, currentUserEmail, isSuperAdmin, onDelete }: { post: Post, currentUserEmail: string, isSuperAdmin: boolean, onDelete: (id: string) => void }) {
+// --- SUB-COMPONENTE: POST INDIVIDUAL ATUALIZADO ---
+function FeedPost({ 
+    post, 
+    currentUserEmail, 
+    currentUserImage, 
+    currentUserId, 
+    isSuperAdmin, 
+    onDelete, 
+    router 
+}: any) {
     const dateDisplay = post.createdAt ? new Date(post.createdAt).toLocaleDateString() : 'Just now';
     const canDelete = isSuperAdmin || (currentUserEmail === post.userEmail);
 
@@ -433,11 +450,8 @@ function FeedPost({ post, currentUserEmail, isSuperAdmin, onDelete }: { post: Po
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ postId: post.id })
             });
-        } catch (error) {
-            console.error("Falha ao registrar like", error);
-        } finally {
-            setIsLiking(false);
-        }
+        } catch (error) { console.error("Falha ao registrar like", error); } 
+        finally { setIsLiking(false); }
     };
 
     const handleAddComment = async (e: React.FormEvent) => {
@@ -447,10 +461,13 @@ function FeedPost({ post, currentUserEmail, isSuperAdmin, onDelete }: { post: Po
         const commentText = newComment;
         setNewComment("");
 
+        // 🔥 AGORA INJETAMOS A IMAGEM E O ID DO USUÁRIO LOGADO NO COMENTÁRIO PROVISÓRIO 🔥
         const tempComment: Comment = {
             id: Date.now().toString(),
             user: "Você",
             userEmail: currentUserEmail,
+            userId: currentUserId,
+            userImage: currentUserImage, 
             content: commentText,
             createdAt: new Date().toISOString()
         };
@@ -467,9 +484,7 @@ function FeedPost({ post, currentUserEmail, isSuperAdmin, onDelete }: { post: Po
                 const finalComment = await res.json();
                 setComments(prev => prev.map(c => c.id === tempComment.id ? finalComment : c));
             }
-        } catch (error) {
-            console.error("Falha ao registrar comentário", error);
-        }
+        } catch (error) { console.error("Falha ao registrar comentário", error); }
     };
 
     const handleDeleteComment = async (commentId: string) => {
@@ -482,21 +497,29 @@ function FeedPost({ post, currentUserEmail, isSuperAdmin, onDelete }: { post: Po
             } else {
                 alert("Falha de permissão ao tentar excluir.");
             }
-        } catch (error) {
-            console.error("Falha ao excluir comentário", error);
-        }
+        } catch (error) { console.error("Falha ao excluir comentário", error); }
     };
 
     return (
         <div className="bg-white/60 dark:bg-white/5 backdrop-blur-md border border-slate-200/50 dark:border-white/10 p-5 rounded-3xl transition-all hover:bg-white hover:shadow-lg dark:hover:bg-white/10 hover:scale-[1.01] relative group/post">
             <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-2xl bg-white/80 dark:bg-white/10 overflow-hidden flex items-center justify-center shrink-0 border border-slate-200/50 dark:border-white/10">
+                {/* 🔥 AVATAR CLICÁVEL 🔥 */}
+                <div 
+                    className="w-10 h-10 rounded-2xl bg-white/80 dark:bg-white/10 overflow-hidden flex items-center justify-center shrink-0 border border-slate-200/50 dark:border-white/10 cursor-pointer hover:border-cyan-400 transition-colors shadow-sm"
+                    onClick={() => post.userId && router.push(`/workstation/${post.userId}`)}
+                >
                     {post.userImage ? <img src={post.userImage} alt="" className="w-full h-full object-cover" /> : <UserCircleIcon className="w-6 h-6 text-slate-500 dark:text-white/50" />}
                 </div>
                 <div className="flex-1 w-full overflow-hidden">
                     <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2">
-                            <span className="text-xs font-black text-slate-800 dark:text-white/90 truncate">{post.user}</span>
+                            {/* 🔥 NOME CLICÁVEL 🔥 */}
+                            <span 
+                                className="text-xs font-black text-slate-800 dark:text-white/90 truncate cursor-pointer hover:text-cyan-500 transition-colors"
+                                onClick={() => post.userId && router.push(`/workstation/${post.userId}`)}
+                            >
+                                {post.user}
+                            </span>
                             <span className="text-[8px] text-slate-600 dark:text-white/60 font-mono uppercase bg-white/60 dark:bg-white/10 px-2 py-0.5 rounded border border-slate-200/50 dark:border-white/10 shrink-0">{post.room}</span>
                         </div>
                         <div className="flex items-center gap-3 shrink-0">
@@ -511,18 +534,12 @@ function FeedPost({ post, currentUserEmail, isSuperAdmin, onDelete }: { post: Po
                     <p className="text-xs text-slate-700 dark:text-white/80 leading-relaxed font-medium mt-1 pr-6">{post.content}</p>
 
                     <div className="flex gap-5 mt-4">
-                        <button
-                            onClick={handleToggleLike}
-                            className={`flex items-center gap-1.5 transition-colors group ${isLikedByMe ? 'text-red-500' : 'text-slate-500 dark:text-white/40 hover:text-red-500'}`}
-                        >
+                        <button onClick={handleToggleLike} className={`flex items-center gap-1.5 transition-colors group ${isLikedByMe ? 'text-red-500' : 'text-slate-500 dark:text-white/40 hover:text-red-500'}`}>
                             {isLikedByMe ? <HeartSolid className="w-4 h-4" /> : <HeartIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />}
                             <span className="text-[10px] font-mono font-bold">{likes.length}</span>
                         </button>
 
-                        <button
-                            onClick={() => setShowComments(!showComments)}
-                            className={`flex items-center gap-1.5 transition-colors group ${showComments ? 'text-cyan-500' : 'text-slate-500 dark:text-white/40 hover:text-cyan-600 dark:hover:text-cyan-400'}`}
-                        >
+                        <button onClick={() => setShowComments(!showComments)} className={`flex items-center gap-1.5 transition-colors group ${showComments ? 'text-cyan-500' : 'text-slate-500 dark:text-white/40 hover:text-cyan-600 dark:hover:text-cyan-400'}`}>
                             <ChatBubbleLeftRightIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />
                             <span className="text-[10px] font-mono font-bold">{comments.length}</span>
                             <span className="text-[9px] ml-1 opacity-0 group-hover:opacity-100 transition-opacity">Reply</span>
@@ -531,27 +548,31 @@ function FeedPost({ post, currentUserEmail, isSuperAdmin, onDelete }: { post: Po
 
                     <AnimatePresence>
                         {showComments && (
-                            <motion.div
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: 'auto', opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                className="overflow-hidden mt-4 pt-4 border-t border-slate-200/50 dark:border-white/10 flex flex-col gap-4"
-                            >
+                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden mt-4 pt-4 border-t border-slate-200/50 dark:border-white/10 flex flex-col gap-4">
                                 {comments.map((comment) => {
                                     const canDeleteComment = isSuperAdmin || (currentUserEmail === comment.userEmail);
 
                                     return (
                                         <div key={comment.id} className="flex gap-3 items-start bg-slate-50/50 dark:bg-black/20 p-3 rounded-2xl border border-slate-100 dark:border-white/5 relative group/comment">
-                                            <UserCircleIcon className="w-6 h-6 text-slate-400 shrink-0" />
+                                            {/* 🔥 FOTO DO COMENTÁRIO CLICÁVEL 🔥 */}
+                                            <div 
+                                                className="w-7 h-7 rounded-xl overflow-hidden shrink-0 cursor-pointer hover:border-cyan-400 border border-transparent transition-colors"
+                                                onClick={() => comment.userId && router.push(`/workstation/${comment.userId}`)}
+                                            >
+                                                {comment.userImage ? <img src={comment.userImage} alt="" className="w-full h-full object-cover" /> : <UserCircleIcon className="w-7 h-7 text-slate-400" />}
+                                            </div>
+                                            
                                             <div className="flex flex-col w-full">
                                                 <div className="flex justify-between items-center">
-                                                    <span className="text-[10px] font-bold text-slate-700 dark:text-white/70">{comment.user}</span>
+                                                    {/* 🔥 NOME DO COMENTÁRIO CLICÁVEL 🔥 */}
+                                                    <span 
+                                                        className="text-[10px] font-bold text-slate-700 dark:text-white/70 cursor-pointer hover:text-cyan-500 transition-colors"
+                                                        onClick={() => comment.userId && router.push(`/workstation/${comment.userId}`)}
+                                                    >
+                                                        {comment.user}
+                                                    </span>
                                                     {canDeleteComment && (
-                                                        <button
-                                                            onClick={() => handleDeleteComment(comment.id)}
-                                                            className="text-slate-400 hover:text-red-500 transition-colors opacity-0 group-hover/comment:opacity-100"
-                                                            title="Apagar Comentário"
-                                                        >
+                                                        <button onClick={() => handleDeleteComment(comment.id)} className="text-slate-400 hover:text-red-500 transition-colors opacity-0 group-hover/comment:opacity-100">
                                                             <TrashIcon className="w-3 h-3" />
                                                         </button>
                                                     )}
@@ -563,13 +584,7 @@ function FeedPost({ post, currentUserEmail, isSuperAdmin, onDelete }: { post: Po
                                 })}
 
                                 <form onSubmit={handleAddComment} className="relative mt-2">
-                                    <input
-                                        type="text"
-                                        value={newComment}
-                                        onChange={(e) => setNewComment(e.target.value)}
-                                        placeholder="Adicionar resposta à rede..."
-                                        className="w-full bg-white dark:bg-white/5 border border-slate-200 dark:border-cyan-500/20 rounded-xl py-2 pl-4 pr-10 text-xs text-slate-800 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-cyan-500 transition-all"
-                                    />
+                                    <input type="text" value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="Adicionar resposta à rede..." className="w-full bg-white dark:bg-white/5 border border-slate-200 dark:border-cyan-500/20 rounded-xl py-2 pl-4 pr-10 text-xs text-slate-800 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-cyan-500 transition-all" />
                                     <button type="submit" disabled={!newComment.trim()} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-cyan-600 disabled:opacity-30 disabled:cursor-not-allowed hover:scale-110 transition-transform">
                                         <PaperAirplaneIcon className="w-4 h-4" />
                                     </button>

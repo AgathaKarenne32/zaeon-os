@@ -15,36 +15,38 @@ export async function GET(req: Request) {
             where: { room: room },
             orderBy: { createdAt: "desc" },
             include: {
-                // Traz o autor do POST (para a foto dinâmica e lixeira do post)
+                // 🔥 Trazemos o ID, email e imagem do autor do post
                 author: {
-                    select: { email: true, image: true }
+                    select: { id: true, email: true, image: true }
                 },
-                // 🔥 CORREÇÃO: Traz os comentários E os autores deles (para a lixeira do comentário!)
                 comments: {
                     include: {
-                        author: { select: { email: true } }
+                        // 🔥 Trazemos o ID, email e imagem do autor do comentário
+                        author: { select: { id: true, email: true, image: true } }
                     },
-                    orderBy: { createdAt: "asc" } // Traz os comentários em ordem cronológica
+                    orderBy: { createdAt: "asc" }
                 }
             }
         });
 
-        // Formatando para o frontend não ter que lidar com estruturas aninhadas complexas do Prisma
+        // Formatando para o frontend
         const formattedPosts = posts.map(post => ({
             id: post.id,
             user: post.user,
+            userId: post.author?.id || post.userId, // 🔥 CRÍTICO PARA O CLIQUE NO PERFIL FUNCIONAR
             userEmail: post.author?.email || "",
             userImage: post.author?.image || post.userImage,
             content: post.content,
-            // Proteção contra registros antigos sem data
             createdAt: post.createdAt ? post.createdAt.toISOString() : new Date().toISOString(),
             likes: post.likes || [],
             room: post.room,
-            // 🔥 CORREÇÃO: Mapeia os comentários para injetar o userEmail corretamente
+            // Mapeando os comentários
             comments: post.comments.map(c => ({
                 id: c.id,
                 user: c.user,
+                userId: c.author?.id || c.userId, // 🔥 CRÍTICO PARA O CLIQUE NO PERFIL FUNCIONAR
                 userEmail: c.author?.email || "",
+                userImage: c.author?.image,       // 🔥 Traz a imagem do comentário também
                 content: c.content,
                 createdAt: c.createdAt ? c.createdAt.toISOString() : new Date().toISOString()
             }))
@@ -88,23 +90,23 @@ export async function POST(req: Request) {
                 userId: dbUser.id
             },
             include: {
-                author: { select: { email: true, image: true } },
-                // Mantém a simetria com a estrutura do GET
-                comments: { include: { author: { select: { email: true } } } }
+                author: { select: { id: true, email: true, image: true } },
+                comments: { include: { author: { select: { id: true, email: true, image: true } } } }
             }
         });
 
-        // Formata igual ao GET para a tela atualizar na hora (Optimistic UI da raiz)
+        // Formata igual ao GET para a UI Otimista
         const formattedPost = {
             id: newPost.id,
             user: newPost.user,
+            userId: newPost.author?.id || dbUser.id, // 🔥 Inclui o ID aqui também
             userEmail: newPost.author?.email || "",
             userImage: newPost.author?.image || newPost.userImage,
             content: newPost.content,
             createdAt: newPost.createdAt ? newPost.createdAt.toISOString() : new Date().toISOString(),
             likes: newPost.likes || [],
             room: newPost.room,
-            comments: [] // Um post recém-criado nunca terá comentários
+            comments: []
         };
 
         return NextResponse.json(formattedPost);
@@ -134,7 +136,6 @@ export async function DELETE(req: Request) {
 
         if (!post) return NextResponse.json({ error: "Sinal não encontrado" }, { status: 404 });
 
-        // Regra de Segurança: Só o dono ou o Super Admin (Chave Mestra) podem apagar o Post INTEIRO
         // @ts-ignore
         const isSuperAdmin = session.user.isAdmin === true;
         const isOwner = post.author?.email === session.user.email;
