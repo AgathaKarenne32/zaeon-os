@@ -13,7 +13,6 @@ import {
 import MatrixRain from "@/components/main/star-background";
 import NetworkMural from "@/app/workstation/profiles/NetworkMural";
 
-// --- MAPEAMENTO DE CURSOS E SALAS ---
 const ROOM_MAPPING: Record<string, string[]> = {
     cyber: ["Ciência da Computação", "Engenharia de Software", "Sistemas de Informação", "Análise e Desenvolvimento de Sistemas", "Engenharia da Computação", "Redes de Computadores", "Segurança da Informação / Cibersegurança", "Banco de Dados", "Inteligência Artificial", "Ciência de Dados", "Computação em Nuvem", "Internet das Coisas", "Robótica", "Jogos Digitais", "Design Digital / UX / UI", "Computer Science", "Software Engineering"],
     med: ["Medicina", "Enfermagem", "Odontologia", "Farmácia", "Fisioterapia", "Nutrição", "Psicologia", "Fonoaudiologia", "Terapia Ocupacional", "Biomedicina", "Educação Física"],
@@ -102,29 +101,40 @@ const SkillDrawer = ({ skill, isOpen, onToggle, theme }: any) => {
     );
 };
 
-// 🔥 COMPONENTE DE SOLICITAÇÃO REAL 🔥
+// 🔥 COMPONENTE DE SOLICITAÇÃO REAL: TEMPO REAL, PEQUENO E DESTACADO 🔥
 const NetworkConnectionsPanel = ({ visitedUserId, currentUserId, theme }: { visitedUserId?: string, currentUserId?: string, theme: any }) => {
     const [requestState, setRequestState] = useState<0 | 1 | 2 | 3 | 4>(0);
     const [requestText, setRequestText] = useState("");
     const [isLoading, setIsLoading] = useState(true);
 
+    const isOwnProfile = visitedUserId === currentUserId;
+
     useEffect(() => {
-        if (!visitedUserId || visitedUserId === currentUserId) {
+        if (!visitedUserId || isOwnProfile) {
             setIsLoading(false);
             return;
         }
 
-        fetch(`/api/network/request?targetId=${visitedUserId}`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.status === 'PENDING') setRequestState(2);
-                else if (data.status === 'REJECTED') setRequestState(3);
-                else if (data.status === 'ACCEPTED') setRequestState(4);
-                else setRequestState(0);
-                setIsLoading(false);
-            })
-            .catch(() => setIsLoading(false));
-    }, [visitedUserId, currentUserId]);
+        const fetchStatus = async () => {
+            try {
+                const res = await fetch(`/api/network/request?targetId=${visitedUserId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.status === 'PENDING') setRequestState(2);
+                    else if (data.status === 'REJECTED') setRequestState(3);
+                    else if (data.status === 'ACCEPTED') setRequestState(4);
+                    else setRequestState(0);
+                }
+            } catch (error) { console.error(error); }
+            finally { setIsLoading(false); }
+        };
+
+        // Chama na hora e depois fica sondando a cada 3 segundos para atualizar em tempo real
+        fetchStatus();
+        const intervalId = setInterval(fetchStatus, 3000);
+
+        return () => clearInterval(intervalId); // Limpa o radar ao sair
+    }, [visitedUserId, currentUserId, isOwnProfile]);
 
     const handleSendRequest = async () => {
         if (!requestText.trim()) return;
@@ -136,71 +146,76 @@ const NetworkConnectionsPanel = ({ visitedUserId, currentUserId, theme }: { visi
         });
     };
 
-    if (!visitedUserId || visitedUserId === currentUserId) return null;
+    if (!visitedUserId || isOwnProfile) return null;
 
-    if (isLoading) return <div className="w-full h-12 bg-white/5 rounded-full animate-pulse mt-4" />;
+    if (isLoading) return <div className="h-8 w-24 bg-slate-200 dark:bg-white/10 rounded-full animate-pulse mt-4" />;
 
     return (
-        <div className={`w-full p-6 mt-4 rounded-[2rem] flex flex-col items-center transition-all ${theme.panelWrapper}`}>
+        <div className="flex flex-col items-center justify-center mt-4 w-full z-40">
             <AnimatePresence mode="wait">
+
+                {/* ESTADO 0: BOTÃO PEQUENO, ELEGANTE E DESTACADO */}
                 {requestState === 0 && (
                     <motion.button
                         key="btn-request"
                         initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
                         onClick={() => setRequestState(1)}
-                        className={`flex items-center gap-2 px-6 py-3 rounded-full border shadow-lg transition-all hover:scale-105 bg-white/10 backdrop-blur-md ${theme.cardBorder} ${theme.textStrong}`}
+                        className={`flex items-center gap-2 px-5 py-2 rounded-full text-white shadow-lg transition-all hover:scale-105 hover:shadow-[0_0_20px_rgba(255,255,255,0.3)] bg-gradient-to-r ${theme.dnaGradient}`}
                     >
-                        <UserPlusIcon className="w-5 h-5" />
-                        <span className="text-xs font-bold uppercase tracking-widest">Solicitar Conexão</span>
+                        <UserPlusIcon className="w-4 h-4 drop-shadow-md" />
+                        <span className="text-[10px] font-black uppercase tracking-widest drop-shadow-md">Conectar</span>
                     </motion.button>
                 )}
 
+                {/* ESTADO 1: FORMULÁRIO DE ENVIO COMPACTO */}
                 {requestState === 1 && (
                     <motion.div
                         key="form-request"
                         initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-                        className="w-full flex flex-col gap-3"
+                        className={`flex flex-col gap-2 p-3 rounded-2xl border backdrop-blur-xl bg-white/70 dark:bg-black/60 w-64 shadow-2xl ${theme.cardBorder}`}
                     >
-                        <span className={`text-[10px] font-black uppercase tracking-widest ${theme.textAccent}`}>Mensagem de Conexão</span>
                         <textarea
                             autoFocus
                             value={requestText}
                             onChange={(e) => setRequestText(e.target.value)}
-                            placeholder="Apresente-se brevemente..."
-                            className={`w-full h-24 bg-black/20 border rounded-xl p-3 text-xs focus:outline-none resize-none ${theme.cardBorder} ${theme.textStrong} placeholder:opacity-40`}
+                            placeholder="Sua mensagem..."
+                            className={`w-full h-16 bg-transparent border-b border-slate-300 dark:border-white/10 text-[10px] focus:outline-none resize-none ${theme.textStrong} placeholder:opacity-40`}
                         />
-                        <div className="flex justify-end gap-2">
-                            <button onClick={() => setRequestState(0)} className="px-4 py-2 text-[10px] uppercase font-bold text-slate-400 hover:text-white transition-colors">Cancelar</button>
+                        <div className="flex justify-between items-center mt-1">
+                            <button onClick={() => setRequestState(0)} className="text-[8px] uppercase font-bold text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors px-2">Cancelar</button>
                             <button
                                 disabled={!requestText.trim()}
                                 onClick={handleSendRequest}
-                                className={`flex items-center gap-2 px-6 py-2 rounded-full border transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed bg-cyan-500/20 border-cyan-400 text-cyan-300 hover:bg-cyan-500 hover:text-white`}
+                                className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-white bg-gradient-to-r ${theme.dnaGradient} shadow-md transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed`}
                             >
-                                <PaperAirplaneIcon className="w-4 h-4" />
-                                <span className="text-[10px] font-bold uppercase tracking-widest">Enviar Solicitação</span>
+                                <PaperAirplaneIcon className="w-3 h-3" />
+                                <span className="text-[9px] font-bold uppercase tracking-widest">Enviar</span>
                             </button>
                         </div>
                     </motion.div>
                 )}
 
+                {/* ESTADO 2: ENVIADO */}
                 {requestState === 2 && (
-                    <motion.div key="btn-sent" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex items-center gap-2 px-6 py-3 rounded-full border border-emerald-500/50 bg-emerald-500/10 text-emerald-400 shadow-[0_0_20px_rgba(52,211,153,0.1)]">
-                        <CheckIcon className="w-5 h-5" />
-                        <span className="text-[10px] font-bold uppercase tracking-widest">Solicitação Enviada</span>
+                    <motion.div key="btn-sent" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex items-center gap-1.5 px-5 py-2 rounded-full border border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shadow-sm">
+                        <CheckIcon className="w-4 h-4" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest">Enviado</span>
                     </motion.div>
                 )}
 
+                {/* ESTADO 3: REJEITADO */}
                 {requestState === 3 && (
-                    <motion.div key="btn-rejected" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex items-center gap-2 px-6 py-3 rounded-full border border-red-500/50 bg-red-500/10 text-red-400">
-                        <XMarkIcon className="w-5 h-5" />
-                        <span className="text-[10px] font-bold uppercase tracking-widest">Solicitação Rejeitada</span>
+                    <motion.div key="btn-rejected" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex items-center gap-1.5 px-5 py-2 rounded-full border border-red-500/30 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 shadow-sm">
+                        <XMarkIcon className="w-4 h-4" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest">Rejeitado</span>
                     </motion.div>
                 )}
 
+                {/* ESTADO 4: CONECTADO */}
                 {requestState === 4 && (
-                    <motion.div key="btn-accepted" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex items-center gap-2 px-6 py-3 rounded-full border border-cyan-500/50 bg-cyan-500/10 text-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.2)]">
-                        <CheckIcon className="w-5 h-5" />
-                        <span className="text-[10px] font-bold uppercase tracking-widest">Conexão Estabelecida</span>
+                    <motion.div key="btn-accepted" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex items-center gap-1.5 px-5 py-2 rounded-full border border-cyan-500/30 bg-cyan-50 dark:bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.2)]">
+                        <CheckIcon className="w-4 h-4" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest">Conectado</span>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -260,8 +275,8 @@ export default function WorkStationPage() {
 
         if (isMale) {
             return {
-                pageBg: "bg-blue-50/80 dark:bg-[#050a1f]", matrixOpacity: "opacity-60", 
-                capsuleBorder: "border-blue-400/50 dark:border-white/10", // 🔥 MASCULINO: Borda azul visível no modo claro
+                pageBg: "bg-blue-50/80 dark:bg-[#050a1f]", matrixOpacity: "opacity-60",
+                capsuleBorder: "border-blue-400/50 dark:border-white/10",
                 capsuleIconFill: "text-blue-600 dark:text-cyan-400", cardBg: "bg-transparent", cardBorder: "border-blue-200/50 dark:border-blue-500/20",
                 panelWrapper: "bg-blue-950/40 backdrop-blur-2xl border border-blue-500/20 shadow-[0_8px_32px_rgba(59,130,246,0.2)]", highlightCard: "border-blue-400/30 bg-blue-800/20 shadow-inner",
                 textStrong: "text-blue-950 dark:text-white", textMuted: "text-blue-800/70 dark:text-blue-200/50", textHighlight: "text-white drop-shadow-[0_0_12px_rgba(34,211,238,1)]",
@@ -272,8 +287,8 @@ export default function WorkStationPage() {
         }
 
         return {
-            pageBg: "bg-slate-200/30 dark:bg-[#030014]", matrixOpacity: "opacity-60", 
-            capsuleBorder: "border-slate-400/50 dark:border-white/20", // DEFAULT: Borda visível no modo claro
+            pageBg: "bg-slate-200/30 dark:bg-[#030014]", matrixOpacity: "opacity-60",
+            capsuleBorder: "border-slate-400/50 dark:border-white/20",
             capsuleIconFill: "text-blue-600 dark:text-cyan-400", cardBg: "bg-transparent", cardBorder: "border-white/60 dark:border-white/10",
             panelWrapper: "bg-slate-900/40 backdrop-blur-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)]", highlightCard: "border-white/20 bg-white/10 shadow-inner",
             textStrong: "text-slate-900 dark:text-white", textMuted: "text-slate-600 dark:text-white/50", textHighlight: "text-white drop-shadow-[0_0_12px_rgba(255,255,255,1)]",
@@ -302,7 +317,6 @@ export default function WorkStationPage() {
         }
     };
 
-    // 🔥 CÓDIGO DE UPLOAD 100% RESTAURADO SEM PLACEHOLDERS 🔥
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -487,11 +501,11 @@ export default function WorkStationPage() {
                                     </div>
                                 </div>
                             )}
-
-                            {/* Na PRÓPRIA PÁGINA (visitedUserId = undefined), ele não vai renderizar nada. */}
-                            <NetworkConnectionsPanel visitedUserId={undefined} currentUserId={currentUserId} theme={theme} />
-
                         </div>
+
+                        {/* 🔥 BOTÃO REPOSICIONADO PARA BAIXO DA CAIXA DE SALAS 🔥 */}
+                        <NetworkConnectionsPanel visitedUserId={undefined} currentUserId={currentUserId} theme={theme} />
+
                     </div>
                 </div>
 

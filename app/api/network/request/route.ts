@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/src/lib/auth';
-import { prisma } from '@/src/lib/prisma';
+import { prisma } from '@/src/lib/prisma'; // Uso do cliente global
+
+// 🔥 CRÍTICO: Desliga o cache do Next.js para esta rota. Sempre buscará dados frescos do MongoDB.
+export const dynamic = 'force-dynamic';
 
 // --- GET: BUSCAR STATUS DA CONEXÃO OU PEDIDOS PENDENTES ---
 export async function GET(req: Request) {
@@ -16,22 +19,20 @@ export async function GET(req: Request) {
         const targetId = searchParams.get('targetId');
 
         if (targetId) {
-            // CENÁRIO A: Você está visitando o perfil de alguém e quer saber o status da conexão
+            // CENÁRIO A: Você visitando perfil
             const reqStatus = await prisma.connectionRequest.findFirst({
                 where: {
                     OR: [
                         { senderId: user.id, receiverId: targetId },
-                        { senderId: targetId, receiverId: user.id } // Checa se ele já te mandou também
+                        { senderId: targetId, receiverId: user.id }
                     ]
                 },
                 orderBy: { createdAt: 'desc' }
             });
-
-            // Retorna o status encontrado ou 'NONE' se nunca conversaram
             return NextResponse.json(reqStatus || { status: 'NONE' });
 
         } else {
-            // CENÁRIO B: O Widget do Chat (Polling) buscando convites que enviaram para você
+            // CENÁRIO B: O Radar do ChatWidget buscando convites para você
             const pendingRequests = await prisma.connectionRequest.findMany({
                 where: {
                     receiverId: user.id,
@@ -40,7 +41,7 @@ export async function GET(req: Request) {
                 include: {
                     sender: { select: { name: true, image: true } }
                 },
-                orderBy: { createdAt: 'asc' } // Os mais antigos primeiro
+                orderBy: { createdAt: 'asc' }
             });
 
             return NextResponse.json(pendingRequests);
@@ -59,14 +60,11 @@ export async function POST(req: Request) {
 
         const { targetId, message } = await req.json();
 
-        if (!targetId || !message) {
-            return NextResponse.json({ error: "Dados incompletos." }, { status: 400 });
-        }
+        if (!targetId || !message) return NextResponse.json({ error: "Dados incompletos." }, { status: 400 });
 
         const user = await prisma.user.findUnique({ where: { email: session.user.email } });
         if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-        // Proteção contra Spam: Checa se já existe um pedido pendente ou aceito
         const existingRequest = await prisma.connectionRequest.findFirst({
             where: {
                 OR: [
@@ -81,7 +79,6 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Já existe uma conexão ou pedido ativo." }, { status: 400 });
         }
 
-        // Cria o novo pedido no banco
         const newReq = await prisma.connectionRequest.create({
             data: {
                 senderId: user.id,

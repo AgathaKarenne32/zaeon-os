@@ -49,15 +49,17 @@ model User {
   createdAt       DateTime? @default(now())
   updatedAt       DateTime? @updatedAt
 
-  // Relations
+  // Relations Base
   accounts         Account[]
   sessions         Session[]
   posts            Post[]
   comments         Comment[]
   userSpaceData    UserSpaceData?
   personalPhotos   PersonalPhoto[] // 🔥 NOVO: Relação com as fotos do Mural (My Photos)
-  
-  // 🔥 CRÍTICO: Relações Opostas obrigatórias para o ConnectionRequest
+
+  // Relations de Chat e Rede
+  sentMessages     Message[] @relation("SentMessages")
+  receivedMessages Message[] @relation("ReceivedMessages")
   sentRequests     ConnectionRequest[] @relation("SentRequests")
   receivedRequests ConnectionRequest[] @relation("ReceivedRequests")
 
@@ -217,7 +219,6 @@ model PersonalPhoto {
   createdAt DateTime @default(now())
 }
 
-// 🔥 NOVO: MODELO DE PEDIDOS DE CONEXÃO (NETWORKING) 🔥
 model ConnectionRequest {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   senderId    String   @db.ObjectId
@@ -229,4 +230,15 @@ model ConnectionRequest {
   // Relacionamentos explícitos (ajuda o Prisma a entender quem é quem)
   sender      User     @relation("SentRequests", fields: [senderId], references: [id])
   receiver    User     @relation("ReceivedRequests", fields: [receiverId], references: [id])
+}
+
+model Message {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  senderId   String   @db.ObjectId
+  receiverId String   @db.ObjectId
+  text       String
+  createdAt  DateTime @default(now())
+
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
 }

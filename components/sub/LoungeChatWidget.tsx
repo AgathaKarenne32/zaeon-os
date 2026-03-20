@@ -1,101 +1,216 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
-import Image from "next/image"; // 🔥 CORREÇÃO 1: Importado o componente Image do Next
+import Image from "next/image";
+import { useSession } from "next-auth/react";
+import { io, Socket } from "socket.io-client";
 import {
     ChatBubbleLeftRightIcon,
     MinusIcon,
-    LockClosedIcon,
     CheckIcon,
     XMarkIcon,
-    UserIcon
+    UserIcon,
+    ChevronLeftIcon,
+    PaperAirplaneIcon,
+    BellAlertIcon,
+    UsersIcon
 } from "@heroicons/react/24/outline";
-import { useTranslation } from "react-i18next";
 
 interface LoungeChatWidgetProps {
     defaultOpen?: boolean;
 }
 
 export const LoungeChatWidget = ({ defaultOpen = false }: LoungeChatWidgetProps) => {
-    const { t } = useTranslation();
     const router = useRouter();
+    const { data: session } = useSession();
+    // @ts-ignore
+    const fallbackId = session?.user?.id || "";
+
     const [isOpen, setIsOpen] = useState(defaultOpen);
+    const [activeTab, setActiveTab] = useState<'friends' | 'requests'>('friends');
+    const [activeChat, setActiveChat] = useState<any | null>(null);
+    const [messageInput, setMessageInput] = useState("");
 
-    // Estados da API Bidirecional
-    const [incomingRequest, setIncomingRequest] = useState<any>(null); // Pedidos recebidos
-    const [outgoingUpdate, setOutgoingUpdate] = useState<any>(null); // Status de pedidos que você enviou
+    // 🔥 O SEGREDO: O seu ID real que o Socket vai usar
+    const [realUserId, setRealUserId] = useState<string>(fallbackId);
 
-    // Fica checando de 5 em 5 segundos
+    // Estados da API & Notificações
+    const [incomingRequest, setIncomingRequest] = useState<any>(null);
+    const [friends, setFriends] = useState<any[]>([]);
+    const [chatHistory, setChatHistory] = useState<any[]>([]);
+
+    // Estados do Socket
+    const socketRef = useRef<Socket | null>(null);
+    const activeChatRef = useRef(activeChat);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [flash, setFlash] = useState(false);
+
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+
     useEffect(() => {
-        const fetchNetworkActivity = async () => {
-            if (!isOpen) return;
+        activeChatRef.current = activeChat;
+        if (isOpen) setUnreadCount(0);
+    }, [activeChat, isOpen]);
 
+    useEffect(() => {
+        if (isOpen && activeChat) {
+            messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        }
+    }, [chatHistory, isOpen, activeChat]);
+
+    // 🔥 1. INICIALIZAÇÃO DO SOCKET.IO EM TEMPO REAL 🔥
+    useEffect(() => {
+        if (!realUserId) return; // Só conecta quando soubermos quem você é!
+
+        const socket = io(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000");
+        socketRef.current = socket;
+
+        socket.on("connect", () => {
+            console.log("Conectado ao Socket! Sala:", realUserId);
+            socket.emit("join_own_room", realUserId);
+        });
+
+        socket.on("receive_private_message", (newMessage) => {
+            if (activeChatRef.current?.id === newMessage.senderId) {
+                setChatHistory(prev => {
+                    if (prev.find(msg => msg.id === newMessage.id)) return prev;
+                    return [...prev, newMessage];
+                });
+            } else {
+                setUnreadCount(prev => prev + 1);
+                setFlash(true);
+                setTimeout(() => setFlash(false), 1500);
+            }
+        });
+
+        return () => {
+            if (socketRef.current) socketRef.current.disconnect();
+        };
+    }, [realUserId]);
+
+    // 🔥 2. BUSCA DE COLEGAS E DO SEU ID REAL 🔥
+    useEffect(() => {
+        const fetchFriends = async () => {
             try {
-                // 1. Busca primeiro se alguém te mandou convite (Prioridade)
-                const res = await fetch('/api/network/request');
+                const res = await fetch(`/api/network/friends?t=${Date.now()}`, { cache: 'no-store' });
                 if (res.ok) {
                     const data = await res.json();
-                    
-                    // A API sempre retorna os pendentes
-                    if (data && data.length > 0) {
+                    if (data.myId) setRealUserId(data.myId); // Atualizamos o ID para ligar o Socket!
+                    setFriends(data.friends || []);
+                }
+            } catch (error) { console.error("Erro ao buscar amigos:", error); }
+        };
+
+        // Roda sempre que abre o chat na aba friends, OU roda logo no início para descobrirmos o seu ID!
+        if ((isOpen && activeTab === 'friends' && !activeChat) || !realUserId) {
+            fetchFriends();
+        }
+    }, [isOpen, activeTab, activeChat, realUserId]);
+
+    // 3. RADAR DE PEDIDOS (Polling leve a cada 10s)
+    useEffect(() => {
+        const fetchNetworkActivity = async () => {
+            try {
+                const resIn = await fetch(`/api/network/request?t=${Date.now()}`, { cache: 'no-store' });
+                if (resIn.ok) {
+                    const dataIn = await resIn.json();
+                    if (dataIn && dataIn.length > 0) {
+                        if (!incomingRequest) {
+                            setFlash(true);
+                            setTimeout(() => setFlash(false), 1500);
+                        }
                         setIncomingRequest({
-                            id: data[0].id,
-                            senderId: data[0].senderId,
-                            senderName: data[0].sender?.name || "Agente",
-                            senderImage: data[0].sender?.image || "", // Deixe string vazia se não tiver
-                            message: data[0].message
+                            id: dataIn[0].id,
+                            senderId: dataIn[0].senderId,
+                            senderName: dataIn[0].sender?.name || "Agente",
+                            senderImage: dataIn[0].sender?.image || "",
+                            message: dataIn[0].message
                         });
-                        setOutgoingUpdate(null);
-                        return; // Se tem recebido, para aqui
+                        if (!activeChat && isOpen) setActiveTab('requests');
                     } else {
                         setIncomingRequest(null);
                     }
                 }
-
-            } catch (error) { console.error("Erro na busca de rede:", error); }
+            } catch (error) { console.error(error); }
         };
 
-        // 2. Busca inicial ao abrir o widget
-        if (isOpen && !incomingRequest && !outgoingUpdate) fetchNetworkActivity();
-        
-        // 3. Polling
-        const interval = setInterval(fetchNetworkActivity, 5000);
+        fetchNetworkActivity();
+        const interval = setInterval(fetchNetworkActivity, 10000);
         return () => clearInterval(interval);
-    }, [isOpen, incomingRequest, outgoingUpdate]);
+    }, [activeChat, isOpen, incomingRequest]);
 
-    const handleRespond = async (status: 'ACCEPTED' | 'REJECTED') => {
+    // 4. BUSCA INICIAL DE MENSAGENS E FALLBACK
+    useEffect(() => {
+        if (!isOpen || !activeChat) return;
+
+        const fetchMessages = async () => {
+            try {
+                const res = await fetch(`/api/chat/messages?targetId=${activeChat.id}&t=${Date.now()}`, { cache: 'no-store' });
+                if (res.ok) {
+                    const data = await res.json();
+                    setChatHistory(data);
+                }
+            } catch (error) { console.error(error); }
+        };
+
+        fetchMessages();
+        // Fallback de segurança a cada 10s caso a internet oscile e o socket caia
+        const interval = setInterval(fetchMessages, 10000);
+        return () => clearInterval(interval);
+    }, [isOpen, activeChat]);
+
+
+    // 🔥 5. FUNÇÃO DE ENVIAR MENSAGEM VIA SOCKET 🔥
+    const handleSendMessage = async () => {
+        if (!messageInput.trim() || !activeChat) return;
+        const text = messageInput.trim();
+        setMessageInput("");
+
+        const optimisticMsg = {
+            id: `opt_${Date.now()}`,
+            senderId: realUserId,
+            text: text,
+        };
+
+        setChatHistory(prev => [...prev, optimisticMsg]);
+
+        // Dispara no túnel instantâneo do Socket.IO!
+        if (socketRef.current) {
+            socketRef.current.emit("send_private_message", {
+                receiverId: activeChat.id,
+                messageObj: optimisticMsg
+            });
+        }
+
+        try {
+            await fetch('/api/chat/messages', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ targetId: activeChat.id, text })
+            });
+        } catch (error) { console.error(error); }
+    };
+
+
+    const handleRespondRequest = async (status: 'ACCEPTED' | 'REJECTED') => {
         if (!incomingRequest) return;
-
         try {
             await fetch('/api/network/respond', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ requestId: incomingRequest.id, status })
             });
-
-            // Feedback visual imediato na sua própria tela (Quem recebeu)
-            setOutgoingUpdate({ 
-                type: status, 
-                name: incomingRequest.senderName 
-            });
             setIncomingRequest(null);
-
-            // Reseta a tela de notificação após 5 segundos
-            setTimeout(() => {
-                setOutgoingUpdate(null);
-            }, 5000);
-
-        } catch (error) {
-            console.error("Erro ao responder", error);
-        }
+            if (status === 'ACCEPTED') setActiveTab('friends');
+        } catch (error) { console.error(error); }
     };
 
-    const glassStyle = `
-        dark:bg-[#0f172a]/95 bg-white/90
-        backdrop-blur-xl border border-slate-300 dark:border-white/10
-        shadow-2xl overflow-hidden
+    const glassContainer = `
+        backdrop-blur-3xl bg-white/95 dark:bg-[#0f172a]/80 
+        border border-slate-300 dark:border-white/10 
+        shadow-[0_0_40px_rgba(0,0,0,0.15)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.5)]
     `;
 
     return (
@@ -104,111 +219,243 @@ export const LoungeChatWidget = ({ defaultOpen = false }: LoungeChatWidgetProps)
             animate={{
                 y: 0,
                 opacity: 1,
-                // Ajuste de altura dinâmico baseado no que estamos mostrando
-                height: isOpen ? (incomingRequest || outgoingUpdate ? 280 : 200) : 48,
-                width: isOpen ? 340 : 180
+                height: isOpen ? 450 : 48,
+                width: isOpen ? 320 : 200
             }}
-            transition={{ type: "spring", stiffness: 100, damping: 20 }}
-            className={`fixed bottom-0 right-8 z-[999] rounded-t-2xl flex flex-col ${glassStyle}`}
+            transition={{ type: "spring", stiffness: 150, damping: 25 }}
+            className={`fixed bottom-0 right-4 sm:right-8 z-[999] rounded-t-3xl flex flex-col overflow-hidden ${glassContainer}`}
         >
             <div
                 onClick={() => setIsOpen(!isOpen)}
-                className="h-12 flex items-center justify-between px-4 bg-slate-100 dark:bg-[#0f172a] border-b border-slate-300 dark:border-white/10 cursor-pointer shrink-0 hover:bg-slate-200 dark:hover:bg-white/5 transition-colors relative"
+                className={`h-12 flex items-center justify-between px-5 cursor-pointer shrink-0 transition-all border-b border-slate-200 dark:border-white/5 ${flash
+                        ? "bg-cyan-500/30 dark:bg-cyan-500/40 shadow-[inset_0_0_20px_rgba(6,182,212,0.5)]"
+                        : "bg-white/50 dark:bg-black/20 hover:bg-slate-100 dark:hover:bg-white/5"
+                    }`}
             >
-                <div className="flex items-center gap-2">
-                    <div className="relative">
-                        <div className={`w-2 h-2 rounded-full ${incomingRequest && !isOpen ? 'bg-cyan-400 animate-ping absolute' : ''}`} />
-                        <div className={`w-2 h-2 rounded-full ${isOpen ? 'bg-red-500' : (incomingRequest ? 'bg-cyan-500' : 'bg-emerald-500 animate-pulse')}`} />
+                <div className="flex items-center gap-3 relative">
+                    <AnimatePresence>
+                        {unreadCount > 0 && !isOpen && (
+                            <motion.div
+                                initial={{ scale: 0, y: 10, opacity: 0 }}
+                                animate={{ scale: 1, y: 0, opacity: 1 }}
+                                exit={{ scale: 0, opacity: 0 }}
+                                className="absolute -top-3 -left-2 bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)] text-white text-[9px] font-black px-1.5 py-0.5 rounded-full z-50"
+                            >
+                                +{unreadCount}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    <div className="relative flex items-center justify-center w-6 h-6 rounded-full bg-cyan-500/10">
+                        {((incomingRequest || unreadCount > 0) && !isOpen) && (
+                            <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full animate-ping" />
+                        )}
+                        <ChatBubbleLeftRightIcon className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
                     </div>
-                    <span className="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-white/50 truncate">
-                        {incomingRequest && !isOpen
-                            ? "Sinal Recebido"
-                            : (isOpen ? "System Core" : "Global Chat")}
+                    <span className="text-xs font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">
+                        {isOpen ? (activeChat ? activeChat.name : "Rede Neural") : "Chat"}
                     </span>
                 </div>
 
-                <button className="p-1 hover:bg-black/5 dark:hover:bg-white/10 rounded text-slate-500 dark:text-white">
-                    {isOpen ? <MinusIcon className="w-4 h-4" /> : <ChatBubbleLeftRightIcon className="w-4 h-4" />}
-                </button>
+                {isOpen ? (
+                    <button className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors">
+                        <MinusIcon className="w-5 h-5" />
+                    </button>
+                ) : (incomingRequest || unreadCount > 0) ? (
+                    <BellAlertIcon className="w-5 h-5 text-red-500 animate-pulse" />
+                ) : null}
             </div>
 
             <AnimatePresence mode="wait">
-                {/* --- MODO 1: RECEBEU UM PEDIDO --- */}
-                {isOpen && incomingRequest ? (
-                    <motion.div key="request-view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col p-5 bg-slate-50 dark:bg-black/20">
-                        <div className="flex items-center gap-3 mb-3">
-                            <div
-                                onClick={() => router.push(`/workstation/${incomingRequest.senderId}`)}
-                                className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-cyan-400 cursor-pointer hover:scale-105 transition-transform shadow-md bg-slate-200 dark:bg-black"
-                            >
-                                {/* 🔥 CORREÇÃO 2: Uso do componente Image do Next.js para avatar */}
-                                {incomingRequest.senderImage ? (
-                                    <Image 
-                                        src={incomingRequest.senderImage} 
-                                        alt="Profile" 
-                                        fill 
-                                        sizes="40px"
-                                        className="object-cover" 
-                                    />
-                                ) : (
-                                    <UserIcon className="w-full h-full p-2 text-slate-400" />
-                                )}
+                {isOpen && (
+                    <motion.div
+                        key={activeChat ? "chat" : "menu"}
+                        initial={{ opacity: 0, x: activeChat ? 20 : -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: activeChat ? -20 : 20 }}
+                        transition={{ duration: 0.2 }}
+                        className="flex-1 flex flex-col overflow-hidden relative"
+                    >
+                        {activeChat ? (
+                            <div className="flex-1 flex flex-col h-full bg-slate-50 dark:bg-black/10">
+                                <div className="flex items-center gap-3 p-3 border-b border-slate-200/50 dark:border-white/5 bg-white/50 dark:bg-black/20 backdrop-blur-md">
+                                    <button onClick={() => setActiveChat(null)} className="p-1.5 rounded-full hover:bg-slate-200 dark:hover:bg-white/10 transition-colors">
+                                        <ChevronLeftIcon className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+                                    </button>
+                                    <div className="relative w-8 h-8 rounded-full overflow-hidden border border-slate-300 dark:border-white/20 bg-slate-200 dark:bg-black shrink-0">
+                                        {activeChat.image ? (
+                                            <Image src={activeChat.image} alt={activeChat.name} fill sizes="32px" className="object-cover" />
+                                        ) : (
+                                            <UserIcon className="w-full h-full p-1.5 text-slate-400" />
+                                        )}
+                                    </div>
+                                    <div className="flex flex-col truncate">
+                                        <span className="text-[11px] font-bold text-slate-800 dark:text-white truncate">{activeChat.name}</span>
+                                        <span className="text-[9px] text-cyan-600 dark:text-cyan-400 font-medium">Chat Seguro</span>
+                                    </div>
+                                </div>
+
+                                <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 custom-scrollbar">
+                                    {chatHistory.length === 0 && (
+                                        <div className="flex-1 flex flex-col items-center justify-center opacity-50">
+                                            <ChatBubbleLeftRightIcon className="w-8 h-8 text-slate-400 mb-2" />
+                                            <span className="text-[10px] text-slate-500 font-mono italic">A conexão foi iniciada.</span>
+                                        </div>
+                                    )}
+                                    {chatHistory.map((msg: any) => {
+                                        const isMe = msg.senderId !== activeChat.id;
+                                        return (
+                                            <div key={msg.id} className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'}`}>
+                                                <div className={`flex items-end gap-2 max-w-[85%] ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
+
+                                                    {!isMe && (
+                                                        <div className="relative w-6 h-6 rounded-full overflow-hidden shrink-0 border border-slate-300 dark:border-white/10 bg-slate-200 dark:bg-black">
+                                                            {activeChat.image ? (
+                                                                <Image src={activeChat.image} alt={activeChat.name} fill sizes="24px" className="object-cover" />
+                                                            ) : (
+                                                                <UserIcon className="w-full h-full p-1 text-slate-400" />
+                                                            )}
+                                                        </div>
+                                                    )}
+
+                                                    <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+                                                        <div className={`p-2.5 text-[11px] shadow-sm backdrop-blur-md ${isMe ? 'bg-cyan-500 text-white rounded-2xl rounded-br-sm' : 'bg-white dark:bg-[#1e293b] text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-white/5 rounded-2xl rounded-bl-sm'}`}>
+                                                            {msg.text}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )
+                                    })}
+                                    <div ref={messagesEndRef} />
+                                </div>
+
+                                <div className="p-3 bg-white/70 dark:bg-black/30 backdrop-blur-xl border-t border-slate-200 dark:border-white/5">
+                                    <div className="flex items-center gap-2 bg-white dark:bg-[#0f172a] rounded-full border border-slate-300 dark:border-white/10 p-1 pl-4 shadow-inner">
+                                        <input
+                                            type="text"
+                                            value={messageInput}
+                                            onChange={(e) => setMessageInput(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                                            placeholder="Transmita algo..."
+                                            className="flex-1 bg-transparent text-[11px] focus:outline-none text-slate-700 dark:text-white placeholder:text-slate-400"
+                                        />
+                                        <button
+                                            onClick={handleSendMessage}
+                                            disabled={!messageInput.trim()}
+                                            className="w-8 h-8 rounded-full bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 flex items-center justify-center text-white transition-colors shadow-md shrink-0"
+                                        >
+                                            <PaperAirplaneIcon className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="flex flex-col">
-                                <span className="text-[9px] text-cyan-600 dark:text-cyan-400 font-black uppercase tracking-widest">Pedido de Conexão</span>
-                                <span
-                                    onClick={() => router.push(`/workstation/${incomingRequest.senderId}`)}
-                                    className="text-sm font-black text-slate-800 dark:text-white cursor-pointer hover:underline"
-                                >
-                                    {incomingRequest.senderName}
-                                </span>
+
+                        ) : (
+                            <div className="flex-1 flex flex-col h-full bg-white/40 dark:bg-transparent">
+                                <div className="flex p-2 bg-slate-100/50 dark:bg-black/20 gap-2 border-b border-slate-200 dark:border-white/5">
+                                    <button
+                                        onClick={() => setActiveTab('friends')}
+                                        className={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${activeTab === 'friends' ? 'bg-white dark:bg-[#1e293b] text-cyan-600 dark:text-cyan-400 shadow-md border border-slate-200 dark:border-transparent' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-white/5'}`}
+                                    >
+                                        Colegas
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveTab('requests')}
+                                        className={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all relative ${activeTab === 'requests' ? 'bg-white dark:bg-[#1e293b] text-cyan-600 dark:text-cyan-400 shadow-md border border-slate-200 dark:border-transparent' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-white/5'}`}
+                                    >
+                                        <div className="flex items-center justify-center gap-1.5">
+                                            Pedidos
+                                            {incomingRequest && <span className="absolute top-1 right-3 w-2 h-2 bg-red-500 rounded-full" />}
+                                        </div>
+                                    </button>
+                                </div>
+
+                                <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
+
+                                    {activeTab === 'friends' && (
+                                        <div className="flex flex-col gap-1">
+                                            {friends.length > 0 ? (
+                                                friends.map(friend => (
+                                                    <div
+                                                        key={friend.id}
+                                                        onClick={() => setActiveChat(friend)}
+                                                        className="flex items-center gap-3 p-2.5 rounded-2xl hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer transition-colors group"
+                                                    >
+                                                        <div className="relative w-10 h-10 rounded-full border border-slate-300 dark:border-white/10 shadow-sm overflow-hidden bg-slate-200 dark:bg-black shrink-0">
+                                                            {friend.image ? (
+                                                                <Image src={friend.image} alt={friend.name} fill sizes="40px" className="object-cover" />
+                                                            ) : (
+                                                                <UserIcon className="w-full h-full p-2 text-slate-400" />
+                                                            )}
+                                                        </div>
+                                                        <div className="flex flex-col flex-1 overflow-hidden">
+                                                            <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors truncate">{friend.name}</span>
+                                                            <span className="text-[9px] text-slate-400 dark:text-slate-500 truncate">Conectado na Rede</span>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <div className="flex flex-col items-center justify-center p-6 mt-4 text-center opacity-60">
+                                                    <UsersIcon className="w-8 h-8 text-slate-400 mb-2" />
+                                                    <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                                                        Você ainda não possui conexões.
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {activeTab === 'requests' && (
+                                        <div className="flex flex-col gap-2 p-2">
+                                            {incomingRequest ? (
+                                                <div className="flex flex-col p-4 bg-white dark:bg-black/30 rounded-2xl border border-slate-200 dark:border-white/10 shadow-sm">
+                                                    <div className="flex items-center gap-3 mb-3">
+                                                        <div className="relative w-10 h-10 rounded-full overflow-hidden border border-cyan-400 bg-slate-200 dark:bg-black shrink-0">
+                                                            {incomingRequest.senderImage ? (
+                                                                <Image src={incomingRequest.senderImage} alt="Profile" fill sizes="40px" className="object-cover" />
+                                                            ) : (
+                                                                <UserIcon className="w-full h-full p-2 text-slate-400" />
+                                                            )}
+                                                        </div>
+                                                        <div className="flex flex-col overflow-hidden">
+                                                            <span className="text-[10px] text-cyan-600 dark:text-cyan-400 font-bold uppercase tracking-widest truncate">Quer conectar</span>
+                                                            <span className="text-xs font-black text-slate-800 dark:text-white truncate">{incomingRequest.senderName}</span>
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-[10px] italic text-slate-600 dark:text-white/60 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-transparent p-2 rounded-lg mb-3">
+                                                        &quot;{incomingRequest.message}&quot;
+                                                    </p>
+                                                    <div className="flex gap-2">
+                                                        <button onClick={() => handleRespondRequest('REJECTED')} className="flex-1 py-1.5 rounded-xl bg-red-50 dark:bg-red-500/10 hover:bg-red-100 text-red-600 text-[9px] font-bold uppercase transition-colors border border-red-100 dark:border-transparent">
+                                                            Recusar
+                                                        </button>
+                                                        <button onClick={() => handleRespondRequest('ACCEPTED')} className="flex-1 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-white dark:text-black shadow-md text-[9px] font-bold uppercase transition-colors">
+                                                            Aceitar
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="flex flex-col items-center justify-center p-6 mt-4 text-center opacity-60">
+                                                    <BellAlertIcon className="w-8 h-8 text-slate-400 mb-2" />
+                                                    <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">Nenhum pedido pendente.</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                </div>
                             </div>
-                        </div>
-
-                        <div className="bg-white dark:bg-white/5 p-3 rounded-xl border border-slate-200 dark:border-white/10 mb-4 shadow-sm">
-                            {/* 🔥 CORREÇÃO 3: Escape das aspas usando &quot; */}
-                            <p className="text-[11px] italic text-slate-600 dark:text-white/70 leading-relaxed font-mono">
-                                &quot;{incomingRequest.message}&quot;
-                            </p>
-                        </div>
-
-                        <div className="flex gap-2 mt-auto">
-                            <button onClick={() => handleRespond('REJECTED')} className="flex-1 py-2 rounded-xl bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 border border-red-200 dark:border-red-500/30 text-red-600 dark:text-red-400 text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm">
-                                Recusar
-                            </button>
-                            <button onClick={() => handleRespond('ACCEPTED')} className="flex-1 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-white dark:text-black shadow-[0_0_15px_rgba(6,182,212,0.4)] text-[10px] font-black uppercase tracking-widest transition-colors flex justify-center items-center gap-1">
-                                <CheckIcon className="w-3 h-3" /> Aceitar
-                            </button>
-                        </div>
+                        )}
                     </motion.div>
-
-                ) : isOpen && outgoingUpdate ? (
-                    // --- MODO 2: FEEDBACK APÓS ACEITAR/REJEITAR ---
-                    <motion.div key="feedback-view" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className={`flex-1 flex flex-col items-center justify-center p-6 text-center ${outgoingUpdate.type === 'ACCEPTED' ? 'bg-cyan-50 dark:bg-cyan-900/20' : 'bg-red-50 dark:bg-red-900/20'}`}>
-                        <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 shadow-lg ${outgoingUpdate.type === 'ACCEPTED' ? 'bg-cyan-500 text-white dark:text-black' : 'bg-red-500 text-white'}`}>
-                            {outgoingUpdate.type === 'ACCEPTED' ? <span className="text-2xl font-black">+1</span> : <XMarkIcon className="w-8 h-8" />}
-                        </div>
-                        <h4 className={`text-sm font-black mb-1 ${outgoingUpdate.type === 'ACCEPTED' ? 'text-cyan-700 dark:text-cyan-400' : 'text-red-700 dark:text-red-400'}`}>
-                            {outgoingUpdate.type === 'ACCEPTED' ? 'Conexão Estabelecida' : 'Pedido Recusado'}
-                        </h4>
-                        <p className="text-[10px] text-slate-600 dark:text-white/60 font-mono">
-                            {outgoingUpdate.type === 'ACCEPTED' ? `Você e ${outgoingUpdate.name} são colegas de rede.` : `O pedido de ${outgoingUpdate.name} foi ignorado.`}
-                        </p>
-                    </motion.div>
-
-                ) : isOpen ? (
-                    // --- MODO 3: CHAT VAZIO / ESPERA ---
-                    <motion.div key="locked-view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col items-center justify-center p-6 text-center bg-slate-50 dark:bg-black/20">
-                        <div className="w-12 h-12 rounded-full bg-slate-200 dark:bg-white/5 flex items-center justify-center mb-3 shadow-inner">
-                            <LockClosedIcon className="w-5 h-5 text-slate-400 dark:text-white/30" />
-                        </div>
-                        <h4 className="text-xs font-black text-slate-800 dark:text-white mb-1 uppercase tracking-widest">Global Chat</h4>
-                        <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono leading-relaxed px-4">
-                            Sua caixa de entrada neural está vazia. Explore perfis para gerar conexões.
-                        </p>
-                    </motion.div>
-                ) : null}
+                )}
             </AnimatePresence>
+
+            <style jsx global>{`
+                .custom-scrollbar::-webkit-scrollbar { width: 3px; }
+                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.3); border-radius: 10px; }
+            `}</style>
         </motion.div>
     );
 };

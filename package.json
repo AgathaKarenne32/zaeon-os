@@ -3,9 +3,9 @@
   "version": "1.0.1",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "prisma generate && next build",
-    "start": "next start",
+    "dev": "node server.js",
+    "build": "next build",
+    "start": "NODE_ENV=production node server.js",
     "lint": "next lint"
   },
   "author": {
@@ -96,6 +96,8 @@
     "react-icons": "^5.0.1",
     "react-intersection-observer": "^9.5.3",
     "sharp": "^0.34.5",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3",
     "tailwind-merge": "^2.2.0",
     "three": "^0.160.1",
     "viem": "^2.43.5"

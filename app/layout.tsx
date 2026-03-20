@@ -13,7 +13,9 @@ import { Web3Provider } from "@/src/context/Web3Context";
 
 // --- COMPONENTES GLOBAIS ---
 import GlobalClickSound from "@/components/main/GlobalClickSound";
-import { Navbar } from "@/components/main/navbar"; // <-- IMPORTAÇÃO DA NAVBAR AQUI (ajuste o caminho se necessário)
+import { Navbar } from "@/components/main/navbar";
+// 🔥 NOVO: IMPORTANDO O WIDGET GLOBAL DE CHAT 🔥
+import { LoungeChatWidget } from "@/components/sub/LoungeChatWidget";
 
 import "../src/i18n";
 import "./globals.css";
@@ -66,14 +68,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                     disableTransitionOnChange
                 >
                     <AuthProvider>
-                        {/* 2. WRAP CHILDREN IN WEB3 PROVIDER */}
                         <Web3Provider>
-                            {/* AQUI ESTÁ O SEGREDO: 
-                                A Navbar nasce junto com a aplicação e nunca morre. 
-                                O áudio dela persiste em todas as rotas. 
-                            */}
                             <Navbar />
                             {children}
+
+                            {/* 🔥 WIDGET DE CHAT GLOBAL INJETADO AQUI 🔥 */}
+                            <LoungeChatWidget />
+
                         </Web3Provider>
                     </AuthProvider>
                 </ThemeProvider>
