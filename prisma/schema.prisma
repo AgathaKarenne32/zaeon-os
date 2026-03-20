@@ -50,12 +50,16 @@ model User {
   updatedAt       DateTime? @updatedAt
 
   // Relations
-  accounts        Account[]
-  sessions        Session[]
-  posts           Post[]
-  comments        Comment[]
-  userSpaceData   UserSpaceData?
-  personalPhotos  PersonalPhoto[] // 🔥 NOVO: Relação com as fotos do Mural (My Photos)
+  accounts         Account[]
+  sessions         Session[]
+  posts            Post[]
+  comments         Comment[]
+  userSpaceData    UserSpaceData?
+  personalPhotos   PersonalPhoto[] // 🔥 NOVO: Relação com as fotos do Mural (My Photos)
+  
+  // 🔥 CRÍTICO: Relações Opostas obrigatórias para o ConnectionRequest
+  sentRequests     ConnectionRequest[] @relation("SentRequests")
+  receivedRequests ConnectionRequest[] @relation("ReceivedRequests")
 
   // 🔥 CRÍTICO: Sincroniza o Prisma com o NextAuth (coleção 'users')
   @@map("users") 
@@ -211,4 +215,18 @@ model PersonalPhoto {
   subtitle  String
   image     String   // Guardará a string em Base64
   createdAt DateTime @default(now())
+}
+
+// 🔥 NOVO: MODELO DE PEDIDOS DE CONEXÃO (NETWORKING) 🔥
+model ConnectionRequest {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  senderId    String   @db.ObjectId
+  receiverId  String   @db.ObjectId
+  message     String
+  status      String   @default("PENDING") // PENDING, ACCEPTED, REJECTED
+  createdAt   DateTime @default(now())
+
+  // Relacionamentos explícitos (ajuda o Prisma a entender quem é quem)
+  sender      User     @relation("SentRequests", fields: [senderId], references: [id])
+  receiver    User     @relation("ReceivedRequests", fields: [receiverId], references: [id])
 }

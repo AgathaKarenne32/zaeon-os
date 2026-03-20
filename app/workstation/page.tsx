@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
-    ChevronRightIcon, BeakerIcon, CpuChipIcon, ShieldCheckIcon, SparklesIcon,
+    ChevronRightIcon, BeakerIcon, CpuChipIcon, SparklesIcon,
     ArrowPathIcon, ChartBarIcon, BookOpenIcon, CameraIcon,
-    EyeIcon, LockClosedIcon, AcademicCapIcon, PencilSquareIcon, UserGroupIcon as CollabIcon, HandRaisedIcon
+    EyeIcon, LockClosedIcon, AcademicCapIcon, PencilSquareIcon, UserGroupIcon as CollabIcon, HandRaisedIcon, UserPlusIcon, PaperAirplaneIcon, XMarkIcon, CheckIcon
 } from "@heroicons/react/24/outline";
 import MatrixRain from "@/components/main/star-background";
 import NetworkMural from "@/app/workstation/profiles/NetworkMural";
@@ -30,7 +30,6 @@ const ROOM_DETAILS = {
     humanities: { id: "humanities", name: "Grand Archive", icon: BookOpenIcon, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-500/10", border: "border-amber-300 dark:border-amber-500/30", route: "/study-rooms/humanities" },
 };
 
-// 🔥 Tabela Base Zerada para Mapeamento de Ícones 🔥
 const DEFAULT_SKILLS = [
     { id: "writing", name: "Academic Writing", icon: PencilSquareIcon, rank: "F", current: 0, next: 50, metricName: "Papers", locked: false },
     { id: "focus", name: "Deep Focus", icon: EyeIcon, rank: "F", current: 0, next: 50, metricName: "Hours", locked: false },
@@ -38,7 +37,6 @@ const DEFAULT_SKILLS = [
     { id: "participation", name: "Participation", icon: HandRaisedIcon, rank: "F", current: 0, next: 5, metricName: "Validations", locked: true, note: "Teacher Controlled" }
 ];
 
-// --- ÍCONES ANIMADOS ---
 const AnimatedBlueGlobe = () => (
     <motion.div animate={{ rotate: 360 }} transition={{ duration: 15, repeat: Infinity, ease: "linear" }} className="w-10 h-10 rounded-full bg-blue-900/40 border border-cyan-400/50 flex items-center justify-center shadow-[0_0_15px_rgba(34,211,238,0.2)] shrink-0">
         <div className="w-5 h-5 rounded-full bg-blue-600/60 flex items-center justify-center">
@@ -54,6 +52,18 @@ const MiniAnimatedDNA = ({ theme }: { theme: any }) => (
                 <div className={`w-1.5 h-1.5 rounded-full ${theme.dnaColor1}`} />
                 <div className={`flex-1 h-[1.5px] bg-gradient-to-r ${theme.dnaGradient}`} />
                 <div className={`w-1.5 h-1.5 rounded-full ${theme.dnaColor2}`} />
+            </motion.div>
+        ))}
+    </motion.div>
+);
+
+const RealisticDNA = ({ theme }: { theme: any }) => (
+    <motion.div animate={{ opacity: [0.8, 1, 0.8], scale: [0.98, 1.02, 0.98] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }} className="absolute inset-0 flex flex-col items-center justify-around py-4 z-10" style={{ perspective: "1000px" }}>
+        {[...Array(30)].map((_, i) => (
+            <motion.div key={i} className="relative w-16 h-[3px] flex items-center justify-between" animate={{ rotateY: [0, 360] }} transition={{ duration: 8, repeat: Infinity, ease: "linear", delay: i * 0.15 }}>
+                <div className={`w-3 h-3 rounded-full ${theme.dnaColor1}`} />
+                <div className={`flex-1 h-[2px] bg-gradient-to-r ${theme.dnaGradient}`} />
+                <div className={`w-3 h-3 rounded-full ${theme.dnaColor2}`} />
             </motion.div>
         ))}
     </motion.div>
@@ -92,17 +102,111 @@ const SkillDrawer = ({ skill, isOpen, onToggle, theme }: any) => {
     );
 };
 
-const RealisticDNA = ({ theme }: { theme: any }) => (
-    <motion.div animate={{ opacity: [0.8, 1, 0.8], scale: [0.98, 1.02, 0.98] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }} className="absolute inset-0 flex flex-col items-center justify-around py-4 z-10" style={{ perspective: "1000px" }}>
-        {[...Array(30)].map((_, i) => (
-            <motion.div key={i} className="relative w-16 h-[3px] flex items-center justify-between" animate={{ rotateY: [0, 360] }} transition={{ duration: 8, repeat: Infinity, ease: "linear", delay: i * 0.15 }}>
-                <div className={`w-3 h-3 rounded-full ${theme.dnaColor1}`} />
-                <div className={`flex-1 h-[2px] bg-gradient-to-r ${theme.dnaGradient}`} />
-                <div className={`w-3 h-3 rounded-full ${theme.dnaColor2}`} />
-            </motion.div>
-        ))}
-    </motion.div>
-);
+// 🔥 COMPONENTE DE SOLICITAÇÃO REAL 🔥
+const NetworkConnectionsPanel = ({ visitedUserId, currentUserId, theme }: { visitedUserId?: string, currentUserId?: string, theme: any }) => {
+    const [requestState, setRequestState] = useState<0 | 1 | 2 | 3 | 4>(0);
+    const [requestText, setRequestText] = useState("");
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        if (!visitedUserId || visitedUserId === currentUserId) {
+            setIsLoading(false);
+            return;
+        }
+
+        fetch(`/api/network/request?targetId=${visitedUserId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'PENDING') setRequestState(2);
+                else if (data.status === 'REJECTED') setRequestState(3);
+                else if (data.status === 'ACCEPTED') setRequestState(4);
+                else setRequestState(0);
+                setIsLoading(false);
+            })
+            .catch(() => setIsLoading(false));
+    }, [visitedUserId, currentUserId]);
+
+    const handleSendRequest = async () => {
+        if (!requestText.trim()) return;
+        setRequestState(2);
+        await fetch('/api/network/request', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ targetId: visitedUserId, message: requestText })
+        });
+    };
+
+    if (!visitedUserId || visitedUserId === currentUserId) return null;
+
+    if (isLoading) return <div className="w-full h-12 bg-white/5 rounded-full animate-pulse mt-4" />;
+
+    return (
+        <div className={`w-full p-6 mt-4 rounded-[2rem] flex flex-col items-center transition-all ${theme.panelWrapper}`}>
+            <AnimatePresence mode="wait">
+                {requestState === 0 && (
+                    <motion.button
+                        key="btn-request"
+                        initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
+                        onClick={() => setRequestState(1)}
+                        className={`flex items-center gap-2 px-6 py-3 rounded-full border shadow-lg transition-all hover:scale-105 bg-white/10 backdrop-blur-md ${theme.cardBorder} ${theme.textStrong}`}
+                    >
+                        <UserPlusIcon className="w-5 h-5" />
+                        <span className="text-xs font-bold uppercase tracking-widest">Solicitar Conexão</span>
+                    </motion.button>
+                )}
+
+                {requestState === 1 && (
+                    <motion.div
+                        key="form-request"
+                        initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                        className="w-full flex flex-col gap-3"
+                    >
+                        <span className={`text-[10px] font-black uppercase tracking-widest ${theme.textAccent}`}>Mensagem de Conexão</span>
+                        <textarea
+                            autoFocus
+                            value={requestText}
+                            onChange={(e) => setRequestText(e.target.value)}
+                            placeholder="Apresente-se brevemente..."
+                            className={`w-full h-24 bg-black/20 border rounded-xl p-3 text-xs focus:outline-none resize-none ${theme.cardBorder} ${theme.textStrong} placeholder:opacity-40`}
+                        />
+                        <div className="flex justify-end gap-2">
+                            <button onClick={() => setRequestState(0)} className="px-4 py-2 text-[10px] uppercase font-bold text-slate-400 hover:text-white transition-colors">Cancelar</button>
+                            <button
+                                disabled={!requestText.trim()}
+                                onClick={handleSendRequest}
+                                className={`flex items-center gap-2 px-6 py-2 rounded-full border transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed bg-cyan-500/20 border-cyan-400 text-cyan-300 hover:bg-cyan-500 hover:text-white`}
+                            >
+                                <PaperAirplaneIcon className="w-4 h-4" />
+                                <span className="text-[10px] font-bold uppercase tracking-widest">Enviar Solicitação</span>
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+
+                {requestState === 2 && (
+                    <motion.div key="btn-sent" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex items-center gap-2 px-6 py-3 rounded-full border border-emerald-500/50 bg-emerald-500/10 text-emerald-400 shadow-[0_0_20px_rgba(52,211,153,0.1)]">
+                        <CheckIcon className="w-5 h-5" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest">Solicitação Enviada</span>
+                    </motion.div>
+                )}
+
+                {requestState === 3 && (
+                    <motion.div key="btn-rejected" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex items-center gap-2 px-6 py-3 rounded-full border border-red-500/50 bg-red-500/10 text-red-400">
+                        <XMarkIcon className="w-5 h-5" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest">Solicitação Rejeitada</span>
+                    </motion.div>
+                )}
+
+                {requestState === 4 && (
+                    <motion.div key="btn-accepted" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex items-center gap-2 px-6 py-3 rounded-full border border-cyan-500/50 bg-cyan-500/10 text-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.2)]">
+                        <CheckIcon className="w-5 h-5" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest">Conexão Estabelecida</span>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+};
 
 export default function WorkStationPage() {
     const { data: session, status, update } = useSession();
@@ -112,7 +216,6 @@ export default function WorkStationPage() {
     const [activeSkill, setActiveSkill] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
 
-    // 🔥 Estado Real das Skills que virão do Banco de Dados 🔥
     const [userSkills, setUserSkills] = useState<typeof DEFAULT_SKILLS>(DEFAULT_SKILLS);
     const [isLoadingSkills, setIsLoadingSkills] = useState(true);
 
@@ -122,6 +225,8 @@ export default function WorkStationPage() {
     const kycStatus = (session?.user as any)?.kycStatus || "pending";
     const academicLevel = (session?.user as any)?.academicLevel || "Graduação";
     const userGender = (session?.user as any)?.gender || "unspecified";
+    // @ts-ignore
+    const currentUserId = session?.user?.id || "";
 
     const [userImage, setUserImage] = useState(session?.user?.image || "/assets/default-avatar.png");
 
@@ -143,169 +248,61 @@ export default function WorkStationPage() {
 
         if (isFemale) {
             return {
-                pageBg: "bg-pink-50/80 dark:bg-[#1a0a13]",
-                matrixOpacity: "opacity-40",
-                capsuleBorder: "border-pink-500/20",
-                capsuleBg: "bg-pink-950/20",
-                capsuleIconFill: "text-blue-600 dark:text-cyan-400",
-                cardBg: "bg-white/10 dark:bg-pink-900/5",
-                cardBorder: "border-pink-200/50 dark:border-pink-500/20",
-                cardHover: "hover:border-pink-400 dark:hover:border-pink-400",
-                highlightCard: "border-pink-500/30 bg-pink-950/20 backdrop-blur-md shadow-lg shadow-pink-500/10",
-                textStrong: "text-pink-950 dark:text-white",
-                textMuted: "text-pink-800/70 dark:text-pink-200/50",
-                textHighlight: "text-white drop-shadow-[0_0_10px_rgba(255,182,193,0.8)]",
-                textAccent: "text-rose-500 dark:text-rose-400",
-                skillIconFill: "text-blue-500 dark:text-cyan-400",
-                skillTitle: "text-blue-600 dark:text-cyan-400",
-                skillFill: "bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.6)]",
-                accentMuted: "bg-pink-400/30 dark:bg-pink-500/30",
-                fillAccent: "bg-pink-400",
-                dnaColor1: "bg-rose-400 shadow-[0_0_15px_#f472b6]",
-                dnaColor2: "bg-fuchsia-400 shadow-[0_0_15px_#e879f9]",
-                dnaGradient: "from-rose-500/50 to-fuchsia-400/50",
+                pageBg: "bg-pink-50/80 dark:bg-[#1a0a13]", matrixOpacity: "opacity-40", capsuleBorder: "border-pink-500/20",
+                capsuleIconFill: "text-blue-600 dark:text-cyan-400", cardBg: "bg-white/10 dark:bg-pink-900/5", cardBorder: "border-pink-200/50 dark:border-pink-500/20",
+                panelWrapper: "bg-pink-950/20 backdrop-blur-2xl border border-pink-500/20 shadow-[0_8px_32px_rgba(236,72,153,0.1)]", highlightCard: "border-pink-500/30 bg-pink-950/20 shadow-pink-500/10",
+                textStrong: "text-pink-950 dark:text-white", textMuted: "text-pink-800/70 dark:text-pink-200/50", textHighlight: "text-white drop-shadow-[0_0_10px_rgba(255,182,193,0.8)]",
+                textAccent: "text-rose-500 dark:text-rose-400", skillIconFill: "text-blue-500 dark:text-cyan-400", skillTitle: "text-blue-600 dark:text-cyan-400",
+                skillFill: "bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.6)]", accentMuted: "bg-pink-400/30 dark:bg-pink-500/30", dnaColor1: "bg-rose-400 shadow-[0_0_15px_#f472b6]",
+                dnaColor2: "bg-fuchsia-400 shadow-[0_0_15px_#e879f9]", dnaGradient: "from-rose-500/50 to-fuchsia-400/50",
             };
         }
 
         if (isMale) {
             return {
-                pageBg: "bg-blue-50/80 dark:bg-[#050a1f]",
-                matrixOpacity: "opacity-60",
-                capsuleBg: "bg-transparent backdrop-blur-3xl shadow-[0_0_50px_rgba(34,211,238,0.15)]",
-                capsuleBorder: "border-white/10",
-                capsuleIconFill: "text-blue-600 dark:text-cyan-400",
-                cardBg: "bg-transparent",
-                cardBorder: "border-blue-200/50 dark:border-blue-500/20",
-                cardHover: "hover:border-blue-400 dark:hover:border-blue-400",
-                panelWrapper: "bg-blue-950/40 backdrop-blur-2xl border border-blue-500/20 shadow-[0_8px_32px_rgba(59,130,246,0.2)]",
-                highlightCard: "border-blue-400/30 bg-blue-800/20 hover:bg-blue-700/40 shadow-inner",
-                textStrong: "text-blue-950 dark:text-white",
-                textMuted: "text-blue-800/70 dark:text-blue-200/50",
-                textHighlight: "text-white drop-shadow-[0_0_12px_rgba(34,211,238,1)]",
-                textAccent: "text-blue-600 dark:text-cyan-400",
-                skillIconFill: "text-blue-500 dark:text-cyan-400",
-                skillTitle: "text-blue-600 dark:text-cyan-400",
-                skillFill: "bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.6)]",
-                accentMuted: "bg-blue-400/30 dark:bg-blue-500/30",
-                fillAccent: "bg-blue-400",
-                dnaColor1: "bg-blue-500 shadow-[0_0_15px_#3b82f6]",
-                dnaColor2: "bg-cyan-400 shadow-[0_0_15px_#22d3ee]",
-                dnaGradient: "from-blue-500 to-cyan-400",
-            };
-        }
-
-        if (isLGBT) {
-            return {
-                pageBg: "bg-slate-50/80 dark:bg-[#030014]",
-                matrixOpacity: "opacity-60",
-                capsuleBg: "bg-transparent backdrop-blur-3xl shadow-[0_0_50px_rgba(217,70,239,0.15)]",
-                capsuleBorder: "border-fuchsia-500/20",
-                capsuleIconFill: "text-blue-600 dark:text-fuchsia-400",
-                cardBg: "bg-transparent",
-                cardBorder: "border-slate-200/50 dark:border-white/10",
-                cardHover: "hover:border-cyan-400 dark:hover:border-fuchsia-400",
-                panelWrapper: "bg-fuchsia-950/30 backdrop-blur-2xl border border-fuchsia-500/20 shadow-[0_8px_32px_rgba(217,70,239,0.2)]",
-                highlightCard: "border-fuchsia-400/30 bg-fuchsia-800/20 hover:bg-fuchsia-700/40 shadow-inner",
-                textStrong: "text-slate-900 dark:text-white",
-                textMuted: "text-slate-600 dark:text-white/50",
-                textHighlight: "text-white drop-shadow-[0_0_12px_rgba(232,121,249,1)]",
-                textAccent: "text-fuchsia-500 dark:text-cyan-400",
-                skillIconFill: "text-blue-600 dark:text-cyan-400",
-                skillTitle: "text-blue-600 dark:text-fuchsia-400",
-                skillFill: "bg-gradient-to-r from-blue-400 to-pink-400",
-                accentMuted: "bg-slate-400/50 dark:bg-white/20",
-                fillAccent: "bg-gradient-to-r from-blue-400 to-pink-400",
-                dnaColor1: "bg-fuchsia-400 shadow-[0_0_15px_#e879f9]",
-                dnaColor2: "bg-cyan-400 shadow-[0_0_15px_#22d3ee]",
-                dnaGradient: "from-fuchsia-400 to-cyan-400",
+                pageBg: "bg-blue-50/80 dark:bg-[#050a1f]", matrixOpacity: "opacity-60", 
+                capsuleBorder: "border-blue-400/50 dark:border-white/10", // 🔥 MASCULINO: Borda azul visível no modo claro
+                capsuleIconFill: "text-blue-600 dark:text-cyan-400", cardBg: "bg-transparent", cardBorder: "border-blue-200/50 dark:border-blue-500/20",
+                panelWrapper: "bg-blue-950/40 backdrop-blur-2xl border border-blue-500/20 shadow-[0_8px_32px_rgba(59,130,246,0.2)]", highlightCard: "border-blue-400/30 bg-blue-800/20 shadow-inner",
+                textStrong: "text-blue-950 dark:text-white", textMuted: "text-blue-800/70 dark:text-blue-200/50", textHighlight: "text-white drop-shadow-[0_0_12px_rgba(34,211,238,1)]",
+                textAccent: "text-blue-600 dark:text-cyan-400", skillIconFill: "text-blue-500 dark:text-cyan-400", skillTitle: "text-blue-600 dark:text-cyan-400",
+                skillFill: "bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.6)]", accentMuted: "bg-blue-400/30 dark:bg-blue-500/30", dnaColor1: "bg-blue-500 shadow-[0_0_15px_#3b82f6]",
+                dnaColor2: "bg-cyan-400 shadow-[0_0_15px_#22d3ee]", dnaGradient: "from-blue-500 to-cyan-400",
             };
         }
 
         return {
-            pageBg: "bg-slate-200/30 dark:bg-[#030014]",
-            matrixOpacity: "opacity-60",
-            capsuleBg: "bg-transparent backdrop-blur-3xl shadow-[0_0_50px_rgba(255,255,255,0.05)]",
-            capsuleBorder: "border-white/20",
-            capsuleIconFill: "text-blue-600 dark:text-cyan-400",
-            cardBg: "bg-transparent",
-            cardBorder: "border-white/60 dark:border-white/10",
-            cardHover: "hover:border-cyan-400 dark:hover:border-cyan-500/50",
-            panelWrapper: "bg-slate-900/40 backdrop-blur-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)]",
-            highlightCard: "border-white/20 bg-white/10 hover:bg-white/20 shadow-inner",
-            textStrong: "text-slate-900 dark:text-white",
-            textMuted: "text-slate-600 dark:text-white/50",
-            textHighlight: "text-white drop-shadow-[0_0_12px_rgba(255,255,255,1)]",
-            textAccent: "text-cyan-600 dark:text-cyan-400",
-            skillIconFill: "text-blue-600 dark:text-cyan-400",
-            skillTitle: "text-blue-600 dark:text-cyan-400",
-            skillFill: "bg-cyan-500",
-            accentMuted: "bg-slate-400/50 dark:bg-cyan-500/50",
-            fillAccent: "bg-cyan-500",
-            dnaColor1: "bg-cyan-400 shadow-[0_0_15px_#22d3ee]",
-            dnaColor2: "bg-blue-500 shadow-[0_0_15px_#3b82f6]",
-            dnaGradient: "from-cyan-400 to-blue-500",
+            pageBg: "bg-slate-200/30 dark:bg-[#030014]", matrixOpacity: "opacity-60", 
+            capsuleBorder: "border-slate-400/50 dark:border-white/20", // DEFAULT: Borda visível no modo claro
+            capsuleIconFill: "text-blue-600 dark:text-cyan-400", cardBg: "bg-transparent", cardBorder: "border-white/60 dark:border-white/10",
+            panelWrapper: "bg-slate-900/40 backdrop-blur-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)]", highlightCard: "border-white/20 bg-white/10 shadow-inner",
+            textStrong: "text-slate-900 dark:text-white", textMuted: "text-slate-600 dark:text-white/50", textHighlight: "text-white drop-shadow-[0_0_12px_rgba(255,255,255,1)]",
+            textAccent: "text-cyan-600 dark:text-cyan-400", skillIconFill: "text-blue-600 dark:text-cyan-400", skillTitle: "text-blue-600 dark:text-cyan-400",
+            skillFill: "bg-cyan-500", accentMuted: "bg-slate-400/50 dark:bg-cyan-500/50", dnaColor1: "bg-cyan-400 shadow-[0_0_15px_#22d3ee]",
+            dnaColor2: "bg-blue-500 shadow-[0_0_15px_#3b82f6]", dnaGradient: "from-cyan-400 to-blue-500",
         };
     };
 
     const theme = getTheme();
 
-    useEffect(() => { setMounted(true); }, []);
+    useEffect(() => { setMounted(true); loadSkills(); }, [status]);
 
-    // 🔥 LOAD DAS SKILLS DO BANCO DE DADOS (Zera se não houver) 🔥
-    useEffect(() => {
-        const loadSkills = async () => {
-            if (status === "authenticated") {
-                try {
-                    const res = await fetch('/api/user/skills'); // <-- Rota Real Futura
-                    if (res.ok) {
-                        const dbSkills = await res.json();
-                        // Combina o ícone/nome estático do frontend com os valores do backend
-                        const mergedSkills = DEFAULT_SKILLS.map(defaultSkill => {
-                            const foundDbSkill = dbSkills.find((s: any) => s.id === defaultSkill.id);
-                            return foundDbSkill ? { ...defaultSkill, ...foundDbSkill } : defaultSkill;
-                        });
-                        setUserSkills(mergedSkills);
-                    }
-                } catch (error) {
-                    console.error("Falha ao carregar skills, usando defaults zerados.", error);
-                    // Falha silenciosa = usa a tabela zerada sem estressar o usuário
-                } finally {
-                    setIsLoadingSkills(false);
+    const loadSkills = async () => {
+        if (status === "authenticated") {
+            try {
+                const res = await fetch('/api/user/skills');
+                if (res.ok) {
+                    const dbSkills = await res.json();
+                    setUserSkills(DEFAULT_SKILLS.map(ds => {
+                        const fd = dbSkills.find((s: any) => s.id === ds.id);
+                        return fd ? { ...ds, ...fd } : ds;
+                    }));
                 }
-            }
-        };
-        if (mounted) loadSkills();
-    }, [mounted, status]);
-
-    useEffect(() => {
-        const syncOnboardingData = async () => {
-            const savedData = localStorage.getItem('zaeon_onboarding');
-            if (savedData && status === "authenticated") {
-                setIsSyncing(true);
-                try {
-                    const onboardingPayload = JSON.parse(savedData);
-                    const res = await fetch('/api/auth/onboarding', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(onboardingPayload)
-                    });
-                    if (res.ok) {
-                        localStorage.removeItem('zaeon_onboarding');
-                        await update();
-                    }
-                } catch (error) { console.error(error); }
-                finally { setIsSyncing(false); }
-            }
-        };
-        if (mounted) syncOnboardingData();
-    }, [mounted, status, update]);
-
-    useEffect(() => {
-        if (session?.user?.image) {
-            setUserImage(session.user.image);
+            } catch (error) { } finally { setIsLoadingSkills(false); }
         }
-    }, [session?.user?.image]);
+    };
 
+    // 🔥 CÓDIGO DE UPLOAD 100% RESTAURADO SEM PLACEHOLDERS 🔥
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -379,7 +376,7 @@ export default function WorkStationPage() {
             <div className={`w-full h-screen flex flex-col items-center justify-center z-[999] ${theme.pageBg}`}>
                 <ArrowPathIcon className={`w-8 h-8 animate-spin mb-4 ${theme.skillIconFill}`} />
                 <span className={`text-[10px] font-black uppercase tracking-[0.3em] animate-pulse ${theme.skillTitle}`}>
-                    {isSyncing ? "Neural Sync in Progress..." : "Loading Workstation..."}
+                    Loading Workstation...
                 </span>
             </div>
         );
@@ -398,19 +395,11 @@ export default function WorkStationPage() {
                 <div className="w-full max-w-[1400px] grid grid-cols-1 lg:grid-cols-12 gap-12 mb-12">
 
                     {/* --- LADO ESQUERDO: HUD DO PERSONAGEM --- */}
-                    <div className="lg:col-span-6 relative flex items-start justify-start pl-4 lg:pl-10 mt-16 lg:mt-24">
-
-                        {/* 🔥 NOME DO PERFIL (Curso Removido da linha inferior) 🔥 */}
-                        <div className="absolute right-0 top-10 flex flex-col items-end z-30">
-                            <span className={`text-2xl font-black tracking-tighter drop-shadow-md ${theme.textStrong}`}>
-                                {session?.user?.name || "Unknown"}
-                            </span>
-                        </div>
+                    <div className="lg:col-span-6 relative flex flex-col items-start pl-4 lg:pl-10 mt-16 lg:mt-24">
 
                         <div className="relative flex items-start">
-                            {/* A CÁPSULA */}
+                            {/* A CÁPSULA (NO CANTO ORIGINAL) */}
                             <div className={`relative w-[180px] h-[500px] rounded-[100px] border-[3px] backdrop-blur-3xl flex flex-col items-center justify-center z-20 py-10 shadow-[0_0_50px_rgba(255,255,255,0.05)] ${theme.capsuleBorder}`}>
-
                                 <RealisticDNA theme={theme} />
 
                                 <motion.div animate={{ y: [-8, 8, -8] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }} className="relative z-30">
@@ -425,14 +414,21 @@ export default function WorkStationPage() {
                                 </motion.div>
                             </div>
 
-                            <div className="absolute left-[100%] top-16 flex flex-col gap-6 z-10">
+                            <div className="absolute left-[100%] top-8 flex flex-col gap-6 z-10 w-full min-w-[250px]">
+                                {/* 🔥 NOME EM CIMA DO CARD DE LEVEL 🔥 */}
+                                <div className="flex flex-col mb-2 pl-6">
+                                    <span className={`text-3xl font-black tracking-tighter drop-shadow-md ${theme.textStrong}`}>
+                                        {session?.user?.name || "Unknown"}
+                                    </span>
+                                </div>
+
                                 <motion.div initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.3 }} className="relative flex items-center">
                                     <div className={`w-6 h-[2px] ${theme.accentMuted}`} />
-                                    <div className={`border px-5 py-3 rounded-2xl backdrop-blur-md shadow-xl flex items-center gap-3 bg-black/20 ${theme.cardBorder}`}>
+                                    <div className={`border px-5 py-3 rounded-2xl backdrop-blur-md shadow-xl flex items-center gap-3 bg-white/40 dark:bg-black/20 ${theme.cardBorder}`}>
                                         <AcademicCapIcon className={`w-6 h-6 ${isSuperAdmin ? 'text-yellow-500' : theme.capsuleIconFill}`} />
                                         <div>
-                                            <div className={`text-[8px] uppercase font-black tracking-widest text-white/50`}>Level</div>
-                                            <div className={`text-xs font-bold uppercase text-white`}>{isSuperAdmin ? "Architect (Max)" : academicLevel}</div>
+                                            <div className={`text-[8px] uppercase font-black tracking-widest ${theme.textMuted}`}>Level</div>
+                                            <div className={`text-xs font-bold uppercase ${theme.textStrong}`}>{isSuperAdmin ? "Architect (Max)" : academicLevel}</div>
                                         </div>
                                     </div>
                                 </motion.div>
@@ -440,22 +436,19 @@ export default function WorkStationPage() {
                                 <motion.div initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.5 }} className="relative flex flex-col items-start mt-4">
                                     <div className="flex items-center">
                                         <div className={`w-10 h-[2px] ${theme.accentMuted}`} />
-                                        <div className={`border px-5 py-3 rounded-2xl backdrop-blur-md shadow-xl flex items-center gap-3 relative z-20 bg-black/20 ${theme.cardBorder}`}>
+                                        <div className={`border px-5 py-3 rounded-2xl backdrop-blur-md shadow-xl flex items-center gap-3 relative z-20 bg-white/40 dark:bg-black/20 ${theme.cardBorder}`}>
                                             <BookOpenIcon className={`w-6 h-6 ${theme.capsuleIconFill}`} />
                                             <div>
-                                                {/* 🔥 TROCA NOME KNOWLEDGE BASE -> CURSO 🔥 */}
-                                                <div className={`text-[8px] uppercase font-black tracking-widest text-white/50`}>Curso</div>
-                                                <div className={`text-xs font-bold uppercase truncate max-w-[180px] text-white`}>{isSuperAdmin ? "Omniscient" : userCourse || "Undeclared"}</div>
+                                                <div className={`text-[8px] uppercase font-black tracking-widest ${theme.textMuted}`}>Curso</div>
+                                                <div className={`text-xs font-bold uppercase truncate max-w-[180px] ${theme.textStrong}`}>{isSuperAdmin ? "Omniscient" : userCourse || "Undeclared"}</div>
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* 🔥 RENDERIZANDO A LISTA DE SKILLS (Reais ou Zeradas) 🔥 */}
                                     <div className={`flex flex-col gap-4 mt-4 ml-16 relative z-10 border-l-[2px] pl-4 py-2 ${theme.cardBorder}`}>
                                         {isLoadingSkills ? (
                                             <div className="flex items-center gap-2 px-2 opacity-50">
-                                                <ArrowPathIcon className="w-4 h-4 animate-spin text-white/50" />
-                                                <span className="text-[8px] text-white/50 uppercase tracking-widest">Sincronizando Skills...</span>
+                                                <ArrowPathIcon className="w-4 h-4 animate-spin text-slate-500 dark:text-white/50" />
                                             </div>
                                         ) : (
                                             userSkills.map((skill) => (
@@ -473,7 +466,6 @@ export default function WorkStationPage() {
 
                         <div className={`w-full p-8 rounded-[40px] flex flex-col gap-6 ${theme.panelWrapper}`}>
 
-                            {/* CARD LOUNGE: Apenas Ícone + Nome */}
                             <div onClick={() => router.push('/study-rooms/lounge')} className={cardBaseStyle + ` ${theme.highlightCard} p-5 rounded-3xl hover:scale-[1.02] cursor-pointer`}>
                                 <div className="flex justify-between items-center gap-4">
                                     <div className="flex items-center gap-4">
@@ -484,39 +476,25 @@ export default function WorkStationPage() {
                                 </div>
                             </div>
 
-                            {/* CARD DA SALA DE ESTUDOS: Apenas Mini DNA + Nome da Sala */}
-                            {isSuperAdmin ? (
-                                Object.values(ROOM_DETAILS).map((room) => (
-                                    <div key={room.id} onClick={() => router.push(room.route)} className={`${cardBaseStyle} bg-black/20 hover:bg-black/30 border-yellow-400/30 hover:border-yellow-400 p-5 rounded-3xl cursor-pointer`}>
-                                        <div className="flex justify-between items-center gap-4">
-                                            <div className="flex items-center gap-4">
-                                                <div className={`p-2 rounded-xl border shadow-sm bg-black/40 ${theme.cardBorder}`}>
-                                                    <room.icon className={`w-5 h-5 ${room.color}`} />
-                                                </div>
-                                                <h2 className={`text-xl font-black uppercase tracking-tight text-white`}>{room.name}</h2>
-                                            </div>
-                                            <ChevronRightIcon className={`w-5 h-5 text-yellow-500 opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all`} />
-                                        </div>
-                                    </div>
-                                ))
-                            ) : targetRoom ? (
+                            {targetRoom && (
                                 <div onClick={() => router.push(targetRoom.route)} className={cardBaseStyle + ` ${theme.highlightCard} p-5 rounded-3xl hover:scale-[1.02] cursor-pointer`}>
                                     <div className="flex justify-between items-center gap-4">
                                         <div className="flex items-center gap-4">
                                             <MiniAnimatedDNA theme={theme} />
-                                            {/* 🔥 HIGHLIGHT DA SALA BASEADO NO CURSO DA ALUNA */}
                                             <h2 className={`text-xl font-black uppercase tracking-tight ${theme.textHighlight}`}>Sala de {userCourse}</h2>
                                         </div>
                                         <ChevronRightIcon className={`w-5 h-5 transition-all ${theme.textHighlight} group-hover:translate-x-1`} />
                                     </div>
                                 </div>
-                            ) : null}
+                            )}
+
+                            {/* Na PRÓPRIA PÁGINA (visitedUserId = undefined), ele não vai renderizar nada. */}
+                            <NetworkConnectionsPanel visitedUserId={undefined} currentUserId={currentUserId} theme={theme} />
 
                         </div>
                     </div>
                 </div>
 
-                {/* --- MURAL DE FOTOS 3D --- */}
                 <div className={`w-full max-w-[1400px] border-t mt-8 ${theme.cardBorder}`}>
                     <NetworkMural />
                 </div>
@@ -526,7 +504,6 @@ export default function WorkStationPage() {
                 .custom-scrollbar::-webkit-scrollbar { width: 4px; }
                 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
                 .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 10px; }
-                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.5); }
             `}</style>
         </div>
     );

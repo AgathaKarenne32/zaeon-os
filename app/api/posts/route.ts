@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/src/lib/auth";
 import { PrismaClient } from "@prisma/client";
+import { redis } from "@/src/lib/redis"; // 🔥 1. IMPORT DO REDIS ADICIONADO
 
 const prisma = new PrismaClient();
 
@@ -11,17 +12,26 @@ export async function GET(req: Request) {
         const { searchParams } = new URL(req.url);
         const room = searchParams.get("room") || "lounge";
 
+        // 🔥 2. CHAVE DE CACHE ÚNICA PARA A SALA
+        const cacheKey = `feed_posts_${room}`;
+
+        // 🔥 3. TENTA LER DO REDIS PRIMEIRO (Hyper-Fast)
+        // O Upstash já faz o parse automático do JSON, então não precisamos de JSON.parse()
+        const cachedFeed = await redis.get(cacheKey);
+        if (cachedFeed) {
+            return NextResponse.json(cachedFeed);
+        }
+
+        // Se não tem no Redis, bate no MongoDB
         const posts = await prisma.post.findMany({
             where: { room: room },
             orderBy: { createdAt: "desc" },
             include: {
-                // 🔥 Trazemos o ID, email e imagem do autor do post
                 author: {
                     select: { id: true, email: true, image: true }
                 },
                 comments: {
                     include: {
-                        // 🔥 Trazemos o ID, email e imagem do autor do comentário
                         author: { select: { id: true, email: true, image: true } }
                     },
                     orderBy: { createdAt: "asc" }
@@ -33,24 +43,27 @@ export async function GET(req: Request) {
         const formattedPosts = posts.map(post => ({
             id: post.id,
             user: post.user,
-            userId: post.author?.id || post.userId, // 🔥 CRÍTICO PARA O CLIQUE NO PERFIL FUNCIONAR
+            userId: post.author?.id || post.userId,
             userEmail: post.author?.email || "",
             userImage: post.author?.image || post.userImage,
             content: post.content,
             createdAt: post.createdAt ? post.createdAt.toISOString() : new Date().toISOString(),
             likes: post.likes || [],
             room: post.room,
-            // Mapeando os comentários
             comments: post.comments.map(c => ({
                 id: c.id,
                 user: c.user,
-                userId: c.author?.id || c.userId, // 🔥 CRÍTICO PARA O CLIQUE NO PERFIL FUNCIONAR
+                userId: c.author?.id || c.userId,
                 userEmail: c.author?.email || "",
-                userImage: c.author?.image,       // 🔥 Traz a imagem do comentário também
+                userImage: c.author?.image,
                 content: c.content,
                 createdAt: c.createdAt ? c.createdAt.toISOString() : new Date().toISOString()
             }))
         }));
+
+        // 🔥 4. SALVA O RESULTADO NO REDIS PARA OS PRÓXIMOS ACESSOS
+        // 'ex: 60' faz o cache expirar sozinho em 60 segundos por segurança
+        await redis.set(cacheKey, formattedPosts, { ex: 60 });
 
         return NextResponse.json(formattedPosts);
     } catch (error) {
@@ -95,11 +108,14 @@ export async function POST(req: Request) {
             }
         });
 
+        // 🔥 5. CRÍTICO: DELETA O CACHE DA SALA APÓS NOVA POSTAGEM
+        await redis.del(`feed_posts_${room}`);
+
         // Formata igual ao GET para a UI Otimista
         const formattedPost = {
             id: newPost.id,
             user: newPost.user,
-            userId: newPost.author?.id || dbUser.id, // 🔥 Inclui o ID aqui também
+            userId: newPost.author?.id || dbUser.id,
             userEmail: newPost.author?.email || "",
             userImage: newPost.author?.image || newPost.userImage,
             content: newPost.content,
@@ -147,6 +163,9 @@ export async function DELETE(req: Request) {
         await prisma.post.delete({
             where: { id: postId }
         });
+
+        // 🔥 6. CRÍTICO: DELETA O CACHE DA SALA APÓS EXCLUSÃO
+        await redis.del(`feed_posts_${post.room}`);
 
         return NextResponse.json({ success: true, message: "Sinal desintegrado." });
     } catch (error) {

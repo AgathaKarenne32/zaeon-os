@@ -2,12 +2,12 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/src/lib/auth';
 import { PrismaClient } from '@prisma/client';
+import { redis } from '@/src/lib/redis'; // 🔥 IMPORT DO REDIS ADICIONADO
 
 const prisma = new PrismaClient();
 
 export async function PATCH(req: Request) {
     try {
-        // 1. Verifica quem está tentando curtir
         const session = await getServerSession(authOptions);
         if (!session?.user?.email) {
             return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
@@ -16,9 +16,9 @@ export async function PATCH(req: Request) {
         const { postId } = await req.json();
         if (!postId) return NextResponse.json({ error: "ID do sinal obrigatório" }, { status: 400 });
 
-        // 2. Busca o post no banco de dados
-        const post = await prisma.post.findUnique({ 
-            where: { id: postId } 
+        // A busca do post já existia, e ela traz o campo 'room' naturalmente!
+        const post = await prisma.post.findUnique({
+            where: { id: postId }
         });
 
         if (!post) return NextResponse.json({ error: "Sinal não encontrado na rede" }, { status: 404 });
@@ -26,16 +26,17 @@ export async function PATCH(req: Request) {
         const userEmail = session.user.email;
         const hasLiked = post.likes.includes(userEmail);
 
-        // 3. Lógica do Toggle (Adiciona ou Remove)
         const updatedLikes = hasLiked
             ? post.likes.filter(email => email !== userEmail) // Remove (Unlike)
             : [...post.likes, userEmail]; // Adiciona (Like)
 
-        // 4. Salva a nova lista de corações no MongoDB
         await prisma.post.update({
             where: { id: postId },
             data: { likes: updatedLikes }
         });
+
+        // 🔥 MODIFICAÇÃO: Limpa o cache da sala após atualizar os likes
+        await redis.del(`feed_posts_${post.room}`);
 
         return NextResponse.json({ success: true, likes: updatedLikes });
     } catch (error) {
