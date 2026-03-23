@@ -167,12 +167,12 @@ export default function LoungeEarth() {
     const fetchFeed = async () => {
         setIsLoadingFeed(true);
         try {
-            const res = await fetch('/api/cyber');
+            const res = await fetch('/api/feed?room=cyber');
             if (res.ok) {
                 const data = await res.json();
                 setPosts(data);
             } else {
-                console.error("Failed to fetch feed");
+                console.error("Failed to fetch cyber feed");
             }
         } catch (error) {
             console.error("Error fetching feed", error);
@@ -316,12 +316,13 @@ function FeedPost({ post, isExpanded, onToggle, onCommentAdded }: { post: Post, 
 
         setIsSubmitting(true);
         try {
-            const res = await fetch('/api/cyber/comment', {
+            const res = await fetch('/api/feed/comment', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     postId: post.id,
                     content: commentText,
+                    room: 'cyber',
                     user: session?.user?.name || "Operative",
                     userId: (session?.user as any)?.id || null
                 })
@@ -331,8 +332,6 @@ function FeedPost({ post, isExpanded, onToggle, onCommentAdded }: { post: Post, 
                 const newComment = await res.json();
                 onCommentAdded(post.id, newComment);
                 setCommentText("");
-            } else {
-                console.error("Failed to submit comment");
             }
         } catch (error) {
             console.error("Error submitting comment:", error);

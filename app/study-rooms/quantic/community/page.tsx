@@ -167,7 +167,7 @@ export default function LoungeEarth() {
     const fetchFeed = async () => {
         setIsLoadingFeed(true);
         try {
-            const res = await fetch('/api/cyber');
+            const res = await fetch('/api/feed?room=quantic');
             if (res.ok) {
                 const data = await res.json();
                 setPosts(data);
@@ -316,12 +316,13 @@ function FeedPost({ post, isExpanded, onToggle, onCommentAdded }: { post: Post, 
 
         setIsSubmitting(true);
         try {
-            const res = await fetch('/api/cyber/comment', {
+            const res = await fetch('/api/feed/comment', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     postId: post.id,
                     content: commentText,
+                    room: 'quantic',
                     user: session?.user?.name || "Operative",
                     userId: (session?.user as any)?.id || null
                 })

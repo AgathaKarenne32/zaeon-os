@@ -45,7 +45,7 @@ interface Post {
 // --- 1. GLOBO 3D (VISUAL & INTERATIVO) ---
 const COLOR_TECH_BLUE = new THREE.Color("#001a2c");
 const COLOR_WIRE_BLUE = new THREE.Color("#00d2ff");
-const COLOR_DOT       = new THREE.Color("#22d3ee");
+const COLOR_DOT = new THREE.Color("#22d3ee");
 
 const latLonToVector3 = (lat: number, lon: number, radius: number) => {
     const phi = (90 - lat) * (Math.PI / 180);
@@ -64,7 +64,7 @@ const LocationMarker = ({ lat, lon, label, cost, onClick }: any) => {
 
     useFrame(({ clock }) => {
         if (ref.current) {
-            ref.current.lookAt(0, 0, 8); 
+            ref.current.lookAt(0, 0, 8);
             const scale = hovered ? 1.3 : 1 + Math.sin(clock.getElapsedTime() * 3) * 0.1;
             ref.current.scale.set(scale, scale, scale);
         }
@@ -72,7 +72,7 @@ const LocationMarker = ({ lat, lon, label, cost, onClick }: any) => {
 
     return (
         <group position={position} ref={ref}>
-            <mesh 
+            <mesh
                 onClick={(e) => { e.stopPropagation(); onClick(); }}
                 onPointerOver={(e) => { e.stopPropagation(); setHovered(true); document.body.style.cursor = 'pointer'; }}
                 onPointerOut={(e) => { e.stopPropagation(); setHovered(false); document.body.style.cursor = 'auto'; }}
@@ -80,11 +80,11 @@ const LocationMarker = ({ lat, lon, label, cost, onClick }: any) => {
                 <sphereGeometry args={[0.04, 16, 16]} />
                 <meshBasicMaterial color={hovered ? "#fbbf24" : COLOR_DOT} toneMapped={false} />
             </mesh>
-            
+
             <Html distanceFactor={12} style={{ pointerEvents: 'none' }} zIndexRange={[100, 0]}>
                 <AnimatePresence>
                     {hovered && (
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0, y: 10, scale: 0.8 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0 }}
@@ -125,12 +125,12 @@ const CyberGlobe = () => {
                 <Sphere args={[1.51, 32, 32]}>
                     <meshBasicMaterial color={COLOR_WIRE_BLUE} wireframe transparent opacity={0.12} />
                 </Sphere>
-                <LocationMarker lat={37.09} lon={-95.71} label="USA" cost="HIGH" onClick={() => {}} />
-                <LocationMarker lat={-14.23} lon={-51.92} label="BRAZIL" cost="LOW" onClick={() => {}} />
-                <LocationMarker lat={51.16} lon={10.45} label="GERMANY" cost="MED" onClick={() => {}} />
-                <LocationMarker lat={35.86} lon={104.19} label="CHINA" cost="MED" onClick={() => {}} />
-                <LocationMarker lat={-25.27} lon={133.77} label="AUSTRALIA" cost="HIGH" onClick={() => {}} />
-                <LocationMarker lat={35.67} lon={139.65} label="JAPAN" cost="HIGH" onClick={() => {}} />
+                <LocationMarker lat={37.09} lon={-95.71} label="USA" cost="HIGH" onClick={() => { }} />
+                <LocationMarker lat={-14.23} lon={-51.92} label="BRAZIL" cost="LOW" onClick={() => { }} />
+                <LocationMarker lat={51.16} lon={10.45} label="GERMANY" cost="MED" onClick={() => { }} />
+                <LocationMarker lat={35.86} lon={104.19} label="CHINA" cost="MED" onClick={() => { }} />
+                <LocationMarker lat={-25.27} lon={133.77} label="AUSTRALIA" cost="HIGH" onClick={() => { }} />
+                <LocationMarker lat={35.67} lon={139.65} label="JAPAN" cost="HIGH" onClick={() => { }} />
             </group>
         </group>
     );
@@ -142,11 +142,11 @@ const EnergyCord = ({ startX, startY, endX, endY, delay = 0 }: any) => {
     return (
         <svg className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-visible z-0">
             <path d={path} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="2" />
-            <motion.path 
-                d={path} fill="none" stroke="#22d3ee" strokeWidth="2" strokeDasharray="10 150" 
-                initial={{ strokeDashoffset: 0 }} animate={{ strokeDashoffset: -160 }} 
-                transition={{ duration: 3, repeat: Infinity, ease: "linear", delay: delay }} 
-                className="drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]" 
+            <motion.path
+                d={path} fill="none" stroke="#22d3ee" strokeWidth="2" strokeDasharray="10 150"
+                initial={{ strokeDashoffset: 0 }} animate={{ strokeDashoffset: -160 }}
+                transition={{ duration: 3, repeat: Infinity, ease: "linear", delay: delay }}
+                className="drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]"
             />
         </svg>
     );
@@ -167,7 +167,7 @@ const AppleSpinner = () => (
 // --- COMPONENTE DA PÁGINA ---
 export default function LoungeEarth() {
     const { data: session } = useSession();
-    
+
     const [globalMessage, setGlobalMessage] = useState("Synchronizing global network...");
     const [activeRoom, setActiveRoom] = useState("lounge");
     const [isLoadingFeed, setIsLoadingFeed] = useState(false);
@@ -179,42 +179,51 @@ export default function LoungeEarth() {
         loadFeed("lounge");
     }, []);
 
+    // --- BUSCA REAL NO BANCO + REDIS ---
     const loadFeed = async (room: string) => {
         setIsLoadingFeed(true);
         setActiveRoom(room);
-        setTimeout(() => {
-            const mockPosts: Post[] = Array.from({ length: 6 }).map((_, i) => ({
-                id: Math.random().toString(),
-                user: room === 'lounge' ? `Agent ${i + 10}` : `${room.toUpperCase()} Specialist`,
-                userImage: "",
-                content: `Secure transmission regarding ${room.toUpperCase()} sector. Data packet #${i + 884} authorized.`,
-                time: `${i * 5 + 2}m ago`,
-                likes: [],
-                isLiked: false,
-                room: room,
-                comments: []
-            }));
-            setPosts(mockPosts);
+        try {
+            const res = await fetch(`/api/feed?room=${room}`);
+            if (res.ok) {
+                const data = await res.json();
+                setPosts(data);
+                setGlobalMessage(`BIO-NETWORK: Sincronização do setor ${room.toUpperCase()} concluída.`);
+            } else {
+                setGlobalMessage("ERRO DE CONEXÃO: Falha ao acessar o cluster de dados.");
+            }
+        } catch (error) {
+            console.error("Erro ao carregar bio-feed:", error);
+        } finally {
             setIsLoadingFeed(false);
-        }, 1000); 
+        }
     };
 
-    const handlePostSubmit = (e: React.FormEvent) => {
+    const handlePostSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newPost.trim()) return;
-        const post: Post = {
-            id: Date.now().toString(),
-            user: session?.user?.name || "Operative",
-            userImage: session?.user?.image || "",
-            content: newPost,
-            time: "Just now",
-            likes: [],
-            isLiked: false,
-            room: activeRoom,
-            comments: []
-        };
-        setPosts([post, ...posts]);
+
+        const content = newPost;
         setNewPost("");
+
+        try {
+            const res = await fetch('/api/feed', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    content,
+                    room: activeRoom
+                })
+            });
+
+            if (res.ok) {
+                await loadFeed(activeRoom);
+            } else {
+                alert("Sessão expirada ou falha na rede neural. Verifique seu login.");
+            }
+        } catch (error) {
+            console.error("Erro ao transmitir sinal:", error);
+        }
     };
 
     const rooms = [
@@ -227,11 +236,11 @@ export default function LoungeEarth() {
     return (
         // Root Wrapper Totalmente Transparente. Depende do Background do Layout.
         <div className="relative w-full min-h-screen font-sans bg-transparent">
-            
+
             {/* --- CAMADA 0: BACKGROUND FIXO (GLOBO + TÍTULO) --- */}
             {/* position: fixed mantém o globo sempre na tela enquanto a página rola */}
             <div className="fixed inset-0 z-0 flex flex-col items-center pointer-events-auto bg-transparent">
-                
+
                 {/* Título Fixo no Topo */}
                 <div className="absolute top-10 w-full flex flex-col items-center z-10 pointer-events-none">
                     <h1 className="text-[10px] font-black uppercase tracking-[1em] text-slate-500 dark:text-white/40 flex items-center gap-4 drop-shadow-md">
@@ -257,12 +266,12 @@ export default function LoungeEarth() {
             {/* --- CAMADA 1: CONTEÚDO ROLÁVEL (PARALLAX EFFECT) --- */}
             {/* IMPORTANTE: pointer-events-none aqui permite que o mouse passe reto e controle o globo no fundo */}
             <div className="relative z-10 w-full flex flex-col pointer-events-none">
-                
+
                 {/* 1. ESPAÇADOR HERÓI: Espaço vazio de 60vh para o globo brilhar sozinho */}
                 <div className="w-full h-[60vh] flex flex-col items-center justify-end pb-8">
-                    <motion.div 
-                        initial={{ opacity: 0, y: 10 }} 
-                        animate={{ opacity: 1, y: 0 }} 
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 1, duration: 1 }}
                     >
                         <ArrowDownIcon className="w-5 h-5 text-cyan-500 animate-bounce drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]" />
@@ -273,14 +282,14 @@ export default function LoungeEarth() {
                 {/* IMPORTANTE: pointer-events-auto reativado aqui para poder clicar nos botões e inputs! */}
                 {/* Fundo ultra-transparente: bg-white/5 e dark:bg-black/20 para ver o globo passando por trás */}
                 <div className="w-full min-h-screen bg-white/5 dark:bg-[#010816]/20 backdrop-blur-3xl border-t border-white/20 dark:border-white/10 rounded-t-[3rem] shadow-[0_-20px_60px_-15px_rgba(0,0,0,0.5)] px-4 pt-16 pb-32 transition-colors duration-1000 pointer-events-auto relative">
-                    
+
                     {/* Alça Decorativa */}
                     <div className="absolute top-4 left-1/2 -translate-x-1/2 w-24 h-1.5 bg-slate-300 dark:bg-white/20 rounded-full opacity-50"></div>
 
                     <div className="max-w-3xl mx-auto flex flex-col gap-12 relative z-10">
 
                         {/* A. ZAEON BANNER (HUB DE MENSAGEM) */}
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0, y: 30 }}
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true, margin: "-100px" }}
@@ -325,8 +334,8 @@ export default function LoungeEarth() {
                                         whileTap={{ scale: 0.97 }}
                                         className={`
                                             relative h-28 rounded-2xl border backdrop-blur-md flex flex-col items-center justify-center gap-3 transition-all duration-300 shadow-lg overflow-hidden group
-                                            ${activeRoom === room.id 
-                                                ? `bg-${room.color}-500/30 border-${room.color}-500/50 shadow-[0_0_25px_rgba(var(--${room.color}-rgb),0.3)]` 
+                                            ${activeRoom === room.id
+                                                ? `bg-${room.color}-500/30 border-${room.color}-500/50 shadow-[0_0_25px_rgba(var(--${room.color}-rgb),0.3)]`
                                                 : 'bg-white/20 dark:bg-white/5 border-slate-200/50 dark:border-white/10 hover:bg-white/40 dark:hover:bg-white/10'
                                             }
                                         `}
@@ -370,7 +379,7 @@ export default function LoungeEarth() {
                                             <input type="text" value={newPost} onChange={(e) => setNewPost(e.target.value)} placeholder={`Transmit to ${activeRoom.toUpperCase()}...`} className="w-full bg-white/60 dark:bg-white/5 border border-slate-200/50 dark:border-white/10 rounded-2xl py-4 pl-6 pr-12 text-sm text-slate-800 dark:text-white placeholder:text-slate-500 dark:placeholder:text-white/40 focus:outline-none focus:border-cyan-500/50 focus:bg-white dark:focus:bg-black/40 transition-all shadow-inner backdrop-blur-md" />
                                             <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-slate-500 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors"><PaperAirplaneIcon className="w-5 h-5" /></button>
                                         </form>
-                                        
+
                                         {posts.length > 0 ? posts.map((post) => (
                                             <FeedPost key={post.id} post={post} />
                                         )) : (

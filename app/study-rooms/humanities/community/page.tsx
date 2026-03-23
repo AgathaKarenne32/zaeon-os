@@ -159,7 +159,7 @@ export default function LoungeEarth() {
     const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
 
     useEffect(() => {
-        setTimeout(() => { setGlobalMessage("System Update 4.0: Quantum coherence achieved. Welcome to the Zaeon Network."); }, 1500);
+        setTimeout(() => { setGlobalMessage("Humanities Module Online: Analyzing social patterns and cultural signals."); }, 1500);
         fetchFeed();
     }, []);
 
@@ -167,15 +167,13 @@ export default function LoungeEarth() {
     const fetchFeed = async () => {
         setIsLoadingFeed(true);
         try {
-            const res = await fetch('/api/cyber');
+            const res = await fetch('/api/feed?room=humanities');
             if (res.ok) {
                 const data = await res.json();
                 setPosts(data);
-            } else {
-                console.error("Failed to fetch feed");
             }
         } catch (error) {
-            console.error("Error fetching feed", error);
+            console.error("Error fetching humanities feed", error);
         } finally {
             setIsLoadingFeed(false);
         }
@@ -316,13 +314,14 @@ function FeedPost({ post, isExpanded, onToggle, onCommentAdded }: { post: Post, 
 
         setIsSubmitting(true);
         try {
-            const res = await fetch('/api/cyber/comment', {
+            const res = await fetch('/api/feed/comment', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     postId: post.id,
                     content: commentText,
-                    user: session?.user?.name || "Operative",
+                    room: 'humanities',
+                    user: session?.user?.name || "Scholar",
                     userId: (session?.user as any)?.id || null
                 })
             });

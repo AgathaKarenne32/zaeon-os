@@ -38,9 +38,9 @@ const ROOM_MAPPING: Record<string, string[]> = {
 interface Comment {
     id: string;
     user: string;
-    userEmail?: string; 
-    userId?: string; 
-    userImage?: string; 
+    userEmail?: string;
+    userId?: string;
+    userImage?: string;
     content: string;
     createdAt: string;
 }
@@ -48,7 +48,7 @@ interface Post {
     id: string;
     user: string;
     userEmail?: string;
-    userId?: string; 
+    userId?: string;
     userImage?: string;
     content: string;
     createdAt: string;
@@ -166,10 +166,10 @@ export default function LoungeEarth() {
     const userCourse = (session?.user as any)?.course || "";
     const isSuperAdmin = (session?.user as any)?.isAdmin === true;
     const currentUserEmail = session?.user?.email || "";
-    
+
     // 🔥 Captura ID e Imagem do usuário logado para UX otimista 🔥
-    const currentUserId = (session?.user as any)?.id || ""; 
-    const currentUserImage = session?.user?.image || ""; 
+    const currentUserId = (session?.user as any)?.id || "";
+    const currentUserImage = session?.user?.image || "";
 
     const getUserHomeRoom = () => {
         const courseStr = String(userCourse).toLowerCase().trim();
@@ -198,7 +198,7 @@ export default function LoungeEarth() {
         setIsLoadingFeed(true);
         setActiveRoom(room);
         try {
-            const res = await fetch(`/api/posts?room=${room}`);
+            const res = await fetch(`/api/feed?room=${room}`);
             if (res.ok) {
                 const data = await res.json();
                 setPosts(data);
@@ -221,7 +221,7 @@ export default function LoungeEarth() {
         setNewPost("");
 
         try {
-            const res = await fetch('/api/posts', {
+            const res = await fetch('/api/feed', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ content, room: activeRoom })
@@ -387,11 +387,12 @@ export default function LoungeEarth() {
                                                 key={post.id}
                                                 post={post}
                                                 currentUserEmail={currentUserEmail}
-                                                currentUserImage={currentUserImage} 
-                                                currentUserId={currentUserId} 
+                                                currentUserImage={currentUserImage}
+                                                currentUserId={currentUserId}
                                                 isSuperAdmin={isSuperAdmin}
                                                 onDelete={handleDeletePost}
                                                 router={router}
+                                                activeRoom={activeRoom}
                                             />
                                         )) : (
                                             <div className="flex flex-col items-center justify-center py-16 opacity-50">
@@ -414,14 +415,15 @@ export default function LoungeEarth() {
 }
 
 // --- SUB-COMPONENTE: POST INDIVIDUAL ATUALIZADO ---
-function FeedPost({ 
-    post, 
-    currentUserEmail, 
-    currentUserImage, 
-    currentUserId, 
-    isSuperAdmin, 
-    onDelete, 
-    router 
+function FeedPost({
+    post,
+    currentUserEmail,
+    currentUserImage,
+    currentUserId,
+    isSuperAdmin,
+    onDelete,
+    router,
+    activeRoom
 }: any) {
     const dateDisplay = post.createdAt ? new Date(post.createdAt).toLocaleDateString() : 'Just now';
     const canDelete = isSuperAdmin || (currentUserEmail === post.userEmail);
@@ -445,12 +447,12 @@ function FeedPost({
         }
 
         try {
-            await fetch('/api/posts/like', {
+            await fetch('/api/feed/like', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ postId: post.id })
             });
-        } catch (error) { console.error("Falha ao registrar like", error); } 
+        } catch (error) { console.error("Falha ao registrar like", error); }
         finally { setIsLiking(false); }
     };
 
@@ -467,17 +469,17 @@ function FeedPost({
             user: "Você",
             userEmail: currentUserEmail,
             userId: currentUserId,
-            userImage: currentUserImage, 
+            userImage: currentUserImage,
             content: commentText,
             createdAt: new Date().toISOString()
         };
         setComments([...comments, tempComment]);
 
         try {
-            const res = await fetch('/api/posts/comment', {
+            const res = await fetch('/api/feed/comment', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ postId: post.id, content: commentText })
+                body: JSON.stringify({ postId: post.id, content: commentText, room: activeRoom })
             });
 
             if (res.ok) {
@@ -504,7 +506,7 @@ function FeedPost({
         <div className="bg-white/60 dark:bg-white/5 backdrop-blur-md border border-slate-200/50 dark:border-white/10 p-5 rounded-3xl transition-all hover:bg-white hover:shadow-lg dark:hover:bg-white/10 hover:scale-[1.01] relative group/post">
             <div className="flex items-start gap-4">
                 {/* 🔥 AVATAR CLICÁVEL 🔥 */}
-                <div 
+                <div
                     className="w-10 h-10 rounded-2xl bg-white/80 dark:bg-white/10 overflow-hidden flex items-center justify-center shrink-0 border border-slate-200/50 dark:border-white/10 cursor-pointer hover:border-cyan-400 transition-colors shadow-sm"
                     onClick={() => post.userId && router.push(`/workstation/${post.userId}`)}
                 >
@@ -514,7 +516,7 @@ function FeedPost({
                     <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2">
                             {/* 🔥 NOME CLICÁVEL 🔥 */}
-                            <span 
+                            <span
                                 className="text-xs font-black text-slate-800 dark:text-white/90 truncate cursor-pointer hover:text-cyan-500 transition-colors"
                                 onClick={() => post.userId && router.push(`/workstation/${post.userId}`)}
                             >
@@ -555,17 +557,17 @@ function FeedPost({
                                     return (
                                         <div key={comment.id} className="flex gap-3 items-start bg-slate-50/50 dark:bg-black/20 p-3 rounded-2xl border border-slate-100 dark:border-white/5 relative group/comment">
                                             {/* 🔥 FOTO DO COMENTÁRIO CLICÁVEL 🔥 */}
-                                            <div 
+                                            <div
                                                 className="w-7 h-7 rounded-xl overflow-hidden shrink-0 cursor-pointer hover:border-cyan-400 border border-transparent transition-colors"
                                                 onClick={() => comment.userId && router.push(`/workstation/${comment.userId}`)}
                                             >
                                                 {comment.userImage ? <img src={comment.userImage} alt="" className="w-full h-full object-cover" /> : <UserCircleIcon className="w-7 h-7 text-slate-400" />}
                                             </div>
-                                            
+
                                             <div className="flex flex-col w-full">
                                                 <div className="flex justify-between items-center">
                                                     {/* 🔥 NOME DO COMENTÁRIO CLICÁVEL 🔥 */}
-                                                    <span 
+                                                    <span
                                                         className="text-[10px] font-bold text-slate-700 dark:text-white/70 cursor-pointer hover:text-cyan-500 transition-colors"
                                                         onClick={() => comment.userId && router.push(`/workstation/${comment.userId}`)}
                                                     >
