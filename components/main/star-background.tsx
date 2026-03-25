@@ -43,6 +43,7 @@ const MatrixRain: React.FC = () => {
         let animationId: number;
         let time = 0;
 
+        // Fases: 0: Globo, 1: Desintegração, 2: Serpente, 3: DNA Normal, 4: DNA Overheat, 5: Desintegração
         let phase = 0;
         let phaseTimer = 0;
 
@@ -78,16 +79,14 @@ const MatrixRain: React.FC = () => {
                     distance: Math.sqrt(i / PARTICLE_COUNT),
                     dnaStrand: strand,
                     dnaY: Math.random() * 2000,
-                    vx: (Math.random() - 0.5) * 25,
-                    vy: (Math.random() - 0.5) * 25,
+                    vx: (Math.random() - 0.5) * 20,
+                    vy: (Math.random() - 0.5) * 20,
                 });
             }
         };
 
         const draw = () => {
-            // AJUSTE DE LIMPEZA: No overload (fase 4) e explosão (fase 5), limpamos o fundo com mais força (0.6)
-            // para evitar que o brilho azul pinte o fundo de branco.
-            const clearOpacity = (phase === 4 || phase === 5) ? 0.6 : 0.4;
+            const clearOpacity = (phase === 4 || phase === 5 || phase === 1) ? 0.6 : 0.4;
             ctx.fillStyle = isDark
                 ? `rgba(1, 8, 22, ${clearOpacity})`
                 : `rgba(255, 255, 255, ${clearOpacity})`;
@@ -95,12 +94,13 @@ const MatrixRain: React.FC = () => {
             ctx.fillRect(0, 0, width, height);
             phaseTimer++;
 
-            if (phase === 0 && phaseTimer > 600) { phase = 1; phaseTimer = 0; }
-            else if (phase === 1 && phaseTimer > 900) { phase = 2; phaseTimer = 0; }
-            else if (phase === 2 && phaseTimer > 600) { phase = 3; phaseTimer = 0; }
-            else if (phase === 3 && phaseTimer > 1000) { phase = 4; phaseTimer = 0; }
-            else if (phase === 4 && phaseTimer > 600) { phase = 5; phaseTimer = 0; }
-            else if (phase === 5 && phaseTimer > 100) { phase = 0; phaseTimer = 0; }
+            // Controle das Derações
+            if (phase === 0 && phaseTimer > 800) { phase = 1; phaseTimer = 0; }        // Globo
+            else if (phase === 1 && phaseTimer > 60) { phase = 2; phaseTimer = 0; }        // Desintegração
+            else if (phase === 2 && phaseTimer > 900) { phase = 3; phaseTimer = 0; }       // Serpente
+            else if (phase === 3 && phaseTimer > 1800) { phase = 4; phaseTimer = 0; }      // DNA (Longo)
+            else if (phase === 4 && phaseTimer > 600) { phase = 5; phaseTimer = 0; }       // DNA Overheat (Normal)
+            else if (phase === 5 && phaseTimer > 100) { phase = 0; phaseTimer = 0; }       // Desintegração final
 
             time += SNAKE_SPEED;
 
@@ -115,6 +115,7 @@ const MatrixRain: React.FC = () => {
                 let alpha = 0.8;
                 let followTarget = true;
 
+                // GLOBO (0)
                 if (phase === 0) {
                     const rotation = time * 1.2;
                     const sx = globeRadius * Math.sin(p.phi) * Math.cos(p.theta + rotation);
@@ -124,28 +125,20 @@ const MatrixRain: React.FC = () => {
                     targetY = centerY + sy;
                     scale = Math.max(0.2, 300 / (300 - sz));
                 }
-                else if (phase === 1) {
+                // SERPENTE (2)
+                else if (phase === 2) {
                     const t = time * 2.2 - (i * 0.004);
                     const sx = Math.cos(t * 0.6) * (width * 0.38) + Math.sin(t * 1.1) * (width * 0.15);
                     const sy = Math.sin(t * 0.4) * (height * 0.35) + Math.cos(t * 1.8) * (height * 0.12);
                     targetX = (width * 0.5) + sx + Math.cos(i * 0.4) * SNAKE_THICKNESS;
                     targetY = (height * 0.5) + sy + Math.sin(i * 0.4) * SNAKE_THICKNESS;
                 }
-                else if (phase === 2) {
-                    const shift = (Math.sin(phaseTimer * 0.02) + 1) / 2;
-                    const spX = Math.cos(p.angle + time) * p.distance * globeRadius * 2.2;
-                    const spY = Math.sin(p.angle + time) * p.distance * globeRadius * 2.2;
-                    const geoX = (globeRadius * 1.5) * ((1 - 5) * Math.cos(p.angle) + 0.6 * 5 * Math.cos((1 - 5) / 5 * p.angle));
-                    const geoY = (globeRadius * 1.5) * ((1 - 5) * Math.sin(p.angle) - 0.6 * 5 * Math.sin((1 - 5) / 5 * p.angle));
-                    targetX = centerX + (spX * (1 - shift) + geoX * shift);
-                    targetY = centerY + (spY * (1 - shift) + geoY * shift);
-                }
+                // DNA (3 e 4)
                 else if (phase === 3 || phase === 4) {
                     p.dnaY -= 0.8;
                     if (p.dnaY < -100) p.dnaY = height + 100;
                     const freq = 0.005;
                     const angle = (p.dnaY * freq) + (p.dnaStrand === 1 ? 0 : p.dnaStrand === 2 ? Math.PI : Math.PI / 2);
-
                     const rad = 180;
                     const cX = width * 0.83;
 
@@ -159,13 +152,14 @@ const MatrixRain: React.FC = () => {
                         targetY = p.dnaY;
                     }
 
-                    if (phase === 4) {
+                    if (phase === 4) { // Overheat apenas no DNA
                         const isFlash = Math.sin(time * 40 + i) > 0;
                         scale = isFlash ? 3 : 0.4;
                         alpha = isFlash ? 1 : 0.2;
                     }
                 }
-                else if (phase === 5) {
+                // DESINTEGRAÇÃO (1 e 5)
+                else if (phase === 1 || phase === 5) {
                     followTarget = false;
                     p.x += p.vx;
                     p.y += p.vy;
@@ -173,7 +167,7 @@ const MatrixRain: React.FC = () => {
                 }
 
                 if (followTarget) {
-                    const speed = (phase === 0 && phaseTimer < 150) ? 0.04 : 0.08;
+                    const speed = 0.08;
                     p.x += (targetX - p.x) * speed;
                     p.y += (targetY - p.y) * speed;
                 }
@@ -181,8 +175,8 @@ const MatrixRain: React.FC = () => {
                 ctx.fillStyle = p.color;
                 ctx.globalAlpha = isDark ? alpha : alpha * 0.7;
 
-                // Aplicar brilho apenas nas fases críticas
-                if ((phase === 4 || phase === 5) && i % 4 === 0) {
+                // Brilho do Overheat (Fase 4 apenas)
+                if (phase === 4 && i % 4 === 0) {
                     ctx.shadowBlur = 15;
                     ctx.shadowColor = p.color;
                 } else {
@@ -192,8 +186,6 @@ const MatrixRain: React.FC = () => {
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, p.size * scale, 0, Math.PI * 2);
                 ctx.fill();
-
-                // RESET DO SHADOW para não afetar a próxima partícula ou o fundo
                 ctx.shadowBlur = 0;
             });
 
