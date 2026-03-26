@@ -3,12 +3,12 @@
 import Image, { type StaticImageData } from "next/image";
 import { useEffect, useRef, useState } from "react";
 
-const LOGO_DEFAULT = "/assets/zaeon-brain.png";
+const LOGO_DEFAULT = "/assets/zaeon-baby.png";
 
-// Substitua pelos caminhos reais dos PNGs do seu personagem para a animação
-const IMG_33_SRC = "/assets/zaeon-baby2.png";
-const IMG_66_SRC = "/assets/zaeon-baby3.png";
-const IMG_88_SRC = "/assets/zaeon-baby4.png";
+const IMG_25_SRC = "/assets/zaeon-baby2.png";
+const IMG_50_SRC = "/assets/zaeon-baby3.png";
+const IMG_75_SRC = "/assets/zaeon-baby3.png";
+const IMG_100_SRC = "/assets/zaeon-baby4.png";
 
 const TIMELINE = {
     AUDIO_SRC: "/assets/sounds/boot-track.mp3",
@@ -93,14 +93,22 @@ export default function MacSplash({ show = true, onDone, logoSrc = LOGO_DEFAULT 
 
             if (currentGlobalPercent >= 100) {
                 newFrameValue = 100;
-                nextImageSource = IMG_88_SRC;
+                nextImageSource = IMG_100_SRC;
+            } else if (currentGlobalPercent >= 88) {
+                newFrameValue = 88;
+                nextImageSource = IMG_75_SRC;
             } else if (currentGlobalPercent >= 66) {
                 newFrameValue = 66;
-                nextImageSource = IMG_66_SRC;
+                nextImageSource = IMG_50_SRC;
             } else if (currentGlobalPercent >= 33) {
-                newFrameValue = 33;
-                nextImageSource = IMG_33_SRC;
+                newFrameValue = 25;
+                nextImageSource = IMG_25_SRC;
+            } else if (hasStarted) {
+                // De 0% até <33%, mas após o clique: ele já acordou.
+                newFrameValue = 1; // Usamos 1 como um 'frame intermediário' para o 'acordar'
+                nextImageSource = IMG_25_SRC; // Ele acorda imediatamente
             } else {
+                // Antes de clicar: ele está dormindo
                 newFrameValue = 0;
                 nextImageSource = logoSrc;
             }
@@ -123,7 +131,7 @@ export default function MacSplash({ show = true, onDone, logoSrc = LOGO_DEFAULT 
                 // Garante que a imagem final 100% esteja definida
                 if (imageFrameRef.current !== 100) {
                     imageFrameRef.current = 100;
-                    setCurrentCharacterImg(IMG_88_SRC);
+                    setCurrentCharacterImg(IMG_100_SRC);
                 }
 
                 // Adicionado delay de 800ms para garantir que o usuário veja os 100% antes da tela sumir
@@ -170,42 +178,87 @@ export default function MacSplash({ show = true, onDone, logoSrc = LOGO_DEFAULT 
     const zhPhrase = phase >= 4 ? "世界之希望已诞生" : phase >= 3 ? "日月星辰皆为吾家" : phase >= 1 ? "万物归一" : "";
 
     return (
-        <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black transition-opacity duration-500" style={{ opacity }}>
-            <div className="flex flex-col items-center justify-center px-6">
-                <button onClick={handleInitiate} className={`flex flex-col items-center justify-center transition-all duration-300 ${!hasStarted ? "cursor-pointer hover:scale-105 opacity-80" : "cursor-default"}`} disabled={hasStarted}>
-                    {/* Esta é a única imagem central agora. 
-                        O 'src' muda de acordo com o estado 'currentCharacterImg' 
-                        que controlamos no loop de animação.
-                    */}
-                    <Image
-                        src={currentCharacterImg}
-                        alt="Zaeon Character Animation"
-                        width={100}
-                        height={100}
-                        priority
-                        className="mb-4 object-contain transition-transform duration-300"
-                    />
+        <>
+            <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black transition-opacity duration-500" style={{ opacity }}>
+                <div className="flex flex-col items-center justify-center px-6">
+                    {/* Contêiner relativo para a animação Zzz */}
+                    <button onClick={handleInitiate} className={`flex flex-col items-center justify-center transition-all duration-300 relative ${!hasStarted ? "cursor-pointer hover:scale-105 opacity-80" : "cursor-default"}`} disabled={hasStarted}>
 
-                    {!hasStarted && <span className="text-white/80 tracking-[0.2em] text-xs font-medium animate-pulse">CLICK TO START ZAEONBOT</span>}
-                </button>
-
-                {/* Altura reduzida pois removemos a grid de imagens de baixo */}
-                <div className="h-[90px] flex flex-col items-center justify-start mt-6 w-full">
-                    {!hasStarted ? (
-                        <div className="text-center text-[10px] tracking-widest text-sky-400/70 font-light mt-4 uppercase">For a better experience, use headphones</div>
-                    ) : (
-                        <>
-                            <div className={`w-[200px] h-[3px] rounded-full bg-white/15 overflow-hidden transition-opacity duration-500 ${phase >= 1 ? 'opacity-100' : 'opacity-0'}`}>
-                                <div ref={progressBarRef} className="h-full rounded-full" style={{ width: "0%", background: "linear-gradient(90deg,rgba(255,255,255,.9),rgba(230,236,255,.95),rgba(255,255,255,.9))", boxShadow: "0 0 8px rgba(255,255,255,0.35)", transition: "none" }} />
+                        {/* ============================================================
+                            NOVA ANIMAÇÃO "Zzz" corrigida e reposicionada
+                            ============================================================
+                        */}
+                        {!hasStarted && (
+                            <div className="absolute top-[-40px] right-[10px] flex items-end gap-0.5 z-10 pointer-events-none">
+                                <span className="zzz-text zzz-1 text-[13px] font-bold text-sky-400/90 tracking-tighter">Z</span>
+                                <span className="zzz-text zzz-2 text-[10px] font-medium text-sky-400/80 tracking-tighter">z</span>
+                                <span className="zzz-text zzz-3 text-[12px] font-semibold text-sky-400/85 tracking-tighter">z</span>
+                                <span className="zzz-text zzz-4 text-[9px] text-sky-400/70 tracking-tighter">z</span>
+                                <span className="zzz-text zzz-5 text-[11px] font-medium text-sky-400/80 tracking-tighter">z</span>
                             </div>
+                        )}
+                        {/* ============================================================ */}
 
-                            {zhPhrase && <div className="mt-6 text-center text-[10px] tracking-widest text-sky-400/90 font-light">{zhPhrase}</div>}
+                        <Image
+                            src={currentCharacterImg}
+                            alt="Zaeon Character Animation"
+                            width={100}
+                            height={100}
+                            priority
+                            className="mb-4 object-contain transition-transform duration-300"
+                        />
 
-                            {/* A div anterior das 3 imagens foi removida daqui */}
-                        </>
-                    )}
+                        {!hasStarted && <span className="text-white/80 tracking-[0.2em] text-xs font-medium animate-pulse">CLICK TO START ZAEONBOT</span>}
+                    </button>
+
+                    <div className="h-[90px] flex flex-col items-center justify-start mt-6 w-full">
+                        {!hasStarted ? (
+                            <div className="text-center text-[10px] tracking-widest text-sky-400/70 font-light mt-4 uppercase">For a better experience, use headphones</div>
+                        ) : (
+                            <>
+                                <div className={`w-[200px] h-[3px] rounded-full bg-white/15 overflow-hidden transition-opacity duration-500 ${phase >= 1 ? 'opacity-100' : 'opacity-0'}`}>
+                                    <div ref={progressBarRef} className="h-full rounded-full" style={{ width: "0%", background: "linear-gradient(90deg,rgba(255,255,255,.9),rgba(230,236,255,.95),rgba(255,255,255,.9))", boxShadow: "0 0 8px rgba(255,255,255,0.35)", transition: "none" }} />
+                                </div>
+
+                                {zhPhrase && <div className="mt-6 text-center text-[10px] tracking-widest text-sky-400/90 font-light">{zhPhrase}</div>}
+                            </>
+                        )}
+                    </div>
                 </div>
             </div>
-        </div>
+
+            <style jsx global>{`
+                @keyframes zzz-float {
+                    0% {
+                        opacity: 0;
+                        transform: translateY(0) rotate(0deg) scale(0.8);
+                    }
+                    15% {
+                        opacity: 1;
+                        transform: translateY(-5px) rotate(3deg) scale(1);
+                    }
+                    80% {
+                        opacity: 1;
+                        transform: translateY(-25px) rotate(-3deg) scale(1.1);
+                    }
+                    100% {
+                        opacity: 0;
+                        transform: translateY(-30px) rotate(0deg) scale(1);
+                    }
+                }
+
+                .zzz-text {
+                    display: inline-block;
+                    animation: zzz-float 3s infinite ease-in-out;
+                    font-family: monospace;
+                }
+
+                .zzz-1 { animation-delay: 0s; }
+                .zzz-2 { animation-delay: 0.5s; animation-duration: 2.8s; }
+                .zzz-3 { animation-delay: 1.1s; animation-duration: 3.2s;}
+                .zzz-4 { animation-delay: 1.7s; animation-duration: 2.7s;}
+                .zzz-5 { animation-delay: 2.3s; animation-duration: 3.1s;}
+            `}</style>
+        </>
     );
 }
