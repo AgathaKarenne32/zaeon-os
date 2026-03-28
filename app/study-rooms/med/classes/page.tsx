@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSession } from 'next-auth/react';
-import Image from 'next/image';
+import NextImage from 'next/image';
 
 // --- INITIAL DATA ---
 const initialSchedule: any[] = []; 
@@ -319,7 +319,7 @@ const CollectiveZone = ({ classes, currentUser, dragConstraints }: { classes: an
                                     members.map((member, i) => (
                                         <div key={i} className="aspect-square rounded-2xl border border-slate-200 dark:border-slate-300/50 dark:border-white/10 bg-slate-50 dark:bg-white/30 dark:bg-black/20 flex flex-col items-center justify-center relative overflow-hidden group/slot shadow-sm">
                                             <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex flex-col items-center gap-1 z-10 w-full">
-                                                <div className="w-10 h-10 rounded-full border-2 border-indigo-400 dark:border-indigo-500 p-0.5 bg-white/50 dark:bg-white/10 backdrop-blur-md shadow-sm dark:shadow-lg"><div className="w-full h-full rounded-full overflow-hidden bg-slate-200 dark:bg-slate-800 flex items-center justify-center">{member.image ? <Image src={member.image} alt="" fill className="object-cover" /> : <User size={16} className="text-slate-500 dark:text-white" />}</div></div>
+                                                <div className="w-10 h-10 rounded-full border-2 border-indigo-400 dark:border-indigo-500 p-0.5 bg-white/50 dark:bg-white/10 backdrop-blur-md shadow-sm dark:shadow-lg"><div className="w-full h-full rounded-full overflow-hidden bg-slate-200 dark:bg-slate-800 flex items-center justify-center">{member.image ? <NextImage src={member.image} alt="" fill className="object-cover" /> : <User size={16} className="text-slate-500 dark:text-white" />}</div></div>
                                                 <div className="text-center w-full px-1"><span className="text-[8px] font-bold text-slate-800 dark:text-white truncate block">{member.name}</span><span className="text-[6px] font-bold text-indigo-600 dark:text-indigo-500 bg-indigo-100 dark:bg-indigo-500/10 px-1 py-0.5 rounded-full inline-block mt-0.5 border border-indigo-200 dark:border-none">CONNECTED</span></div>
                                             </motion.div>
                                         </div>
@@ -1120,7 +1120,7 @@ export default function LessonsModule() {
                                         title={`Launch ${ai.name}`}
                                     >
                                         {ai.logo ? (
-                                            <img src={ai.logo} alt={ai.name} className="w-5 h-5 object-contain invert opacity-90" onError={(e) => e.currentTarget.style.display='none'} />
+                                            <NextImage src={ai.logo} alt={ai.name} width={20} height={20} className="w-5 h-5 object-contain invert opacity-90" onError={(e) => e.currentTarget.style.display='none'} />
                                         ) : (
                                             ai.fallbackIcon && <ai.fallbackIcon size={14} strokeWidth={3} />
                                         )}

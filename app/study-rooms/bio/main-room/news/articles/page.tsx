@@ -2,6 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react"; // Adicionado Suspense
 import { useSearchParams, useRouter } from "next/navigation";
+import NextImage from "next/image";
 import { ArrowLeftIcon, CalendarDaysIcon } from "@heroicons/react/24/outline";
 
 // Criamos um componente interno para isolar o uso do useSearchParams
@@ -9,13 +10,13 @@ function ArticleContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const id = searchParams.get("id");
-    
+
     const [article, setArticle] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         if (!id) return;
-        
+
         const fetchArticle = async () => {
             try {
                 const res = await fetch('/api/news');
@@ -28,7 +29,7 @@ function ArticleContent() {
                 setIsLoading(false);
             }
         };
-        
+
         fetchArticle();
     }, [id]);
 
@@ -43,17 +44,26 @@ function ArticleContent() {
         <div className="min-h-screen bg-slate-50 dark:bg-[#030014] pb-20 transition-colors duration-500">
             {/* Header / Imagem de Capa */}
             <div className="relative w-full h-[50vh] min-h-[400px]">
-                <img src={article.imageUrl} alt="Cover" className="w-full h-full object-cover" />
+                {article.imageUrl ? (
+                    <NextImage 
+                        src={article.imageUrl} 
+                        alt="Cover" 
+                        fill // Faz a imagem preencher o container pai (h-[50vh])
+                        priority // Carrega esta imagem imediatamente (melhora o LCP)
+                        className="object-cover"
+                    />
+                ) : (
+                    <div className="w-full h-full bg-slate-200 dark:bg-white/5" /> // Fallback caso não haja imagem
+                )}
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-50 dark:from-[#030014] via-black/40 to-black/60" />
-                
-                <button 
+
+                <button
                     onClick={() => router.back()}
                     className="absolute top-8 left-8 flex items-center gap-2 px-4 py-2 bg-black/40 backdrop-blur-md rounded-full text-white text-xs font-bold uppercase tracking-widest hover:bg-white hover:text-black transition-colors"
                 >
                     <ArrowLeftIcon className="w-4 h-4" /> Back to Lounge
                 </button>
             </div>
-
             {/* Conteúdo do Artigo */}
             <div className="max-w-3xl mx-auto px-6 -mt-32 relative z-10">
                 <div className="bg-white dark:bg-[#0a0a14]/90 backdrop-blur-xl border border-slate-200 dark:border-white/10 p-10 md:p-14 rounded-[40px] shadow-2xl">
@@ -62,17 +72,17 @@ function ArticleContent() {
                         <span className="mx-2 text-slate-300 dark:text-slate-700">|</span>
                         Special Report
                     </div>
-                    
+
                     <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white leading-tight mb-6 tracking-tighter">
                         {article.title}
                     </h1>
-                    
+
                     <h2 className="text-xl md:text-2xl text-slate-500 dark:text-slate-400 font-medium mb-12 leading-relaxed">
                         {article.subtitle}
                     </h2>
-                    
+
                     <div className="w-full h-px bg-slate-200 dark:bg-white/10 mb-12" />
-                    
+
                     <div className="prose prose-slate dark:prose-invert max-w-none text-lg leading-loose font-serif text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
                         {article.content}
                     </div>

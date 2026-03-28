@@ -6,6 +6,7 @@ import { OrbitControls, Sphere, Html } from "@react-three/drei";
 import * as THREE from "three";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
+import NextImage from "next/image";
 import {
     ChatBubbleLeftRightIcon,
     UserCircleIcon,
@@ -348,7 +349,7 @@ function FeedPost({ post, isExpanded, onToggle, onCommentAdded }: { post: Post, 
         >
             <div className="flex items-start gap-4">
                 <div className="w-10 h-10 rounded-2xl bg-white/80 dark:bg-white/10 overflow-hidden flex items-center justify-center shrink-0 border border-slate-200/50 dark:border-white/10">
-                    {post.userImage ? <img src={post.userImage} alt="" className="w-full h-full object-cover" /> : <UserCircleIcon className="w-6 h-6 text-slate-500 dark:text-white/50" />}
+                    {post.userImage ? <NextImage src={post.userImage} alt="" fill className="w-full h-full object-cover" /> : <UserCircleIcon className="w-6 h-6 text-slate-500 dark:text-white/50" />}
                 </div>
                 <div className="flex-1 w-full">
                     <div className="flex items-center justify-between mb-2">
@@ -386,7 +387,7 @@ function FeedPost({ post, isExpanded, onToggle, onCommentAdded }: { post: Post, 
                                         <div className={`grid gap-2 mt-4 ${post.images.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
                                             {post.images.map((img, i) => (
                                                 <div key={i} className="rounded-xl overflow-hidden border border-white/10 max-h-48">
-                                                    <img src={img} alt="Post Attachment" className="w-full h-full object-cover" />
+                                                    <NextImage src={img} alt="Post Attachment" fill className="w-full h-full object-cover" />
                                                 </div>
                                             ))}
                                         </div>

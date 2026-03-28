@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { PlusIcon, PhotoIcon, GlobeAmericasIcon, SparklesIcon, CalendarDaysIcon } from "@heroicons/react/24/outline";
+import NextImage from "next/image";
 
 type Locale = "pt" | "en" | "zh" | "es" | "fr";
 
@@ -67,7 +68,7 @@ export default function ReportsModule({ glassPanel }: { glassPanel: string }) {
                     <div className="max-w-3xl mx-auto space-y-10">
                         <div className="w-full h-56 rounded-[35px] border-2 border-dashed border-slate-200 dark:border-white/10 flex flex-col items-center justify-center relative overflow-hidden bg-slate-50 dark:bg-black/20 group">
                             {currentPost.imageUrl ? (
-                                <img src={currentPost.imageUrl} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                                <NextImage src={currentPost.imageUrl} alt="Post Header" fill className="w-full h-full object-cover transition-transform group-hover:scale-105" />
                             ) : <><PhotoIcon className="w-10 h-10 text-slate-300 mb-2" /><span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Post Header Image</span></>}
                             <input type="text" placeholder="Paste Image URL..." className="absolute bottom-4 bg-white/90 dark:bg-black/70 px-4 py-2 rounded-xl text-[10px] w-2/3 outline-none border border-slate-200 dark:border-white/10" value={currentPost.imageUrl} onChange={(e) => setCurrentPost({...currentPost, imageUrl: e.target.value})} />
                         </div>

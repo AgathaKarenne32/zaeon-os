@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { ArrowLeftIcon, CalendarDaysIcon } from "@heroicons/react/24/outline";
+import NextImage from "next/image";
 
 export default function ArticlePage() {
     const searchParams = useSearchParams();
@@ -43,7 +44,7 @@ export default function ArticlePage() {
         <div className="min-h-screen bg-slate-50 dark:bg-[#030014] pb-20 transition-colors duration-500">
             {/* Header / Imagem de Capa */}
             <div className="relative w-full h-[50vh] min-h-[400px]">
-                <img src={article.imageUrl} alt="Cover" className="w-full h-full object-cover" />
+                <NextImage src={article.imageUrl} alt="Cover" fill className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-50 dark:from-[#030014] via-black/40 to-black/60" />
                 
                 <button 

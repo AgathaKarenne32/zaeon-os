@@ -6,6 +6,7 @@ import { OrbitControls, Sphere, Html } from "@react-three/drei";
 import * as THREE from "three";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
+import NextImage from "next/image";
 import { useRouter } from "next/navigation"; // 🔥 IMPORTADO ROUTER PARA NAVEGAÇÃO
 import {
     ChatBubbleLeftRightIcon,
@@ -508,7 +509,7 @@ function FeedPost({
                     className="w-10 h-10 rounded-2xl bg-white/80 dark:bg-white/10 overflow-hidden flex items-center justify-center shrink-0 border border-slate-200/50 dark:border-white/10 cursor-pointer hover:border-cyan-400 transition-colors shadow-sm"
                     onClick={() => post.userId && router.push(`/workstation/${post.userId}`)}
                 >
-                    {post.userImage ? <img src={post.userImage} alt="" className="w-full h-full object-cover" /> : <UserCircleIcon className="w-6 h-6 text-slate-500 dark:text-white/50" />}
+                    {post.userImage ? <NextImage src={post.userImage} alt="" fill className="w-full h-full object-cover" /> : <UserCircleIcon className="w-6 h-6 text-slate-500 dark:text-white/50" />}
                 </div>
                 <div className="flex-1 w-full overflow-hidden">
                     <div className="flex items-center justify-between mb-1">
@@ -559,7 +560,7 @@ function FeedPost({
                                                 className="w-7 h-7 rounded-xl overflow-hidden shrink-0 cursor-pointer hover:border-cyan-400 border border-transparent transition-colors"
                                                 onClick={() => comment.userId && router.push(`/workstation/${comment.userId}`)}
                                             >
-                                                {comment.userImage ? <img src={comment.userImage} alt="" className="w-full h-full object-cover" /> : <UserCircleIcon className="w-7 h-7 text-slate-400" />}
+                                                {comment.userImage ? <NextImage src={comment.userImage} alt="" fill className="w-full h-full object-cover" /> : <UserCircleIcon className="w-7 h-7 text-slate-400" />}
                                             </div>
                                             
                                             <div className="flex flex-col w-full">

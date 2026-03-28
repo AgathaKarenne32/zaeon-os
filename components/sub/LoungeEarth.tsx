@@ -6,6 +6,7 @@ import { OrbitControls, Sphere } from "@react-three/drei";
 import * as THREE from "three";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
+import NextImage from "next/image";
 import {
     ExclamationTriangleIcon,
     ChatBubbleLeftRightIcon,
@@ -449,7 +450,7 @@ function FeedPost({ post, onLike, onClick, isDetailView = false }: any) {
         <div onClick={!isDetailView ? onClick : undefined} className={`bg-white/[0.03] border border-white/5 p-5 rounded-3xl transition-all group flex gap-5 ${!isDetailView ? 'hover:bg-white/[0.06] cursor-pointer' : ''} ${isDetailView ? 'bg-white/[0.05] border-cyan-500/20' : ''}`}>
             <div className="w-10 h-10 rounded-2xl bg-cyan-500/10 overflow-hidden flex items-center justify-center shrink-0 border border-white/10 shadow-lg">
                 {post.userImage ? (
-                    <img src={post.userImage} alt="" className="w-full h-full object-cover" />
+                    <NextImage src={post.userImage} alt="" fill className="w-full h-full object-cover" />
                 ) : (
                     <UserCircleIcon className="w-6 h-6 text-cyan-400/50" />
                 )}

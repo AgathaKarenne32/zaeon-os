@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import NextImage from "next/image";
 import { 
     IdentificationIcon, 
     CalendarDaysIcon, 
@@ -154,7 +155,7 @@ export default function ProfileModule({ glassPanel }: { glassPanel: string }) {
                                             <iframe src={`${selectedReq.verificationDoc}#toolbar=0`} className="w-full h-full border-none" title="Registry View" />
                                         </div>
                                     ) : (
-                                        <img src={selectedReq.verificationDoc} alt="Registry" className="max-h-[500px] rounded-2xl shadow-2xl object-contain" />
+                                        <NextImage src={selectedReq.verificationDoc} alt="Registry" width={600} height={500} className="max-h-[500px] rounded-2xl shadow-2xl object-contain" />
                                     )
                                 ) : (
                                     <div className="text-center opacity-30">

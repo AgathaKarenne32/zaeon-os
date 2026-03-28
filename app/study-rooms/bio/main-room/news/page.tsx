@@ -10,6 +10,7 @@ import {
     useTransform
 } from "framer-motion";
 import Link from "next/link";
+import NextImage from "next/image";
 import { useTranslation } from "react-i18next"; // Reintegrado
 import {
     NewspaperIcon,
@@ -196,10 +197,11 @@ function NewsCard({ item, locale }: { item: NewsPost, locale: string }) {
         >
             {item.imageUrl && (
                 <div className="w-full h-32 sm:h-40 overflow-hidden relative border-b border-slate-200 dark:border-white/5 rounded-t-2xl">
-                    <img
+                    <NextImage
                         src={item.imageUrl}
                         alt={title}
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                        fill
+                        className="object-cover transition-transform duration-700 group-hover:scale-105"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-50 dark:opacity-80" />
                 </div>
@@ -290,7 +292,7 @@ export default function LoungeNewsFeed() {
                 <Link href={`/study-rooms/lounge/main-lounge/news/articles/page?id=${featuredReport.id}`}>
                     <div className="w-full rounded-[30px] bg-[#0f172a] border border-cyan-500/30 shadow-2xl overflow-hidden relative group cursor-pointer hover:border-cyan-400 transition-colors">
                         <div className="absolute inset-0 z-0">
-                            <img src={featuredReport.imageUrl} alt="Cover" className="w-full h-full object-cover opacity-30 group-hover:opacity-40 transition-opacity duration-500" />
+                            <NextImage src={featuredReport.imageUrl} alt="Cover" fill className="object-cover opacity-30 group-hover:opacity-40 transition-opacity duration-500" />
                             <div className="absolute inset-0 bg-gradient-to-t from-[#0f172a] via-[#0f172a]/80 to-transparent" />
                         </div>
                         <div className="relative z-10 p-8 flex flex-col h-full justify-end min-h-[300px]">

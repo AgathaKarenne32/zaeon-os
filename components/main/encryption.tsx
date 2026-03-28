@@ -2,6 +2,7 @@
 
 import { motion, useScroll, useTransform, AnimatePresence, LayoutGroup } from "framer-motion";
 import React, { useRef, useState, useEffect } from "react";
+import NextImage from "next/image";
 import { 
     PlayIcon, 
     XMarkIcon, 
@@ -63,7 +64,7 @@ const SponsorCard = ({ item }: { item: { name: string; src: string; url: string 
     >
       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.12)_0%,transparent_70%)]" />
       <div className="relative w-full h-full p-6 flex items-center justify-center">
-        <img src={item.src} alt={item.name} className="max-w-full max-h-full object-contain opacity-100 transition-all duration-500" />
+        <NextImage src={item.src} alt={item.name} fill className="max-w-full max-h-full object-contain opacity-100 transition-all duration-500" />
       </div>
     </motion.a>
   );
@@ -156,15 +157,17 @@ const ProcessFlowchart = () => {
                     
                     <div className="relative h-26 w-64 transition-all duration-300 group-hover:scale-105 opacity-90 group-hover:opacity-100">
                         {/* Imagem para modo CLARO (hidden no dark) */}
-                        <img 
+                        <NextImage 
                             src="/sponsors/MCTI_light.png" 
                             alt="MCTI Logo" 
+                            fill
                             className="w-full h-full object-contain block dark:hidden" 
                         />
                         {/* Imagem para modo ESCURO (hidden no light) */}
-                        <img 
+                        <NextImage 
                             src="/sponsors/MCTI_dark.png" 
                             alt="MCTI Logo" 
+                            fill
                             className="w-full h-full object-contain hidden dark:block" 
                         />
                     </div>
