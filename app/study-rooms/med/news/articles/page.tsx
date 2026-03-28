@@ -5,17 +5,19 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { ArrowLeftIcon, CalendarDaysIcon } from "@heroicons/react/24/outline";
 import NextImage from "next/image";
 
+export const dynamic = 'force-dynamic';
+
 export default function ArticlePage() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const id = searchParams.get("id");
-    
+
     const [article, setArticle] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         if (!id) return;
-        
+
         const fetchArticle = async () => {
             try {
                 // Aqui você pode criar um endpoint /api/news/[id] ou filtrar no front
@@ -29,7 +31,7 @@ export default function ArticlePage() {
                 setIsLoading(false);
             }
         };
-        
+
         fetchArticle();
     }, [id]);
 
@@ -46,8 +48,8 @@ export default function ArticlePage() {
             <div className="relative w-full h-[50vh] min-h-[400px]">
                 <NextImage src={article.imageUrl} alt="Cover" fill className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-50 dark:from-[#030014] via-black/40 to-black/60" />
-                
-                <button 
+
+                <button
                     onClick={() => router.back()}
                     className="absolute top-8 left-8 flex items-center gap-2 px-4 py-2 bg-black/40 backdrop-blur-md rounded-full text-white text-xs font-bold uppercase tracking-widest hover:bg-white hover:text-black transition-colors"
                 >
@@ -63,17 +65,17 @@ export default function ArticlePage() {
                         <span className="mx-2 text-slate-300 dark:text-slate-700">|</span>
                         Special Report
                     </div>
-                    
+
                     <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white leading-tight mb-6 tracking-tighter">
                         {article.title}
                     </h1>
-                    
+
                     <h2 className="text-xl md:text-2xl text-slate-500 dark:text-slate-400 font-medium mb-12 leading-relaxed">
                         {article.subtitle}
                     </h2>
-                    
+
                     <div className="w-full h-px bg-slate-200 dark:bg-white/10 mb-12" />
-                    
+
                     {/* Renderização do texto. Para renderizar quebras de linha corretamente, usamos whitespace-pre-wrap */}
                     <div className="prose prose-slate dark:prose-invert max-w-none text-lg leading-loose font-serif text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
                         {article.content}

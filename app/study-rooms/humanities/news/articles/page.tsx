@@ -5,6 +5,8 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { ArrowLeftIcon, CalendarDaysIcon } from "@heroicons/react/24/outline";
 import NextImage from "next/image";
 
+export const dynamic = 'force-dynamic';
+
 export default function ArticlePage() {
     const searchParams = useSearchParams();
     const router = useRouter();
