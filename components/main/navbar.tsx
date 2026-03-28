@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -40,58 +40,25 @@ export const Navbar = () => {
 
   useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
 
-  useEffect(() => {
-    setMounted(true);
-    
-    if (typeof window !== "undefined" && !globalAudio) {
-      globalAudio = new Audio(TRACKS[0]);
-      globalAudio.crossOrigin = "anonymous";
-      globalAudio.volume = 0.4;
-      (window as any).zaeonAudio = globalAudio;
-    }
-
-    if (globalAudio && !globalAudio.paused && !isHome) {
-      setIsPlaying(true);
-      initAudioEngine();
-    }
-  }, []);
-
-  useEffect(() => {
-    if (isHome && globalAudio) {
-      globalAudio.pause();
-      globalAudio.currentTime = 0;
-      globalAudio.src = TRACKS[0];
-      setCurrentTrackIndex(0);
-      setIsPlaying(false);
-    }
-  }, [pathname]);
-
-  // ESCUTA O COMANDO DE SYNC DO INTRO
-  useEffect(() => {
-    const handleMusicSync = () => {
-      if (globalAudio) {
-        setIsPlaying(true); 
-        initAudioEngine();
+  const visualize = () => {
+    if (!globalAnalyser) return;
+    const dataArray = new Uint8Array(globalAnalyser.frequencyBinCount);
+    const render = () => {
+      requestAnimationFrame(render);
+      if (isPlayingRef.current && globalAnalyser) {
+        globalAnalyser.getByteFrequencyData(dataArray);
+        barsRef.current.forEach((bar, i) => {
+          if (!bar) return;
+          const val = dataArray[i * 2] || 0;
+          const h = Math.min(100, Math.max(15, (val / 255) * 100 * 1.5));
+          bar.style.height = `${h}%`;
+        });
       }
     };
-    window.addEventListener("zaeon-music-sync", handleMusicSync);
-    return () => window.removeEventListener("zaeon-music-sync", handleMusicSync);
-  }, []);
+    render();
+  };
 
-  // --- NOVO: ESCUTA O SINAL DE MODO FOCO DAS SALAS ---
-  useEffect(() => {
-    const handleFocusMode = (e: any) => {
-      setIsFocusMode(e.detail);
-    };
-    window.addEventListener("zaeon-focus-mode", handleFocusMode);
-    
-    // Resetar se mudar de rota
-    return () => {
-      window.removeEventListener("zaeon-focus-mode", handleFocusMode);
-    };
-  }, []);
-
-  const initAudioEngine = () => {
+  const initAudioEngine = useCallback(() => {
     if (!globalAudio) return;
     
     if (!globalAudioCtx) {
@@ -114,25 +81,58 @@ export const Navbar = () => {
 
     if (globalAudioCtx.state === "suspended") globalAudioCtx.resume();
     visualize(); 
-  };
+  }, []);
 
-  const visualize = () => {
-    if (!globalAnalyser) return;
-    const dataArray = new Uint8Array(globalAnalyser.frequencyBinCount);
-    const render = () => {
-      requestAnimationFrame(render);
-      if (isPlayingRef.current && globalAnalyser) {
-        globalAnalyser.getByteFrequencyData(dataArray);
-        barsRef.current.forEach((bar, i) => {
-          if (!bar) return;
-          const val = dataArray[i * 2] || 0;
-          const h = Math.min(100, Math.max(15, (val / 255) * 100 * 1.5));
-          bar.style.height = `${h}%`;
-        });
+  useEffect(() => {
+    setMounted(true);
+    
+    if (typeof window !== "undefined" && !globalAudio) {
+      globalAudio = new Audio(TRACKS[0]);
+      globalAudio.crossOrigin = "anonymous";
+      globalAudio.volume = 0.4;
+      (window as any).zaeonAudio = globalAudio;
+    }
+
+    if (globalAudio && !globalAudio.paused && !isHome) {
+      setIsPlaying(true);
+      initAudioEngine();
+    }
+  }, [isHome, initAudioEngine]);
+
+  useEffect(() => {
+    if (isHome && globalAudio) {
+      globalAudio.pause();
+      globalAudio.currentTime = 0;
+      globalAudio.src = TRACKS[0];
+      setCurrentTrackIndex(0);
+      setIsPlaying(false);
+    }
+  }, [pathname, isHome]);
+
+  // ESCUTA O COMANDO DE SYNC DO INTRO
+  useEffect(() => {
+    const handleMusicSync = () => {
+      if (globalAudio) {
+        setIsPlaying(true); 
+        initAudioEngine();
       }
     };
-    render();
-  };
+    window.addEventListener("zaeon-music-sync", handleMusicSync);
+    return () => window.removeEventListener("zaeon-music-sync", handleMusicSync);
+  }, [initAudioEngine]);
+
+  // --- NOVO: ESCUTA O SINAL DE MODO FOCO DAS SALAS ---
+  useEffect(() => {
+    const handleFocusMode = (e: any) => {
+      setIsFocusMode(e.detail);
+    };
+    window.addEventListener("zaeon-focus-mode", handleFocusMode);
+    
+    // Resetar se mudar de rota
+    return () => {
+      window.removeEventListener("zaeon-focus-mode", handleFocusMode);
+    };
+  }, []);
 
   const togglePlay = () => {
     if (!globalAudio) return;

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CameraIcon, ArrowPathIcon, ChevronLeftIcon, ChevronRightIcon, PlusIcon, TrashIcon, PencilIcon, CheckIcon, Cog6ToothIcon, ArrowsRightLeftIcon } from "@heroicons/react/24/outline";
+import NextImage from "next/image";
 
 interface PersonalPhoto {
     id: string;
@@ -308,11 +309,12 @@ export default function NetworkMural({ visitedUserId }: { visitedUserId?: string
                                     </div>
                                 ) : (
                                     <>
-                                        <img
+                                        <NextImage
                                             src={item.image}
                                             alt={item.title}
+                                            fill
                                             onLoad={(e) => {
-                                                const img = e.currentTarget;
+                                                const img = e.currentTarget as HTMLImageElement;
                                                 setOrientations(prev => ({ ...prev, [item.id]: img.naturalWidth > img.naturalHeight }));
                                             }}
                                             className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${isActive ? 'opacity-100' : 'opacity-60'}`}

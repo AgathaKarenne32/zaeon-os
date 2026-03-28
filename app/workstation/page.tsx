@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -300,9 +300,7 @@ export default function WorkStationPage() {
 
     const theme = getTheme();
 
-    useEffect(() => { setMounted(true); loadSkills(); }, [status]);
-
-    const loadSkills = async () => {
+    const loadSkills = useCallback(async () => {
         if (status === "authenticated") {
             try {
                 const res = await fetch('/api/user/skills');
@@ -315,7 +313,9 @@ export default function WorkStationPage() {
                 }
             } catch (error) { } finally { setIsLoadingSkills(false); }
         }
-    };
+    }, [status]);
+
+    useEffect(() => { setMounted(true); loadSkills(); }, [status, loadSkills]);
 
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];

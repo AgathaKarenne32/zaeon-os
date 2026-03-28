@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Sphere } from "@react-three/drei";
 import * as THREE from "three";
@@ -156,24 +156,27 @@ export default function ZaeonLobby() {
     const [newComment, setNewComment] = useState("");
 
     // --- FETCH FEED ---
-    const fetchPosts = async () => {
+    const fetchPosts = useCallback(async () => {
         setIsLoadingFeed(true);
         try {
             const res = await fetch('/api/feed');
             if (res.ok) {
                 const data = await res.json();
                 setPosts(data);
-                if (selectedPost) {
-                    const updatedSelected = data.find((p: Post) => p.id === selectedPost.id);
-                    if (updatedSelected) setSelectedPost(updatedSelected);
-                }
+                setSelectedPost((prev: Post | null) => {
+                    if (prev) {
+                        const updatedSelected = data.find((p: Post) => p.id === prev.id);
+                        return updatedSelected || prev;
+                    }
+                    return prev;
+                });
             }
         } catch (error) {
             console.error(error);
         } finally {
             setIsLoadingFeed(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
         if (isLiveFeedActive) {
@@ -181,7 +184,7 @@ export default function ZaeonLobby() {
             const interval = setInterval(fetchPosts, 30000);
             return () => clearInterval(interval);
         }
-    }, [isLiveFeedActive]);
+    }, [isLiveFeedActive, fetchPosts]);
 
     // --- ACTIONS ---
     const handlePost = async (e: React.FormEvent) => {
