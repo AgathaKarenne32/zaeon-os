@@ -3,11 +3,12 @@
 import Image, { type StaticImageData } from "next/image";
 import { useEffect, useRef, useState } from "react";
 
-const LOGO_DEFAULT = "/assets/zaeon-baby.png";
+const LOGO_DEFAULT = "/assets/zaeon-sleep.png";
 
-const IMG_25_SRC = "/assets/zaeon-baby2.png";
-const IMG_50_SRC = "/assets/zaeon-baby3.png";
-const IMG_75_SRC = "/assets/zaeon-baby3.png";
+// Substitua pelos caminhos reais dos PNGs do seu personagem para a animação
+const IMG_25_SRC = "/assets/zaeon-baby3.png";
+const IMG_50_SRC = "/assets/zaeon-baby4.png";
+const IMG_75_SRC = "/assets/zaeon-baby4.png";
 const IMG_100_SRC = "/assets/zaeon-baby4.png";
 
 const TIMELINE = {
@@ -85,9 +86,7 @@ export default function MacSplash({ show = true, onDone, logoSrc = LOGO_DEFAULT 
             // Atualiza barra de progresso
             if (progressBarRef.current) progressBarRef.current.style.width = `${currentGlobalPercent}%`;
 
-            // ============================================================
-            // NOVA LÓGICA DE ANIMAÇÃO DO PERSONAGEM (SOBREPOSIÇÃO)
-            // ============================================================
+            // Lógica de Animação do Personagem
             let newFrameValue = 0;
             let nextImageSource: StaticImageData | string = logoSrc;
 
@@ -104,71 +103,60 @@ export default function MacSplash({ show = true, onDone, logoSrc = LOGO_DEFAULT 
                 newFrameValue = 25;
                 nextImageSource = IMG_25_SRC;
             } else if (hasStarted) {
-                // De 0% até <33%, mas após o clique: ele já acordou.
-                newFrameValue = 1; // Usamos 1 como um 'frame intermediário' para o 'acordar'
-                nextImageSource = IMG_25_SRC; // Ele acorda imediatamente
+                newFrameValue = 1;
+                nextImageSource = IMG_25_SRC;
             } else {
-                // Antes de clicar: ele está dormindo
                 newFrameValue = 0;
                 nextImageSource = logoSrc;
             }
 
-            // Atualiza o estado da imagem apenas quando cruzamos a porcentagem alvo
             if (newFrameValue !== imageFrameRef.current) {
                 imageFrameRef.current = newFrameValue;
                 setCurrentCharacterImg(nextImageSource);
             }
-            // ============================================================
 
             if (time < TIMELINE.TOTAL_DURATION && !exitingRef.current) {
                 raf = requestAnimationFrame(loop);
             } else if (!exitingRef.current) {
                 exitingRef.current = true;
 
-                // Força visualização do estado final
                 if (progressBarRef.current) progressBarRef.current.style.width = `100%`;
 
-                // Garante que a imagem final 100% esteja definida
                 if (imageFrameRef.current !== 100) {
                     imageFrameRef.current = 100;
                     setCurrentCharacterImg(IMG_100_SRC);
                 }
 
-                // Adicionado delay de 800ms para garantir que o usuário veja os 100% antes da tela sumir
                 setTimeout(() => {
                     setOpacity(0);
                     setTimeout(() => {
                         onDoneRef.current?.();
                         setVisible(false);
-                        // IMPORTANTE: Não matamos o áudio aqui, ele continua para a Home.
-                    }, 500); // Tempo da transição de opacidade
+                    }, 500);
                 }, 800);
             }
         };
         raf = requestAnimationFrame(loop);
         return () => cancelAnimationFrame(raf);
-    }, [show, hasStarted, logoSrc]); // Adicionado logoSrc às dependências
+    }, [show, hasStarted, logoSrc]);
 
     const handleInitiate = () => {
         if (hasStarted) return;
 
         startTimeRef.current = performance.now();
 
-        // Tenta encontrar o áudio que a Navbar já preparou
         const audio = (window as any).zaeonAudio;
 
         if (audio) {
             audio.play().then(() => {
                 isAudioPlaying.current = true;
                 setHasStarted(true);
-                // Avisa a Navbar para subir as barrinhas
                 window.dispatchEvent(new CustomEvent("zaeon-music-sync"));
             }).catch((err: any) => {
                 console.warn("Bloqueio de áudio:", err);
                 setHasStarted(true);
             });
         } else {
-            // Fallback caso a Navbar demore a carregar
             setHasStarted(true);
         }
     };
@@ -181,15 +169,11 @@ export default function MacSplash({ show = true, onDone, logoSrc = LOGO_DEFAULT 
         <>
             <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black transition-opacity duration-500" style={{ opacity }}>
                 <div className="flex flex-col items-center justify-center px-6">
-                    {/* Contêiner relativo para a animação Zzz */}
+
                     <button onClick={handleInitiate} className={`flex flex-col items-center justify-center transition-all duration-300 relative ${!hasStarted ? "cursor-pointer hover:scale-105 opacity-80" : "cursor-default"}`} disabled={hasStarted}>
 
-                        {/* ============================================================
-                            NOVA ANIMAÇÃO "Zzz" corrigida e reposicionada
-                            ============================================================
-                        */}
                         {!hasStarted && (
-                            <div className="absolute top-[-40px] right-[10px] flex items-end gap-0.5 z-10 pointer-events-none">
+                            <div className="absolute top-[-200px] right-[10px] flex items-end gap-0.5 z-40 pointer-events-none">
                                 <span className="zzz-text zzz-1 text-[13px] font-bold text-sky-400/90 tracking-tighter">Z</span>
                                 <span className="zzz-text zzz-2 text-[10px] font-medium text-sky-400/80 tracking-tighter">z</span>
                                 <span className="zzz-text zzz-3 text-[12px] font-semibold text-sky-400/85 tracking-tighter">z</span>
@@ -197,7 +181,6 @@ export default function MacSplash({ show = true, onDone, logoSrc = LOGO_DEFAULT 
                                 <span className="zzz-text zzz-5 text-[11px] font-medium text-sky-400/80 tracking-tighter">z</span>
                             </div>
                         )}
-                        {/* ============================================================ */}
 
                         <Image
                             src={currentCharacterImg}
@@ -227,23 +210,25 @@ export default function MacSplash({ show = true, onDone, logoSrc = LOGO_DEFAULT 
                 </div>
             </div>
 
-            <style jsx global>{`
+            {/* Injeção de CSS nativa para não depender do styled-jsx no Next.js App Router */}
+            <style dangerouslySetInnerHTML={{
+                __html: `
                 @keyframes zzz-float {
                     0% {
                         opacity: 0;
-                        transform: translateY(0) rotate(0deg) scale(0.8);
+                        transform: translateY(-80px) rotate(0deg) scale(0.8);
                     }
                     15% {
                         opacity: 1;
-                        transform: translateY(-5px) rotate(3deg) scale(1);
+                        transform: translateY(340) rotate(3deg) scale(1);
                     }
                     80% {
                         opacity: 1;
-                        transform: translateY(-25px) rotate(-3deg) scale(1.1);
+                        transform: translateY(-105px) rotate(-3deg) scale(1.1);
                     }
                     100% {
                         opacity: 0;
-                        transform: translateY(-30px) rotate(0deg) scale(1);
+                        transform: translateY(-95px) rotate(0deg) scale(1);
                     }
                 }
 
@@ -251,14 +236,16 @@ export default function MacSplash({ show = true, onDone, logoSrc = LOGO_DEFAULT 
                     display: inline-block;
                     animation: zzz-float 3s infinite ease-in-out;
                     font-family: monospace;
+                    transform-origin: center bottom;
                 }
 
                 .zzz-1 { animation-delay: 0s; }
                 .zzz-2 { animation-delay: 0.5s; animation-duration: 2.8s; }
-                .zzz-3 { animation-delay: 1.1s; animation-duration: 3.2s;}
-                .zzz-4 { animation-delay: 1.7s; animation-duration: 2.7s;}
-                .zzz-5 { animation-delay: 2.3s; animation-duration: 3.1s;}
-            `}</style>
+                .zzz-3 { animation-delay: 1.1s; animation-duration: 3.2s; }
+                .zzz-4 { animation-delay: 1.7s; animation-duration: 2.7s; }
+                .zzz-5 { animation-delay: 2.3s; animation-duration: 3.1s; }
+                `
+            }} />
         </>
     );
 }

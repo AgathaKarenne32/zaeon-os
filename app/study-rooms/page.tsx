@@ -59,7 +59,7 @@ export default function StudyRoomsPage() {
                 <div className="absolute bottom-0 left-0 w-full h-full lg:static lg:col-span-7 flex items-end justify-center lg:justify-start pointer-events-none z-10">
                     <motion.div initial={{ opacity: 0, x: -50 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 1 }} className="relative w-full h-full flex items-end">
                         <div className="absolute bottom-0 left-[5%] w-[90%] h-[60%] blur-[120px] rounded-full bg-cyan-400/10 dark:bg-blue-900/15" />
-                        <Image src="/study-char.png" alt="Zaeon Brain" fill className="object-contain object-bottom origin-bottom scale-95" priority />
+                        <Image src="/assets/zaeon-baby-dark.png" alt="Zaeon Baby" fill className="object-contain object-bottom origin-bottom scale-95" priority />
                     </motion.div>
                 </div>
 

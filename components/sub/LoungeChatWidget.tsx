@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
-import { io, Socket } from "socket.io-client";
+import PusherClient from "pusher-js"; // 🔥 IMPORT DO PUSHER AQUI 🔥
 import {
     ChatBubbleLeftRightIcon,
     MinusIcon,
@@ -33,7 +33,7 @@ export const LoungeChatWidget = ({ defaultOpen = false }: LoungeChatWidgetProps)
     const [activeChat, setActiveChat] = useState<any | null>(null);
     const [messageInput, setMessageInput] = useState("");
 
-    // 🔥 O SEGREDO: O seu ID real que o Socket vai usar
+    // O seu ID real que o Pusher vai usar para criar o canal
     const [realUserId, setRealUserId] = useState<string>(fallbackId);
 
     // Estados da API & Notificações
@@ -41,8 +41,6 @@ export const LoungeChatWidget = ({ defaultOpen = false }: LoungeChatWidgetProps)
     const [friends, setFriends] = useState<any[]>([]);
     const [chatHistory, setChatHistory] = useState<any[]>([]);
 
-    // Estados do Socket
-    const socketRef = useRef<Socket | null>(null);
     const activeChatRef = useRef(activeChat);
     const [unreadCount, setUnreadCount] = useState(0);
     const [flash, setFlash] = useState(false);
@@ -60,25 +58,28 @@ export const LoungeChatWidget = ({ defaultOpen = false }: LoungeChatWidgetProps)
         }
     }, [chatHistory, isOpen, activeChat]);
 
-    // 🔥 1. INICIALIZAÇÃO DO SOCKET.IO EM TEMPO REAL 🔥
+    // 🔥 1. INICIALIZAÇÃO DO PUSHER (WEB SOCKET GERENCIADO) 🔥
     useEffect(() => {
-        if (!realUserId) return; // Só conecta quando soubermos quem você é!
+        if (!realUserId) return;
 
-        const socket = io(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000");
-        socketRef.current = socket;
-
-        socket.on("connect", () => {
-            console.log("Conectado ao Socket! Sala:", realUserId);
-            socket.emit("join_own_room", realUserId);
+        // Inicia o cliente do Pusher usando as variáveis de ambiente
+        const pusher = new PusherClient(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
+            cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
         });
 
-        socket.on("receive_private_message", (newMessage) => {
+        // Assina o canal exclusivo do usuário atual
+        const channel = pusher.subscribe(`user_${realUserId}`);
+
+        // Fica escutando por mensagens disparadas pela API
+        channel.bind('new-message', (newMessage: any) => {
             if (activeChatRef.current?.id === newMessage.senderId) {
+                // Se for de quem estamos conversando, joga na tela
                 setChatHistory(prev => {
                     if (prev.find(msg => msg.id === newMessage.id)) return prev;
                     return [...prev, newMessage];
                 });
             } else {
+                // Notificação de background (Flash e +1)
                 setUnreadCount(prev => prev + 1);
                 setFlash(true);
                 setTimeout(() => setFlash(false), 1500);
@@ -86,24 +87,24 @@ export const LoungeChatWidget = ({ defaultOpen = false }: LoungeChatWidgetProps)
         });
 
         return () => {
-            if (socketRef.current) socketRef.current.disconnect();
+            pusher.unsubscribe(`user_${realUserId}`);
+            pusher.disconnect();
         };
     }, [realUserId]);
 
-    // 🔥 2. BUSCA DE COLEGAS E DO SEU ID REAL 🔥
+    // 🔥 2. BUSCA DE COLEGAS E DO SEU ID REAL
     useEffect(() => {
         const fetchFriends = async () => {
             try {
                 const res = await fetch(`/api/network/friends?t=${Date.now()}`, { cache: 'no-store' });
                 if (res.ok) {
                     const data = await res.json();
-                    if (data.myId) setRealUserId(data.myId); // Atualizamos o ID para ligar o Socket!
+                    if (data.myId) setRealUserId(data.myId);
                     setFriends(data.friends || []);
                 }
             } catch (error) { console.error("Erro ao buscar amigos:", error); }
         };
 
-        // Roda sempre que abre o chat na aba friends, OU roda logo no início para descobrirmos o seu ID!
         if ((isOpen && activeTab === 'friends' && !activeChat) || !realUserId) {
             fetchFriends();
         }
@@ -156,18 +157,18 @@ export const LoungeChatWidget = ({ defaultOpen = false }: LoungeChatWidgetProps)
         };
 
         fetchMessages();
-        // Fallback de segurança a cada 10s caso a internet oscile e o socket caia
         const interval = setInterval(fetchMessages, 10000);
         return () => clearInterval(interval);
     }, [isOpen, activeChat]);
 
 
-    // 🔥 5. FUNÇÃO DE ENVIAR MENSAGEM VIA SOCKET 🔥
+    // 🔥 5. FUNÇÃO DE ENVIAR MENSAGEM 🔥
     const handleSendMessage = async () => {
         if (!messageInput.trim() || !activeChat) return;
         const text = messageInput.trim();
         setMessageInput("");
 
+        // Joga a mensagem na tela imediatamente (Optimistic UI)
         const optimisticMsg = {
             id: `opt_${Date.now()}`,
             senderId: realUserId,
@@ -176,14 +177,7 @@ export const LoungeChatWidget = ({ defaultOpen = false }: LoungeChatWidgetProps)
 
         setChatHistory(prev => [...prev, optimisticMsg]);
 
-        // Dispara no túnel instantâneo do Socket.IO!
-        if (socketRef.current) {
-            socketRef.current.emit("send_private_message", {
-                receiverId: activeChat.id,
-                messageObj: optimisticMsg
-            });
-        }
-
+        // A API vai cuidar de salvar e avisar o Pusher para disparar no outro cliente
         try {
             await fetch('/api/chat/messages', {
                 method: 'POST',
@@ -228,8 +222,8 @@ export const LoungeChatWidget = ({ defaultOpen = false }: LoungeChatWidgetProps)
             <div
                 onClick={() => setIsOpen(!isOpen)}
                 className={`h-12 flex items-center justify-between px-5 cursor-pointer shrink-0 transition-all border-b border-slate-200 dark:border-white/5 ${flash
-                        ? "bg-cyan-500/30 dark:bg-cyan-500/40 shadow-[inset_0_0_20px_rgba(6,182,212,0.5)]"
-                        : "bg-white/50 dark:bg-black/20 hover:bg-slate-100 dark:hover:bg-white/5"
+                    ? "bg-cyan-500/30 dark:bg-cyan-500/40 shadow-[inset_0_0_20px_rgba(6,182,212,0.5)]"
+                    : "bg-white/50 dark:bg-black/20 hover:bg-slate-100 dark:hover:bg-white/5"
                     }`}
             >
                 <div className="flex items-center gap-3 relative">

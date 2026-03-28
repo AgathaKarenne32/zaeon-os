@@ -3,8 +3,19 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/src/lib/auth';
 import { prisma } from '@/src/lib/prisma';
 import { redis } from '@/src/lib/redis';
+import Pusher from 'pusher'; // 🔥 IMPORT DO PUSHER 🔥
 
 export const dynamic = 'force-dynamic';
+
+// 🔥 INICIALIZAÇÃO DO PUSHER SERVER 🔥
+// Usamos as variáveis de ambiente que você pegou no painel do Pusher
+const pusher = new Pusher({
+    appId: process.env.PUSHER_APP_ID!,
+    key: process.env.NEXT_PUBLIC_PUSHER_KEY!,
+    secret: process.env.PUSHER_SECRET!,
+    cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+    useTLS: true,
+});
 
 const getRoomKey = (id1: string, id2: string) => {
     const sortedIds = [id1, id2].sort();
@@ -78,8 +89,19 @@ export async function POST(req: Request) {
         const roomKey = getRoomKey(user.id, targetId);
         await redis.del(roomKey);
 
+        // 🔥 A MÁGICA DO PUSHER 🔥
+        // Dispara o evento 'new-message' para o canal exclusivo do destinatário
+        try {
+            await pusher.trigger(`user_${targetId}`, 'new-message', newMessage);
+        } catch (pusherError) {
+            console.error("Erro ao disparar evento no Pusher:", pusherError);
+            // Não damos 'throw' aqui para não falhar a requisição caso o Pusher engasgue, 
+            // a mensagem já está salva no banco e no Redis!
+        }
+
         return NextResponse.json(newMessage);
     } catch (error) {
+        console.error("Erro interno:", error);
         return NextResponse.json({ error: "Erro interno" }, { status: 500 });
     }
 }
