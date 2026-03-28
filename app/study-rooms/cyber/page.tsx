@@ -94,6 +94,7 @@ export default function ZaeonComputerScienceRoom() {
             };
             fetchSavedOrder();
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isAuthenticated]);
 
     const handleReorder = async (newOrderTabs: any[]) => {

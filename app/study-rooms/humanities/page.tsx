@@ -174,6 +174,7 @@ export default function ZaeonHumanitiesRoom() {
             }
         };
         fetchSavedOrder();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const handleReorder = async (newOrderTabs: any[]) => {
@@ -440,7 +441,7 @@ export default function ZaeonHumanitiesRoom() {
                                                 O leitor é convidado a experimentar o texto sem distrações. Este módulo é desenhado especificamente para isolar o conteúdo do documento, removendo qualquer ruído da interface principal do sistema.
                                             </p>
                                             <p className="text-lg font-serif leading-loose text-stone-700 dark:text-stone-400 mb-6 text-justify">
-                                                Quando um documento é anexado pelo "Upload Scroll", o sistema Zaeon OS converte o arquivo para este formato de leitura Zen, permitindo que a pesquisa acadêmica flua em harmonia com a estética clássica.
+                                                Quando um documento é anexado pelo &ldquo;Upload Scroll&rdquo;, o sistema Zaeon OS converte o arquivo para este formato de leitura Zen, permitindo que a pesquisa acadêmica flua em harmonia com a estética clássica.
                                             </p>
                                             
                                             {/* Placeholder UI */}

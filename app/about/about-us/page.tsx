@@ -136,7 +136,7 @@ const BackgroundInterdimensional = () => {
         }, intervalTime);
 
         return () => clearInterval(interval);
-    }, [imgIndex]); // O efeito roda novamente sempre que o index muda para pegar o novo timer
+    }, [imgIndex]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const transitionVariants = {
         enter: { opacity: 0, filter: "brightness(2) blur(10px)", scale: 1.05 },

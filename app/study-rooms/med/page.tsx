@@ -82,6 +82,7 @@ export default function ZaeonMedLabRoom() {
             }
         };
         fetchSavedOrder();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const handleReorder = async (newOrderTabs: any[]) => {

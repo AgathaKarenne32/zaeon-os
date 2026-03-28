@@ -98,6 +98,7 @@ export default function ZaeonLoungeRoom() {
             };
             fetchSavedOrder();
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isAuthenticated]);
 
     // --- SALVAR A ORDEM NO BANCO QUANDO O USUÁRIO ARRASTAR ---

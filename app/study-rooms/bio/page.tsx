@@ -98,6 +98,7 @@ export default function ZaeonBiologyRoom() {
             };
             fetchSavedOrder();
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isModalOpen]);
 
     // --- SALVAR A ORDEM NO BANCO QUANDO O USUÁRIO ARRASTAR ---

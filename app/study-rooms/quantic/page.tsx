@@ -226,6 +226,7 @@ export default function ZaeonQuanticRoom() {
             };
             fetchSavedOrder();
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isAuthenticated]);
 
     const handleReorder = async (newOrderTabs: any[]) => {
