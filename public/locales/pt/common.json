@@ -22,15 +22,15 @@
         "dev_hack": "MODO CEO"
     },
     "roles": {
-        "student": "Estudante",
-        "researcher": "Pesquisador",
-        "professional": "Professor",
-        "entrepreneur": "Empreendedor"
+        "student": "Aluno",
+        "professor": "Professor",
+        "teacher": "Professor",
+        "professional": "Profissional"
     },
     "hints": {
-        "new_game": "DICA: Comece com um novo perfil para conferir a tecnologia Zaeon, temos tudo o que você precisa para estudar, ensinar e pesquisar --  seja qual for sua área de formação..",
-        "save_progress": "DICA: Conecte sua conta do Google para salvar o progresso e as conquistas, além de liberar todos os agentes disponíveis para trabalhar por você.",
-        "roles": "DICA: Cada turma (Aluno, Pesquisador) desbloqueia ferramentas exclusivas.",
+        "new_game": "Bem vindo(a) à Zaeon. Aqui você encontra tudo para estudo e pesquisa, em qualquer área de formação.",
+        "save_progress": "Inicie uma nova conte e escolha seu perfil: Aluno ou Professor.",
+        "roles": "Professores podem t",
         "wallet": "DICA: carregue seu progresso salvo para continuar sua jornada.",
         "options": "DICA: Acesse opções para personalizar seu perfil e configurações de idioma, etc.."
     },

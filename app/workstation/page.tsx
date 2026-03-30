@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation"; // <-- Adicionado usePathname
 import { useSession } from "next-auth/react";
 import {
     ChevronRightIcon, BeakerIcon, CpuChipIcon, SparklesIcon,
@@ -101,7 +101,6 @@ const SkillDrawer = ({ skill, isOpen, onToggle, theme }: any) => {
     );
 };
 
-// 🔥 COMPONENTE DE SOLICITAÇÃO REAL: TEMPO REAL, PEQUENO E DESTACADO 🔥
 const NetworkConnectionsPanel = ({ visitedUserId, currentUserId, theme }: { visitedUserId?: string, currentUserId?: string, theme: any }) => {
     const [requestState, setRequestState] = useState<0 | 1 | 2 | 3 | 4>(0);
     const [requestText, setRequestText] = useState("");
@@ -129,11 +128,10 @@ const NetworkConnectionsPanel = ({ visitedUserId, currentUserId, theme }: { visi
             finally { setIsLoading(false); }
         };
 
-        // Chama na hora e depois fica sondando a cada 3 segundos para atualizar em tempo real
         fetchStatus();
         const intervalId = setInterval(fetchStatus, 3000);
 
-        return () => clearInterval(intervalId); // Limpa o radar ao sair
+        return () => clearInterval(intervalId);
     }, [visitedUserId, currentUserId, isOwnProfile]);
 
     const handleSendRequest = async () => {
@@ -153,8 +151,6 @@ const NetworkConnectionsPanel = ({ visitedUserId, currentUserId, theme }: { visi
     return (
         <div className="flex flex-col items-center justify-center mt-4 w-full z-40">
             <AnimatePresence mode="wait">
-
-                {/* ESTADO 0: BOTÃO PEQUENO, ELEGANTE E DESTACADO */}
                 {requestState === 0 && (
                     <motion.button
                         key="btn-request"
@@ -167,7 +163,6 @@ const NetworkConnectionsPanel = ({ visitedUserId, currentUserId, theme }: { visi
                     </motion.button>
                 )}
 
-                {/* ESTADO 1: FORMULÁRIO DE ENVIO COMPACTO */}
                 {requestState === 1 && (
                     <motion.div
                         key="form-request"
@@ -195,7 +190,6 @@ const NetworkConnectionsPanel = ({ visitedUserId, currentUserId, theme }: { visi
                     </motion.div>
                 )}
 
-                {/* ESTADO 2: ENVIADO */}
                 {requestState === 2 && (
                     <motion.div key="btn-sent" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex items-center gap-1.5 px-5 py-2 rounded-full border border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shadow-sm">
                         <CheckIcon className="w-4 h-4" />
@@ -203,7 +197,6 @@ const NetworkConnectionsPanel = ({ visitedUserId, currentUserId, theme }: { visi
                     </motion.div>
                 )}
 
-                {/* ESTADO 3: REJEITADO */}
                 {requestState === 3 && (
                     <motion.div key="btn-rejected" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex items-center gap-1.5 px-5 py-2 rounded-full border border-red-500/30 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 shadow-sm">
                         <XMarkIcon className="w-4 h-4" />
@@ -211,7 +204,6 @@ const NetworkConnectionsPanel = ({ visitedUserId, currentUserId, theme }: { visi
                     </motion.div>
                 )}
 
-                {/* ESTADO 4: CONECTADO */}
                 {requestState === 4 && (
                     <motion.div key="btn-accepted" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex items-center gap-1.5 px-5 py-2 rounded-full border border-cyan-500/30 bg-cyan-50 dark:bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.2)]">
                         <CheckIcon className="w-4 h-4" />
@@ -223,9 +215,11 @@ const NetworkConnectionsPanel = ({ visitedUserId, currentUserId, theme }: { visi
     );
 };
 
-export default function WorkStationPage() {
+// 🔥 ADICIONADO: Prop `isEmbedded` para adaptar o visual quando dentro do painel do professor
+export default function WorkStationPage({ isEmbedded = false }: { isEmbedded?: boolean }) {
     const { data: session, status, update } = useSession();
     const router = useRouter();
+    const pathname = usePathname(); // Adicionado para verificação de rota
     const [mounted, setMounted] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
     const [activeSkill, setActiveSkill] = useState<string | null>(null);
@@ -233,6 +227,9 @@ export default function WorkStationPage() {
 
     const [userSkills, setUserSkills] = useState<typeof DEFAULT_SKILLS>(DEFAULT_SKILLS);
     const [isLoadingSkills, setIsLoadingSkills] = useState(true);
+
+    // 🔥 VERIFICAÇÃO SE É PROFESSOR
+    const isTeacher = (session?.user as any)?.role === "teacher" || (session?.user as any)?.role === "professor";
 
     // @ts-ignore
     const isSuperAdmin = !!session?.user?.isAdmin;
@@ -244,6 +241,13 @@ export default function WorkStationPage() {
     const currentUserId = session?.user?.id || "";
 
     const [userImage, setUserImage] = useState(session?.user?.image || "/assets/default-avatar.png");
+
+    // 🔥 TRAVA DE SEGURANÇA DA ROTA: Se for professor tentando acessar a rota raiz /workstation, joga para a sidebar
+    useEffect(() => {
+        if (isTeacher && pathname === '/workstation' && !isEmbedded) {
+            router.replace('/workstation/teacher/profile');
+        }
+    }, [isTeacher, pathname, isEmbedded, router]);
 
     const getTargetRoom = () => {
         if (kycStatus === "rejected") return null;
@@ -387,7 +391,7 @@ export default function WorkStationPage() {
 
     if (!mounted || status === "loading" || isSyncing) {
         return (
-            <div className={`w-full h-screen flex flex-col items-center justify-center z-[999] ${theme.pageBg}`}>
+            <div className={`w-full flex flex-col items-center justify-center z-[999] ${theme.pageBg} ${isEmbedded ? 'h-full py-20' : 'h-screen'}`}>
                 <ArrowPathIcon className={`w-8 h-8 animate-spin mb-4 ${theme.skillIconFill}`} />
                 <span className={`text-[10px] font-black uppercase tracking-[0.3em] animate-pulse ${theme.skillTitle}`}>
                     Loading Workstation...
@@ -401,18 +405,19 @@ export default function WorkStationPage() {
     const cardBaseStyle = `relative overflow-hidden transition-all duration-300 border shrink-0 ${theme.cardBorder}`;
 
     return (
-        <div className={`w-full min-h-screen overflow-x-hidden overflow-y-auto custom-scrollbar relative transition-colors duration-1000 font-mono pb-20 ${theme.pageBg}`}>
-            <div className={`fixed inset-0 z-0 ${theme.matrixOpacity} pointer-events-none mix-blend-overlay`}><MatrixRain /></div>
+        // 🔥 Layout adaptável: se for embutido, remove o "min-h-screen" para encaixar perfeitamente na página do professor
+        <div className={`w-full overflow-x-hidden overflow-y-auto custom-scrollbar relative transition-colors duration-1000 font-mono ${isEmbedded ? 'min-h-full pb-10' : 'min-h-screen pb-20'} ${theme.pageBg}`}>
+            {!isEmbedded && <div className={`fixed inset-0 z-0 ${theme.matrixOpacity} pointer-events-none mix-blend-overlay`}><MatrixRain /></div>}
 
-            <div className="w-full flex flex-col items-center justify-start relative z-20 pt-24 px-8">
+            <div className={`w-full flex flex-col items-center justify-start relative z-20 ${isEmbedded ? 'pt-8 px-2' : 'pt-24 px-8'}`}>
 
                 <div className="w-full max-w-[1400px] grid grid-cols-1 lg:grid-cols-12 gap-12 mb-12">
 
                     {/* --- LADO ESQUERDO: HUD DO PERSONAGEM --- */}
-                    <div className="lg:col-span-6 relative flex flex-col items-start pl-4 lg:pl-10 mt-16 lg:mt-24">
+                    <div className={`lg:col-span-6 relative flex flex-col items-start pl-4 lg:pl-10 ${isEmbedded ? 'mt-4' : 'mt-16 lg:mt-24'}`}>
 
                         <div className="relative flex items-start">
-                            {/* A CÁPSULA (NO CANTO ORIGINAL) */}
+                            {/* A CÁPSULA */}
                             <div className={`relative w-[180px] h-[500px] rounded-[100px] border-[3px] backdrop-blur-3xl flex flex-col items-center justify-center z-20 py-10 shadow-[0_0_50px_rgba(255,255,255,0.05)] ${theme.capsuleBorder}`}>
                                 <RealisticDNA theme={theme} />
 
@@ -429,7 +434,6 @@ export default function WorkStationPage() {
                             </div>
 
                             <div className="absolute left-[100%] top-8 flex flex-col gap-6 z-10 w-full min-w-[250px]">
-                                {/* 🔥 NOME EM CIMA DO CARD DE LEVEL 🔥 */}
                                 <div className="flex flex-col mb-2 pl-6">
                                     <span className={`text-3xl font-black tracking-tighter drop-shadow-md ${theme.textStrong}`}>
                                         {session?.user?.name || "Unknown"}
@@ -459,53 +463,74 @@ export default function WorkStationPage() {
                                         </div>
                                     </div>
 
-                                    <div className={`flex flex-col gap-4 mt-4 ml-16 relative z-10 border-l-[2px] pl-4 py-2 ${theme.cardBorder}`}>
-                                        {isLoadingSkills ? (
-                                            <div className="flex items-center gap-2 px-2 opacity-50">
-                                                <ArrowPathIcon className="w-4 h-4 animate-spin text-slate-500 dark:text-white/50" />
-                                            </div>
-                                        ) : (
-                                            userSkills.map((skill) => (
-                                                <SkillDrawer key={skill.id} skill={skill} isOpen={activeSkill === skill.id} onToggle={() => setActiveSkill(activeSkill === skill.id ? null : skill.id)} theme={theme} />
-                                            ))
-                                        )}
-                                    </div>
+                                    {/* 🔥 OCULTA AS SKILLS GAMIFICADAS SE FOR PROFESSOR 🔥 */}
+                                    {!isTeacher && (
+                                        <div className={`flex flex-col gap-4 mt-4 ml-16 relative z-10 border-l-[2px] pl-4 py-2 ${theme.cardBorder}`}>
+                                            {isLoadingSkills ? (
+                                                <div className="flex items-center gap-2 px-2 opacity-50">
+                                                    <ArrowPathIcon className="w-4 h-4 animate-spin text-slate-500 dark:text-white/50" />
+                                                </div>
+                                            ) : (
+                                                userSkills.map((skill) => (
+                                                    <SkillDrawer key={skill.id} skill={skill} isOpen={activeSkill === skill.id} onToggle={() => setActiveSkill(activeSkill === skill.id ? null : skill.id)} theme={theme} />
+                                                ))
+                                            )}
+                                        </div>
+                                    )}
                                 </motion.div>
                             </div>
                         </div>
                     </div>
 
-                    {/* --- LADO DIREITO: PORTAS DE ACESSO --- */}
+                    {/* --- LADO DIREITO: PORTAS DE ACESSO OU MURAL DO PROFESSOR --- */}
                     <div className="lg:col-span-6 flex flex-col justify-center items-center gap-5 z-30 w-full max-w-[450px] mx-auto pb-10">
-
                         <div className={`w-full p-8 rounded-[40px] flex flex-col gap-6 ${theme.panelWrapper}`}>
 
-                            <div onClick={() => router.push('/study-rooms/lounge')} className={cardBaseStyle + ` ${theme.highlightCard} p-5 rounded-3xl hover:scale-[1.02] cursor-pointer`}>
-                                <div className="flex justify-between items-center gap-4">
-                                    <div className="flex items-center gap-4">
-                                        <AnimatedBlueGlobe />
-                                        <h2 className={`text-xl font-black uppercase tracking-tight ${theme.textHighlight}`}>Lounge</h2>
+                            {/* 🔥 SE FOR PROFESSOR, MOSTRA O MURAL. SE FOR ALUNO, MOSTRA AS SALAS 🔥 */}
+                            {isTeacher ? (
+                                <div className={`p-6 rounded-3xl ${theme.highlightCard} flex flex-col gap-4 border`}>
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <BookOpenIcon className={`w-8 h-8 ${theme.textHighlight}`} />
+                                        <h2 className={`text-xl font-black uppercase tracking-tight ${theme.textHighlight}`}>Mural de Publicações</h2>
                                     </div>
-                                    <ChevronRightIcon className={`w-5 h-5 transition-all ${theme.textHighlight} group-hover:translate-x-1`} />
+                                    <p className={`text-[11px] leading-relaxed font-medium ${theme.textMuted}`}>
+                                        Fixe aqui seus artigos, teses e links importantes. Eles ficarão visíveis para todos os alunos que visitarem seu perfil.
+                                    </p>
+                                    <button className={`mt-2 py-3 px-4 rounded-xl text-white font-black text-[10px] uppercase tracking-widest bg-gradient-to-r ${theme.dnaGradient} hover:scale-[1.02] transition-all shadow-lg flex items-center justify-center gap-2`}>
+                                        + Nova Publicação
+                                    </button>
+                                    <div className={`w-full h-32 border-2 border-dashed rounded-xl flex items-center justify-center mt-4 ${theme.cardBorder} bg-black/10`}>
+                                        <span className={`text-[10px] uppercase font-bold tracking-widest ${theme.textMuted}`}>Nenhuma publicação fixada</span>
+                                    </div>
                                 </div>
-                            </div>
-
-                            {targetRoom && (
-                                <div onClick={() => router.push(targetRoom.route)} className={cardBaseStyle + ` ${theme.highlightCard} p-5 rounded-3xl hover:scale-[1.02] cursor-pointer`}>
-                                    <div className="flex justify-between items-center gap-4">
-                                        <div className="flex items-center gap-4">
-                                            <MiniAnimatedDNA theme={theme} />
-                                            <h2 className={`text-xl font-black uppercase tracking-tight ${theme.textHighlight}`}>Sala de {userCourse}</h2>
+                            ) : (
+                                <>
+                                    <div onClick={() => router.push('/study-rooms/lounge')} className={cardBaseStyle + ` ${theme.highlightCard} p-5 rounded-3xl hover:scale-[1.02] cursor-pointer`}>
+                                        <div className="flex justify-between items-center gap-4">
+                                            <div className="flex items-center gap-4">
+                                                <AnimatedBlueGlobe />
+                                                <h2 className={`text-xl font-black uppercase tracking-tight ${theme.textHighlight}`}>Lounge</h2>
+                                            </div>
+                                            <ChevronRightIcon className={`w-5 h-5 transition-all ${theme.textHighlight} group-hover:translate-x-1`} />
                                         </div>
-                                        <ChevronRightIcon className={`w-5 h-5 transition-all ${theme.textHighlight} group-hover:translate-x-1`} />
                                     </div>
-                                </div>
+
+                                    {targetRoom && (
+                                        <div onClick={() => router.push(targetRoom.route)} className={cardBaseStyle + ` ${theme.highlightCard} p-5 rounded-3xl hover:scale-[1.02] cursor-pointer`}>
+                                            <div className="flex justify-between items-center gap-4">
+                                                <div className="flex items-center gap-4">
+                                                    <MiniAnimatedDNA theme={theme} />
+                                                    <h2 className={`text-xl font-black uppercase tracking-tight ${theme.textHighlight}`}>Sala de {userCourse}</h2>
+                                                </div>
+                                                <ChevronRightIcon className={`w-5 h-5 transition-all ${theme.textHighlight} group-hover:translate-x-1`} />
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
 
-                        {/* 🔥 BOTÃO REPOSICIONADO PARA BAIXO DA CAIXA DE SALAS 🔥 */}
                         <NetworkConnectionsPanel visitedUserId={undefined} currentUserId={currentUserId} theme={theme} />
-
                     </div>
                 </div>
 

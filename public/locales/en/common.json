@@ -23,9 +23,9 @@
   },
   "roles": {
     "student": "Student",
-    "researcher": "Researcher",
-    "professional": "Teacher",
-    "entrepreneur": "Entrepreneur"
+    "professor": "Teacher",
+    "teacher": "Teacher",
+    "professional": "Professional"
   },
   "hints": {
     "new_game": "HINT: Start with a new profile to check out Zaeon tech.",

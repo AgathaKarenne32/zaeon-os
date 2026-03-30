@@ -64,6 +64,9 @@ const ZaeonAuthModal = ({ isOpen, onClose, role }: ZaeonAuthModalProps) => {
     const [contactEmail, setContactEmail] = useState("");
     const [phone, setPhone] = useState("");
 
+    // NORMALIZAÇÃO DE ROLE NO TOPO (Garante que "professor" e "teacher" sejam a mesma coisa em todo o modal)
+    const normalizedRole = role.toLowerCase() === 'professor' || role.toLowerCase() === 'teacher' ? 'teacher' : 'student';
+
     useEffect(() => {
         if (i18n?.language) {
             const matchedCountry = COUNTRIES.find(c => i18n.language.startsWith(c.langMatch));
@@ -75,7 +78,9 @@ const ZaeonAuthModal = ({ isOpen, onClose, role }: ZaeonAuthModalProps) => {
         if (selectedCountry !== 'br' && institution !== 'other') setInstitution(null);
     }, [selectedCountry, institution]);
 
-    const isAcademicRole = role === 'student' || role === 'professor';
+    // CORREÇÃO: isAcademicRole agora usa o normalizedRole e só aceita student ou teacher
+    const isAcademicRole = normalizedRole === 'student' || normalizedRole === 'teacher';
+
     const isFastTrackInst = institution === 'unilab' || institution === 'ufc' || institution === 'ifce';
     const isGuest = !isFastTrackInst;
 
@@ -142,11 +147,16 @@ const ZaeonAuthModal = ({ isOpen, onClose, role }: ZaeonAuthModalProps) => {
         onDrop: onDropVerification, accept: { 'application/pdf': [], 'image/*': [] }, maxFiles: 1
     });
 
-    // --- NOVA LÓGICA DE LOGIN HÍBRIDO ---
+    // --- LÓGICA DE LOGIN HÍBRIDO ---
     const handleInitialize = async () => {
         setIsSubmitting(true);
+
+        // CORREÇÃO: Define o destino correto usando a role já normalizada
+        const destinationPath = normalizedRole === 'teacher' ? '/workstation/teacher/work' : '/workstation';
+
         const onboardingData = {
-            name, age, gender, course: studyArea, identityId: studentId, role,
+            name, age, gender, course: studyArea, identityId: studentId,
+            role: normalizedRole, // <-- Vai salvar "teacher" ou "student"
             institution, verificationDoc,
             image: profileImage, torsoImage: torsoImage,
             countryCode: selectedCountry,
@@ -156,11 +166,10 @@ const ZaeonAuthModal = ({ isOpen, onClose, role }: ZaeonAuthModalProps) => {
         if (isFastTrackInst) {
             // FLUXO NORMAL (GOOGLE)
             localStorage.setItem('zaeon_onboarding', JSON.stringify(onboardingData));
-            await signIn('google', { callbackUrl: '/workstation' });
+            await signIn('google', { callbackUrl: destinationPath });
         } else {
-            // NOVO FLUXO (GUEST)
+            // FLUXO (GUEST)
             try {
-                // 1. Cria o usuário no banco
                 const res = await fetch('/api/auth/guest-register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -168,10 +177,9 @@ const ZaeonAuthModal = ({ isOpen, onClose, role }: ZaeonAuthModalProps) => {
                 });
 
                 if (res.ok) {
-                    // 2. Faz o login silencioso usando as credenciais criadas
                     await signIn('credentials', {
                         email: contactEmail,
-                        callbackUrl: '/workstation'
+                        callbackUrl: destinationPath
                     });
                 } else {
                     alert("Falha ao criar acesso Guest.");
@@ -220,7 +228,8 @@ const ZaeonAuthModal = ({ isOpen, onClose, role }: ZaeonAuthModalProps) => {
                 ctx.fillText(this.text, this.x, this.y);
             }
         }
-        const particles = Array.from({ length: 20 }).map(() => new Particle(role.toUpperCase(), canvas.width, canvas.height));
+        // Usamos normalizedRole na animação para ficar consistente
+        const particles = Array.from({ length: 20 }).map(() => new Particle(normalizedRole.toUpperCase(), canvas.width, canvas.height));
         const animate = () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             particles.forEach(p => { p.update(canvas.width, canvas.height); p.draw(ctx); });
@@ -228,7 +237,7 @@ const ZaeonAuthModal = ({ isOpen, onClose, role }: ZaeonAuthModalProps) => {
         };
         animate();
         return () => { window.removeEventListener('resize', resize); cancelAnimationFrame(animationFrameId); };
-    }, [isOpen, mounted, role, isMinimized]);
+    }, [isOpen, mounted, normalizedRole, isMinimized]); // Adicionei normalizedRole às dependências
 
     const StringLine = ({ height }: { height: number }) => (
         <div className="absolute left-1/2 -translate-x-1/2 w-[1px] bg-gray-400/60 dark:bg-white/20 z-0 pointer-events-none" style={{ height: `${height}px`, top: `-${height}px` }} />
@@ -266,7 +275,7 @@ const ZaeonAuthModal = ({ isOpen, onClose, role }: ZaeonAuthModalProps) => {
                         </div>
 
                         <div className="relative h-full p-8 flex flex-col items-center pt-14 overflow-y-auto custom-scrollbar scroll-smooth">
-                            <div className="absolute top-6 left-6 opacity-5 dark:opacity-10 text-5xl font-black uppercase tracking-tighter -rotate-12 pointer-events-none select-none text-black dark:text-white">{role}</div>
+                            <div className="absolute top-6 left-6 opacity-5 dark:opacity-10 text-5xl font-black uppercase tracking-tighter -rotate-12 pointer-events-none select-none text-black dark:text-white">{normalizedRole}</div>
 
                             <div className="w-full flex flex-col gap-6 pb-8 mt-2">
                                 <motion.div drag dragConstraints={{ left: -30, right: 30, top: -30, bottom: 30 }} className="relative z-40 w-full bg-white dark:bg-[#1e293b] rounded-xl p-5 border border-gray-100 dark:border-white/10 shadow-lg">
@@ -297,8 +306,8 @@ const ZaeonAuthModal = ({ isOpen, onClose, role }: ZaeonAuthModalProps) => {
                                                 <div className="relative flex h-11 bg-gray-100 dark:bg-[#0f172a] rounded-lg p-1 border cursor-pointer border-gray-200 dark:border-white/10">
                                                     <motion.div
                                                         className={`absolute top-1 bottom-1 w-[calc(33.33%-4px)] rounded-md transition-all ${gender === 'male' ? 'bg-blue-500' :
-                                                                gender === 'other' ? 'bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500' :
-                                                                    'bg-pink-500'
+                                                            gender === 'other' ? 'bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500' :
+                                                                'bg-pink-500'
                                                             }`}
                                                         animate={{
                                                             left: gender === 'male' ? '4px' : gender === 'other' ? '33.33%' : '66.66%'
@@ -328,8 +337,8 @@ const ZaeonAuthModal = ({ isOpen, onClose, role }: ZaeonAuthModalProps) => {
                                                     key={c.id}
                                                     onClick={() => setSelectedCountry(c.id)}
                                                     className={`w-6 h-6 flex items-center justify-center rounded-full text-xs transition-all duration-300 ${selectedCountry === c.id
-                                                            ? 'bg-white dark:bg-white/20 shadow-sm scale-110 ring-1 ring-purple-500/50'
-                                                            : 'opacity-50 hover:opacity-100 hover:bg-white/50 dark:hover:bg-white/10'
+                                                        ? 'bg-white dark:bg-white/20 shadow-sm scale-110 ring-1 ring-purple-500/50'
+                                                        : 'opacity-50 hover:opacity-100 hover:bg-white/50 dark:hover:bg-white/10'
                                                         }`}
                                                     title={c.langMatch.toUpperCase()}
                                                 >
@@ -434,7 +443,7 @@ const ZaeonAuthModal = ({ isOpen, onClose, role }: ZaeonAuthModalProps) => {
                                                 ) : (
                                                     <>
                                                         <Upload size={16} className="text-gray-400 mb-1" />
-                                                        <span className="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase text-center">Upload {role === 'student' ? 'Student ID' : 'Faculty ID'}</span>
+                                                        <span className="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase text-center">Upload {normalizedRole === 'student' ? 'Student ID' : 'Faculty ID'}</span>
                                                     </>
                                                 )}
                                             </div>
@@ -454,7 +463,7 @@ const ZaeonAuthModal = ({ isOpen, onClose, role }: ZaeonAuthModalProps) => {
                                                                 <Image src={inst.logo} alt={inst.name} width={48} height={48} className="object-contain" />
                                                             </div>
                                                             <span className="text-[10px] font-bold uppercase tracking-widest text-gray-700 dark:text-gray-200">{inst.name}</span>
-                                                            <span className="text-[8px] text-gray-400 mt-1 uppercase text-center leading-tight font-medium">{role === 'student' ? 'Student' : 'Professor'}</span>
+                                                            <span className="text-[8px] text-gray-400 mt-1 uppercase text-center leading-tight font-medium">{normalizedRole === 'student' ? 'Student' : 'Professor'}</span>
                                                         </button>
                                                     ))}
                                                 </div>
@@ -513,7 +522,7 @@ const ZaeonAuthModal = ({ isOpen, onClose, role }: ZaeonAuthModalProps) => {
                             </div>
                             <div className="absolute bottom-10 left-8 right-8 text-white z-10 pointer-events-none">
                                 <div className="inline-block px-2 py-1 bg-green-500/20 border border-green-500/30 rounded text-[10px] text-green-400 font-mono mb-2 backdrop-blur-md">
-                                    SYSTEM: {(studyArea || role).toUpperCase()}_MODE
+                                    SYSTEM: {(studyArea || normalizedRole).toUpperCase()}_MODE
                                 </div>
                                 <h2 className="text-2xl font-black truncate">{name || 'Unknown Subject'}</h2>
                                 <p className="text-[10px] text-gray-300 leading-relaxed font-medium">This is how your profile card will be visible for others. You can change your photos later.</p>
