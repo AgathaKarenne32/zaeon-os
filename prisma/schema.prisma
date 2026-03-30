@@ -63,6 +63,13 @@ model User {
   sentRequests     ConnectionRequest[] @relation("SentRequests")
   receivedRequests ConnectionRequest[] @relation("ReceivedRequests")
 
+  // 🔥 NOVO: Relações Professor-Aluno
+  teacherStudents  TeacherStudent[] @relation("TeacherStudents")  // Alunos deste professor
+  studentOf        TeacherStudent[] @relation("StudentOf")        // Professores deste aluno
+
+  // 🔥 NOVO: Documentos do Professor (Tarefas e Provas)
+  teacherDocuments TeacherDocument[] @relation("TeacherDocuments")
+
   // 🔥 CRÍTICO: Sincroniza o Prisma com o NextAuth (coleção 'users')
   @@map("users") 
 }
@@ -241,4 +248,35 @@ model Message {
 
   sender     User     @relation("SentMessages", fields: [senderId], references: [id])
   receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+}
+
+// 🔥 NOVO: RELAÇÃO PROFESSOR-ALUNO (Sem necessidade de aprovação do aluno)
+model TeacherStudent {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  teacherId  String   @db.ObjectId
+  studentId  String   @db.ObjectId
+  createdAt  DateTime @default(now())
+
+  teacher    User     @relation("TeacherStudents", fields: [teacherId], references: [id])
+  student    User     @relation("StudentOf", fields: [studentId], references: [id])
+
+  @@unique([teacherId, studentId])
+}
+
+// 🔥 NOVO: DOCUMENTOS DO PROFESSOR (Tarefas e Provas Gerados por IA)
+model TeacherDocument {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  teacherId   String   @db.ObjectId
+  title       String
+  type        String   // 'tarefa' or 'prova'
+  subject     String?
+  questions   Json     // Array of { number, statement, options[], answer, type }
+  headerImage String?  // Base64 institution logo
+  context     String?  // Original prompt/source material
+  status      String   @default("draft") // draft, published
+  assignedTo  String[] @default([]) // Array of student IDs
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  teacher     User @relation("TeacherDocuments", fields: [teacherId], references: [id])
 }

@@ -14,7 +14,13 @@ import {
     User
 } from "lucide-react";
 
+// --- IMPORTS DOS MÓDULOS ---
 import WorkStationContent from "@/app/workstation/WorkStationContent";
+import WorkAreaContent from "@/app/workstation/teacher/WorkAreaContent";
+import ResearchAreaContent from "@/app/workstation/teacher/ResearchAreaContent";
+import AgenticAreaContent from "@/app/workstation/teacher/AgenticAreaContent";
+import LoungeContent from "@/app/workstation/teacher/LoungeContent";
+import FinancesContent from "@/app/workstation/teacher/FinancesContent";
 
 export default function TeacherWorkstation() {
     const params = useParams();
@@ -22,11 +28,10 @@ export default function TeacherWorkstation() {
     const currentModule = params.module as string;
 
     // 🔥 CORREÇÃO DO FLICKER: Inicialização Síncrona.
-    // Ele lê a memória instantaneamente antes de desenhar a tela, evitando o "pulo".
     const [isSidebarExpanded, setIsSidebarExpanded] = useState(() => {
         if (typeof window !== "undefined") {
             const saved = sessionStorage.getItem("zaeon-sidebar-expanded");
-            return saved !== "false"; // Por padrão é true, a menos que esteja explicitamente "false"
+            return saved !== "false";
         }
         return true;
     });
@@ -85,11 +90,11 @@ export default function TeacherWorkstation() {
 
     const renderModuleContent = () => {
         switch (currentModule) {
-            case "work": return <div className="p-8 text-black/80 dark:text-white/80 font-medium">Carregando painel de aulas e turmas...</div>;
-            case "research": return <div className="p-8 text-black/80 dark:text-white/80 font-medium">Carregando repositório de teses...</div>;
-            case "agentic": return <div className="p-8 text-black/80 dark:text-white/80 font-medium">Inicializando rede de agentes (Aura, Scholar)...</div>;
-            case "lounge": return <div className="p-8 text-black/80 dark:text-white/80 font-medium">Lounge dos professores em breve.</div>;
-            case "finances": return <div className="p-8 text-black/80 dark:text-white/80 font-medium">Módulo financeiro de repasses...</div>;
+            case "work": return <WorkAreaContent />;
+            case "research": return <ResearchAreaContent />;
+            case "agentic": return <AgenticAreaContent />;
+            case "lounge": return <LoungeContent />;
+            case "finances": return <FinancesContent />;
             case "profile": return <WorkStationContent isEmbedded={true} />;
             default: return <div className="p-8 text-black/80 dark:text-white/80 font-medium">Selecione um módulo no menu lateral.</div>;
         }
@@ -171,19 +176,17 @@ export default function TeacherWorkstation() {
                 </div>
             </aside>
 
-            {/* ÁREA DE CONTEÚDO PRINCIPAL (Também recebeu melhorias de Glass) */}
+            {/* ÁREA DE CONTEÚDO PRINCIPAL */}
             <main className={`flex-1 p-4 pl-0 transition-all duration-700 ease-in-out ${isFocusMode ? 'h-[calc(100vh-1rem)]' : 'h-[calc(100vh-6rem)]'}`}>
-                <div className="w-full h-full rounded-[2rem] bg-white/50 dark:bg-slate-950/40 backdrop-blur-3xl border border-white/40 dark:border-white/10 shadow-2xl overflow-hidden flex flex-col relative">
+                {/* O contêiner principal agora tem overflow-y-auto no elemento pai para habilitar a rolagem livre */}
+                <div className="w-full h-full rounded-[2rem] bg-white/50 dark:bg-slate-950/40 backdrop-blur-3xl border border-white/40 dark:border-white/10 shadow-2xl relative flex flex-col overflow-hidden">
 
                     {/* Linha de reflexo no topo do vidro */}
-                    <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-black/5 dark:via-cyan-400/20 to-transparent"></div>
+                    <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-black/5 dark:via-cyan-400/20 to-transparent z-10 pointer-events-none"></div>
 
-                    <header className="h-20 flex items-center px-8 border-b border-black/5 dark:border-white/5">
-                        <h1 className="text-lg font-semibold text-slate-800 dark:text-white/90 tracking-wide capitalize">
-                            {menuItems.find(i => i.id === currentModule)?.label || "Workstation"}
-                        </h1>
-                    </header>
-                    <div className="flex-1 overflow-y-auto custom-scrollbar">
+                    {/* O cabeçalho redundante foi removido. */}
+                    {/* A div abaixo gerencia o scroll corretamente. */}
+                    <div className="flex-1 overflow-y-auto custom-scrollbar relative z-0">
                         {renderModuleContent()}
                     </div>
                 </div>
