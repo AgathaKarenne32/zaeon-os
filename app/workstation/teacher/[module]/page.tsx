@@ -21,29 +21,34 @@ export default function TeacherWorkstation() {
     const router = useRouter();
     const currentModule = params.module as string;
 
-    const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
-    const [isFocusMode, setIsFocusMode] = useState(false);
-
-    // Efeito para recuperar o estado do Modo Foco e da Sidebar ao mudar de rota
-    useEffect(() => {
+    // 🔥 CORREÇÃO DO FLICKER: Inicialização Síncrona.
+    // Ele lê a memória instantaneamente antes de desenhar a tela, evitando o "pulo".
+    const [isSidebarExpanded, setIsSidebarExpanded] = useState(() => {
         if (typeof window !== "undefined") {
-            // Recupera o Modo Foco
-            const savedFocusMode = sessionStorage.getItem("zaeon-focus-mode") === "true";
-            if (savedFocusMode) {
-                setIsFocusMode(true);
-                document.body.classList.add("focus-mode-active");
-                window.dispatchEvent(new CustomEvent("zaeon-focus-mode", { detail: true }));
-            }
-
-            // Recupera o estado da Sidebar
-            const savedSidebarState = sessionStorage.getItem("zaeon-sidebar-expanded");
-            if (savedSidebarState !== null) {
-                setIsSidebarExpanded(savedSidebarState === "true");
-            }
+            const saved = sessionStorage.getItem("zaeon-sidebar-expanded");
+            return saved !== "false"; // Por padrão é true, a menos que esteja explicitamente "false"
         }
-    }, []);
+        return true;
+    });
 
-    // Função dedicada para alternar o Modo Foco garantindo persistência
+    const [isFocusMode, setIsFocusMode] = useState(() => {
+        if (typeof window !== "undefined") {
+            return sessionStorage.getItem("zaeon-focus-mode") === "true";
+        }
+        return false;
+    });
+
+    // Efeito para sincronizar as classes globais no body assim que a página carrega
+    useEffect(() => {
+        if (isFocusMode) {
+            document.body.classList.add("focus-mode-active");
+            window.dispatchEvent(new CustomEvent("zaeon-focus-mode", { detail: true }));
+        } else {
+            document.body.classList.remove("focus-mode-active");
+            window.dispatchEvent(new CustomEvent("zaeon-focus-mode", { detail: false }));
+        }
+    }, [isFocusMode]);
+
     const toggleFocusMode = () => {
         const newMode = !isFocusMode;
         setIsFocusMode(newMode);
@@ -60,7 +65,6 @@ export default function TeacherWorkstation() {
         }
     };
 
-    // Função dedicada para alternar a Sidebar garantindo persistência
     const toggleSidebar = () => {
         const newState = !isSidebarExpanded;
         setIsSidebarExpanded(newState);
@@ -92,27 +96,28 @@ export default function TeacherWorkstation() {
     };
 
     return (
-        <div className={`min-h-screen bg-[#f5f5f7] dark:bg-[#050505] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-200/50 dark:from-slate-900/20 via-transparent to-transparent flex transition-all duration-700 ease-in-out ${isFocusMode ? 'pt-2 fixed inset-0 z-50' : 'pt-24'}`}>
+        <div className={`min-h-screen bg-[#f5f5f7] dark:bg-[#03050a] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-200/50 dark:from-indigo-950/20 via-transparent to-transparent flex transition-all duration-700 ease-in-out ${isFocusMode ? 'pt-2 fixed inset-0 z-50' : 'pt-24'}`}>
 
-            {/* SIDEBAR - APPLE LIQUID GLASS */}
+            {/* SIDEBAR - APPLE LIQUID GLASS ATUALIZADA */}
             <aside
                 className={`
           relative flex flex-col justify-between m-4 rounded-[2rem]
-          bg-white/40 dark:bg-[#1a1a1a]/40 backdrop-blur-2xl 
-          border border-white/40 dark:border-white/5 
-          shadow-[0_8px_32px_0_rgba(0,0,0,0.05)] dark:shadow-[0_8px_32px_0_rgba(0,0,0,0.4)]
+          bg-white/40 dark:bg-slate-900/20 backdrop-blur-3xl 
+          bg-gradient-to-b from-white/40 to-white/10 dark:from-indigo-500/10 dark:to-cyan-500/5
+          border border-white/40 dark:border-white/10 dark:border-t-white/20
+          shadow-[0_8px_32px_0_rgba(0,0,0,0.05)] dark:shadow-[0_8px_32px_0_rgba(0,20,40,0.4)]
           transition-all duration-500 ease-[cubic-bezier(0.25,0.1,0.25,1)]
           ${isSidebarExpanded ? "w-64" : "w-20"}
           ${isFocusMode ? 'h-[calc(100vh-2rem)]' : 'h-[calc(100vh-7rem)]'}
         `}
             >
-                {/* Efeito de Reflexo Interno (Glassmorphism highlight) */}
-                <div className="absolute inset-0 rounded-[2rem] shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] pointer-events-none"></div>
+                {/* Efeito de Reflexo Interno Profundo */}
+                <div className="absolute inset-0 rounded-[2rem] shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)] dark:shadow-[inset_0_1px_2px_rgba(255,255,255,0.15)] pointer-events-none z-0"></div>
 
                 <div className="relative z-10">
                     <div className="h-20 flex items-center justify-center border-b border-black/5 dark:border-white/5">
                         <button
-                            onClick={toggleSidebar} // <-- Alterado aqui para usar a nova função
+                            onClick={toggleSidebar}
                             className="p-3 rounded-2xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-slate-600 dark:text-white/70 hover:text-black dark:hover:text-white"
                         >
                             {isSidebarExpanded ? <PanelLeftClose size={22} strokeWidth={1.5} /> : <PanelLeftOpen size={22} strokeWidth={1.5} />}
@@ -131,7 +136,7 @@ export default function TeacherWorkstation() {
                                     className={`
                                         w-full flex items-center p-3 rounded-2xl transition-all duration-300 group
                                         ${isActive
-                                            ? "bg-black/5 dark:bg-white/10 shadow-[inset_0_1px_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] text-black dark:text-white font-semibold"
+                                            ? "bg-black/5 dark:bg-white/10 shadow-[inset_0_1px_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)] text-black dark:text-white font-semibold"
                                             : "text-slate-500 dark:text-white/50 hover:bg-black/5 dark:hover:bg-white/5 hover:text-slate-800 dark:hover:text-white/90"}
                                         ${!isSidebarExpanded && "justify-center"}
                                     `}
@@ -166,12 +171,12 @@ export default function TeacherWorkstation() {
                 </div>
             </aside>
 
-            {/* ÁREA DE CONTEÚDO PRINCIPAL */}
+            {/* ÁREA DE CONTEÚDO PRINCIPAL (Também recebeu melhorias de Glass) */}
             <main className={`flex-1 p-4 pl-0 transition-all duration-700 ease-in-out ${isFocusMode ? 'h-[calc(100vh-1rem)]' : 'h-[calc(100vh-6rem)]'}`}>
-                <div className="w-full h-full rounded-[2rem] bg-white/50 dark:bg-[#121212]/40 backdrop-blur-3xl border border-white/40 dark:border-white/5 shadow-2xl overflow-hidden flex flex-col relative">
+                <div className="w-full h-full rounded-[2rem] bg-white/50 dark:bg-slate-950/40 backdrop-blur-3xl border border-white/40 dark:border-white/10 shadow-2xl overflow-hidden flex flex-col relative">
 
                     {/* Linha de reflexo no topo do vidro */}
-                    <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-black/5 dark:via-white/10 to-transparent"></div>
+                    <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-black/5 dark:via-cyan-400/20 to-transparent"></div>
 
                     <header className="h-20 flex items-center px-8 border-b border-black/5 dark:border-white/5">
                         <h1 className="text-lg font-semibold text-slate-800 dark:text-white/90 tracking-wide capitalize">
