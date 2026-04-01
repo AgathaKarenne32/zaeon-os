@@ -21,6 +21,10 @@ export default function WorkAreaContent() {
     const [isLoadingStudents, setIsLoadingStudents] = useState(false);
     const [removingId, setRemovingId] = useState<string | null>(null);
 
+    // Links Ativos
+    const [myLinks, setMyLinks] = useState<any[]>([]);
+    const [isLoadingLinks, setIsLoadingLinks] = useState(false);
+
     // Document Generation (Tarefas & Provas)
     const [docPrompt, setDocPrompt] = useState("");
     const [docContext, setDocContext] = useState("");
@@ -30,6 +34,7 @@ export default function WorkAreaContent() {
     const [showInviteModal, setShowInviteModal] = useState(false);
     const [inviteSubject, setInviteSubject] = useState("");
     const [inviteRoom, setInviteRoom] = useState("cyber");
+    const [inviteLocation, setInviteLocation] = useState("");
     const [inviteHour, setInviteHour] = useState("");
     const [inviteEndHour, setInviteEndHour] = useState("");
     const [inviteDays, setInviteDays] = useState<number[]>([]);
@@ -62,6 +67,15 @@ export default function WorkAreaContent() {
         finally { setIsLoadingStudents(false); }
     }, []);
 
+    const fetchMyLinks = useCallback(async () => {
+        setIsLoadingLinks(true);
+        try {
+            const res = await fetch(`/api/teacher/links?t=${Date.now()}`);
+            if (res.ok) setMyLinks(await res.json());
+        } catch (error) { console.error(error); }
+        finally { setIsLoadingLinks(false); }
+    }, []);
+
     const fetchMyDocuments = useCallback(async (type: string) => {
         try {
             const res = await fetch(`/api/teacher/documents?type=${type}&t=${Date.now()}`);
@@ -70,7 +84,10 @@ export default function WorkAreaContent() {
     }, []);
 
     useEffect(() => {
-        if (activeTab === 'alunos') fetchMyStudents();
+        if (activeTab === 'alunos') {
+            fetchMyStudents();
+            fetchMyLinks();
+        }
         else if (activeTab === 'tarefas' || activeTab === 'provas') {
             fetchMyDocuments(activeTab);
             setActiveDocument(null);
@@ -88,7 +105,7 @@ export default function WorkAreaContent() {
     };
 
     const handleGenerateInvite = async () => {
-        if (!inviteSubject || !inviteRoom) return;
+        if (!inviteSubject || !inviteRoom || !inviteLocation || !inviteHour || !inviteEndHour || inviteDays.length === 0) return;
         setIsGeneratingLink(true);
         try {
             const res = await fetch('/api/teacher/invite', {
@@ -97,14 +114,16 @@ export default function WorkAreaContent() {
                 body: JSON.stringify({
                     subject: inviteSubject,
                     room: inviteRoom,
-                    hour: inviteHour ? parseInt(inviteHour) : null,
-                    endHour: inviteEndHour ? parseInt(inviteEndHour) : null,
+                    location: inviteLocation,
+                    hour: parseInt(inviteHour),
+                    endHour: parseInt(inviteEndHour),
                     days: inviteDays
                 })
             });
             const data = await res.json();
             if (res.ok && data.inviteUrl) {
                 setGeneratedLink(data.inviteUrl);
+                fetchMyLinks(); // Recarrega os links após gerar um novo!
             }
         } catch (error) { console.error(error); }
         finally { setIsGeneratingLink(false); }
@@ -241,11 +260,11 @@ export default function WorkAreaContent() {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="flex flex-col gap-1">
                                             <label className="text-xs font-bold text-indigo-700 uppercase">Nome da Disciplina</label>
-                                            <input type="text" value={inviteSubject} onChange={e => setInviteSubject(e.target.value)} placeholder="Ex: Anatomia Sistêmica I" className="px-4 py-2 rounded-xl border border-indigo-200 outline-none focus:border-indigo-500 bg-white" />
+                                            <input type="text" value={inviteSubject} onChange={e => setInviteSubject(e.target.value)} placeholder="Ex: Anatomia Sistêmica I" className="px-4 py-2 rounded-xl border border-indigo-200 outline-none focus:border-indigo-500 bg-white text-slate-900" />
                                         </div>
                                         <div className="flex flex-col gap-1">
                                             <label className="text-xs font-bold text-indigo-700 uppercase">Estúdio/Módulo</label>
-                                            <select value={inviteRoom} onChange={e => setInviteRoom(e.target.value)} className="px-4 py-2 rounded-xl border border-indigo-200 outline-none focus:border-indigo-500 bg-white">
+                                            <select value={inviteRoom} onChange={e => setInviteRoom(e.target.value)} className="px-4 py-2 rounded-xl border border-indigo-200 outline-none focus:border-indigo-500 bg-white text-slate-900">
                                                 <option value="cyber">Cyber</option>
                                                 <option value="med">Med (Anatomia)</option>
                                                 <option value="quantic">Quantic</option>
@@ -254,14 +273,18 @@ export default function WorkAreaContent() {
                                                 <option value="bio">Biology</option>
                                             </select>
                                         </div>
+                                        <div className="flex flex-col gap-1 col-span-1 md:col-span-2">
+                                            <label className="text-xs font-bold text-indigo-700 uppercase">Local da Aula</label>
+                                            <input type="text" value={inviteLocation} onChange={e => setInviteLocation(e.target.value)} placeholder="Ex: Anfiteatro 3, Google Meet, etc." className="px-4 py-2 rounded-xl border border-indigo-200 outline-none focus:border-indigo-500 bg-white text-slate-900" />
+                                        </div>
                                         <div className="flex gap-4 col-span-1 md:col-span-2">
                                             <div className="flex flex-col gap-1 flex-1">
                                                 <label className="text-xs font-bold text-indigo-700 uppercase">Início (Hora ex: 8)</label>
-                                                <input type="number" value={inviteHour} onChange={e => setInviteHour(e.target.value)} placeholder="Opcional" className="px-4 py-2 rounded-xl border border-indigo-200 outline-none focus:border-indigo-500 bg-white" />
+                                                <input type="number" value={inviteHour} onChange={e => setInviteHour(e.target.value)} placeholder="Obrigatório" className="px-4 py-2 rounded-xl border border-indigo-200 outline-none focus:border-indigo-500 bg-white text-slate-900" />
                                             </div>
                                             <div className="flex flex-col gap-1 flex-1">
                                                 <label className="text-xs font-bold text-indigo-700 uppercase">Fim (Hora ex: 10)</label>
-                                                <input type="number" value={inviteEndHour} onChange={e => setInviteEndHour(e.target.value)} placeholder="Opcional" className="px-4 py-2 rounded-xl border border-indigo-200 outline-none focus:border-indigo-500 bg-white" />
+                                                <input type="number" value={inviteEndHour} onChange={e => setInviteEndHour(e.target.value)} placeholder="Obrigatório" className="px-4 py-2 rounded-xl border border-indigo-200 outline-none focus:border-indigo-500 bg-white text-slate-900" />
                                             </div>
                                         </div>
                                         <div className="col-span-1 md:col-span-2 flex flex-col gap-2">
@@ -275,7 +298,7 @@ export default function WorkAreaContent() {
                                             </div>
                                         </div>
                                     </div>
-                                    <button onClick={handleGenerateInvite} disabled={!inviteSubject || !inviteRoom || isGeneratingLink} className="mt-2 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50 transition-colors w-full flex items-center justify-center gap-2">
+                                    <button onClick={handleGenerateInvite} disabled={!inviteSubject || !inviteRoom || !inviteLocation || !inviteHour || !inviteEndHour || inviteDays.length === 0 || isGeneratingLink} className="mt-2 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50 transition-colors w-full flex items-center justify-center gap-2">
                                         {isGeneratingLink ? <Loader2 className="animate-spin" size={20} /> : <LinkIcon size={20} />} Gerar Link de Matrícula
                                     </button>
                                 </>
@@ -309,6 +332,44 @@ export default function WorkAreaContent() {
                     </button>
                 </motion.div>
             ))}
+
+            {/* Links Ativos Section */}
+            <div className="mt-8 border-t border-black/5 dark:border-white/10 pt-6">
+                <h4 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Meus Links de Matrícula Ativos</h4>
+                {isLoadingLinks ? (
+                    <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-cyan-500" /></div>
+                ) : myLinks.length === 0 ? (
+                    <div className="text-sm text-slate-400 italic">Nenhum link gerado no momento.</div>
+                ) : (
+                    <div className="flex flex-col gap-3">
+                        {myLinks.map(link => {
+                            const linkUrl = `${window.location.protocol}//${window.location.host}/join/${link.token}`;
+                            return (
+                                <div key={link.id} className="p-4 bg-white/60 dark:bg-black/30 border border-indigo-100 dark:border-indigo-500/20 rounded-xl flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="text-sm font-bold text-slate-800 dark:text-white">{link.subject}</span>
+                                            <span className="text-[10px] font-bold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-md uppercase">{link.room}</span>
+                                        </div>
+                                        <div className="text-xs text-slate-500 mb-2">
+                                            {link.location} • {link.hour}h até {link.endHour}h • Dias: {link.days.join(', ')}
+                                        </div>
+                                        <div className="text-xs font-mono text-slate-400 truncate max-w-sm md:max-w-md bg-white/50 dark:bg-black/20 px-2 py-1 rounded">
+                                            {linkUrl}
+                                        </div>
+                                    </div>
+                                    <button 
+                                        onClick={() => { navigator.clipboard.writeText(linkUrl); alert("Link copiado!"); }}
+                                        className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 rounded-lg text-xs font-bold transition-colors shadow-sm"
+                                    >
+                                        <Copy size={14} /> Copiar
+                                    </button>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
         </div>
     );
 

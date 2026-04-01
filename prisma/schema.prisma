@@ -84,6 +84,7 @@ model ClassLink {
   teacherId String   @db.ObjectId
   subject   String
   room      String   // Ex: 'cyber', 'med'
+  location  String?  // Ex: Sala 1B, Meet link
   hour      Int?
   endHour   Int?
   days      Int[]    @default([])

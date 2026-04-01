@@ -30,27 +30,18 @@ export default function JoinClassPage({ params }: { params: { token: string } })
 
     const handleJoin = async () => {
         if (!session) {
-            signIn();
+            signIn(undefined, { callbackUrl: window.location.href });
             return;
         }
         setJoining(true);
         try {
-            const res = await fetch('/api/student/join', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token })
-            });
-            const data = await res.json();
-            if (data.error) throw new Error(data.error);
-            
-            // Sucesso! Redireciona para o hub de aulas correspondente a sala.
+            // Apenas redireciona carregando o token. A matrícula oficial ocorrerá quando a agenda for preenchida!
             const roomTarget = classInfo?.room === 'humanity' ? 'humanities' : classInfo?.room;
-            router.push(`/study-rooms/${roomTarget || 'cyber'}/classes`);
-
+            router.push(`/study-rooms/${roomTarget || 'cyber'}?pendingInvite=${token}`);
         } catch (err: any) {
-            alert("Falha ao ingressar: " + err.message);
+            alert("Falha ao organizar ingresso: " + err.message);
         } finally {
-            setJoining(false);
+            // delay on hiding just to pretend loading
         }
     };
 

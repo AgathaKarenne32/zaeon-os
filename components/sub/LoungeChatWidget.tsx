@@ -33,7 +33,7 @@ export const LoungeChatWidget = ({ defaultOpen = false }: LoungeChatWidgetProps)
     const isTeacher = (session?.user as any)?.role === "teacher" || (session?.user as any)?.role === "professor";
 
     const [isOpen, setIsOpen] = useState(defaultOpen);
-    const [activeTab, setActiveTab] = useState<'friends' | 'requests'>('friends');
+    const [activeTab, setActiveTab] = useState<'friends' | 'requests' | 'teachers'>('friends');
     const [activeChat, setActiveChat] = useState<any | null>(null);
     const [messageInput, setMessageInput] = useState("");
 
@@ -42,6 +42,8 @@ export const LoungeChatWidget = ({ defaultOpen = false }: LoungeChatWidgetProps)
     // Estados da API & Notificações
     const [incomingRequest, setIncomingRequest] = useState<any>(null);
     const [friends, setFriends] = useState<any[]>([]);
+    const [teachers, setTeachers] = useState<any[]>([]);
+    const [students, setStudents] = useState<any[]>([]);
     const [chatHistory, setChatHistory] = useState<any[]>([]);
 
     // 🔥 NOVOS ESTADOS PARA MODO PROFESSOR - ABA ALUNOS
@@ -105,6 +107,8 @@ export const LoungeChatWidget = ({ defaultOpen = false }: LoungeChatWidgetProps)
                     const data = await res.json();
                     if (data.myId) setRealUserId(data.myId);
                     setFriends(data.friends || []);
+                    setTeachers(data.teachers || []);
+                    setStudents(data.students || []);
                 }
             } catch (error) { console.error("Erro ao buscar amigos:", error); }
         };
@@ -431,6 +435,14 @@ export const LoungeChatWidget = ({ defaultOpen = false }: LoungeChatWidgetProps)
                                     >
                                         Colegas
                                     </button>
+                                    {!isTeacher && (
+                                        <button
+                                            onClick={() => setActiveTab('teachers')}
+                                            className={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${activeTab === 'teachers' ? 'bg-white dark:bg-[#1e293b] text-cyan-600 dark:text-cyan-400 shadow-md border border-slate-200 dark:border-transparent' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-white/5'}`}
+                                        >
+                                            Professores
+                                        </button>
+                                    )}
                                     <button
                                         onClick={() => setActiveTab('requests')}
                                         className={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all relative ${activeTab === 'requests' ? 'bg-white dark:bg-[#1e293b] text-cyan-600 dark:text-cyan-400 shadow-md border border-slate-200 dark:border-transparent' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-white/5'}`}
@@ -494,6 +506,40 @@ export const LoungeChatWidget = ({ defaultOpen = false }: LoungeChatWidgetProps)
                                         </div>
                                     )}
 
+                                    {/* ====== ABA TEACHERS (ALUNO) ====== */}
+                                    {activeTab === 'teachers' && !isTeacher && (
+                                        <div className="flex flex-col gap-1 p-1">
+                                            {teachers.length > 0 ? (
+                                                teachers.map(teacher => (
+                                                    <div
+                                                        key={teacher.id}
+                                                        onClick={() => setActiveChat(teacher)}
+                                                        className="flex items-center gap-3 p-2.5 rounded-2xl hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer transition-colors group"
+                                                    >
+                                                        <div className="relative w-10 h-10 rounded-full border border-slate-300 dark:border-white/10 shadow-sm overflow-hidden bg-slate-200 dark:bg-black shrink-0">
+                                                            {teacher.image ? (
+                                                                <Image src={teacher.image} alt={teacher.name} fill sizes="40px" className="object-cover" />
+                                                            ) : (
+                                                                <AcademicCapIcon className="w-full h-full p-2 text-slate-400" />
+                                                            )}
+                                                        </div>
+                                                        <div className="flex flex-col flex-1 overflow-hidden">
+                                                            <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors truncate">Prof. {teacher.name}</span>
+                                                            <span className="text-[9px] text-slate-400 dark:text-slate-500 truncate">Workspace Tutor</span>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <div className="flex flex-col items-center justify-center p-6 mt-4 text-center opacity-60">
+                                                    <AcademicCapIcon className="w-8 h-8 text-slate-400 mb-2" />
+                                                    <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                                                        Você ainda não possui nenhum professor vinculado. Ingresse numa aula!
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
                                     {/* ====== ABA REQUESTS/ALUNOS ====== */}
                                     {activeTab === 'requests' && (
                                         <div className="flex flex-col gap-2 p-1">
@@ -512,55 +558,84 @@ export const LoungeChatWidget = ({ defaultOpen = false }: LoungeChatWidgetProps)
                                                         />
                                                     </div>
 
-                                                    {/* Resultados */}
-                                                    {isStudentSearching ? (
+                                                    {/* Resultados Search */}
+                                                    {isStudentSearching && (
                                                         <div className="flex items-center justify-center py-6">
                                                             <div className="w-5 h-5 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
                                                         </div>
-                                                    ) : studentSearchResults.length > 0 ? (
-                                                        studentSearchResults.map(student => (
-                                                            <div key={student.id} className="flex items-center gap-3 p-2 rounded-2xl bg-white dark:bg-black/20 border border-slate-200 dark:border-white/5 shadow-sm">
-                                                                <div className="relative w-9 h-9 rounded-full overflow-hidden border border-slate-300 dark:border-white/10 bg-slate-200 dark:bg-black shrink-0">
-                                                                    {student.image ? (
-                                                                        <Image src={student.image} alt={student.name || ""} fill sizes="36px" className="object-cover" />
+                                                    )}
+                                                    
+                                                    {!isStudentSearching && studentSearchQuery.length >= 2 && studentSearchResults.length > 0 && (
+                                                        <div className="mb-2 border-b border-white/10 pb-2">
+                                                            <span className="text-[9px] uppercase tracking-widest text-slate-400 mb-2 block px-2">Resultados da Busca</span>
+                                                            {studentSearchResults.map(student => (
+                                                                <div key={student.id} className="flex items-center gap-3 p-2 rounded-xl bg-white dark:bg-black/20 border border-slate-200 dark:border-white/5 shadow-sm mb-1">
+                                                                    <div className="relative w-8 h-8 rounded-full overflow-hidden border border-slate-300 dark:border-white/10 bg-slate-200 dark:bg-black shrink-0">
+                                                                        {student.image ? (
+                                                                            <Image src={student.image} alt={student.name || ""} fill sizes="32px" className="object-cover" />
+                                                                        ) : (
+                                                                            <UserIcon className="w-full h-full p-1.5 text-slate-400" />
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="flex flex-col flex-1 overflow-hidden">
+                                                                        <span className="text-[11px] font-bold text-slate-800 dark:text-white truncate">{student.name}</span>
+                                                                    </div>
+                                                                    {student.isAdded ? (
+                                                                        <span className="text-[8px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest px-2 py-1 bg-emerald-50 dark:bg-emerald-500/10 rounded-lg shrink-0">
+                                                                            Ok
+                                                                        </span>
                                                                     ) : (
-                                                                        <UserIcon className="w-full h-full p-1.5 text-slate-400" />
+                                                                        <button
+                                                                            onClick={() => handleAddStudent(student.id)}
+                                                                            disabled={addingStudentId === student.id}
+                                                                            className="p-1 px-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 text-white transition-colors shadow-sm shrink-0 flex items-center gap-1"
+                                                                        >
+                                                                            {addingStudentId === student.id ? (
+                                                                                <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                                                            ) : (
+                                                                                <><UserPlusIcon className="w-3 h-3" /> <span className="text-[9px] uppercase font-bold tracking-widest">Add</span></>
+                                                                            )}
+                                                                        </button>
                                                                     )}
                                                                 </div>
-                                                                <div className="flex flex-col flex-1 overflow-hidden">
-                                                                    <span className="text-[11px] font-bold text-slate-800 dark:text-white truncate">{student.name}</span>
-                                                                    <span className="text-[8px] text-slate-400 dark:text-white/40 uppercase tracking-widest truncate">{student.course || "Sem curso"}</span>
-                                                                </div>
-                                                                {student.isAdded ? (
-                                                                    <span className="text-[8px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest px-2 py-1 bg-emerald-50 dark:bg-emerald-500/10 rounded-lg shrink-0">
-                                                                        Adicionado
-                                                                    </span>
-                                                                ) : (
-                                                                    <button
-                                                                        onClick={() => handleAddStudent(student.id)}
-                                                                        disabled={addingStudentId === student.id}
-                                                                        className="p-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 text-white transition-colors shadow-sm shrink-0"
-                                                                    >
-                                                                        {addingStudentId === student.id ? (
-                                                                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                                                        ) : (
-                                                                            <UserPlusIcon className="w-4 h-4" />
-                                                                        )}
-                                                                    </button>
-                                                                )}
-                                                            </div>
-                                                        ))
-                                                    ) : studentSearchQuery.length >= 2 ? (
-                                                        <div className="flex flex-col items-center justify-center p-6 mt-2 text-center opacity-60">
-                                                            <UsersIcon className="w-7 h-7 text-slate-400 mb-2" />
-                                                            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">Nenhum aluno encontrado.</p>
+                                                            ))}
                                                         </div>
-                                                    ) : (
-                                                        <div className="flex flex-col items-center justify-center p-6 mt-2 text-center opacity-60">
-                                                            <AcademicCapIcon className="w-7 h-7 text-slate-400 mb-2" />
-                                                            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
-                                                                Digite o nome de um aluno para buscá-lo na base de dados.
-                                                            </p>
+                                                    )}
+
+                                                    {/* Meus Alunos Adicionados */}
+                                                    {!isStudentSearching && studentSearchQuery.length < 2 && (
+                                                        <div className="mt-2">
+                                                            <span className="text-[9px] uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2 block px-2">
+                                                                Meus Alunos
+                                                            </span>
+                                                            {students.length > 0 ? (
+                                                                students.map(student => (
+                                                                    <div
+                                                                        key={student.id}
+                                                                        onClick={() => setActiveChat(student)}
+                                                                        className="flex items-center gap-3 p-2.5 rounded-2xl hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer transition-colors group mb-1"
+                                                                    >
+                                                                        <div className="relative w-10 h-10 rounded-full border border-slate-300 dark:border-white/10 shadow-sm overflow-hidden bg-slate-200 dark:bg-black shrink-0">
+                                                                            {student.image ? (
+                                                                                <Image src={student.image} alt={student.name} fill sizes="40px" className="object-cover" />
+                                                                            ) : (
+                                                                                <UserIcon className="w-full h-full p-2 text-slate-400" />
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="flex flex-col flex-1 overflow-hidden">
+                                                                            <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors truncate">{student.name}</span>
+                                                                            <span className="text-[9px] text-slate-400 dark:text-slate-500 truncate">Aluno Ativo</span>
+                                                                        </div>
+                                                                    </div>
+                                                                ))
+                                                            ) : (
+                                                                <div className="flex flex-col items-center justify-center p-6 mt-2 text-center opacity-60">
+                                                                    <AcademicCapIcon className="w-7 h-7 text-slate-400 mb-2" />
+                                                                    <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                                                                        Nenhum aluno vinculado. Digite o nome acima para buscar.
+                                                                    </p>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     )}
                                                 </>

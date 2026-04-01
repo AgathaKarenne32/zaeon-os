@@ -17,10 +17,10 @@ export async function POST(req: Request) {
         }
 
         const data = await req.json();
-        const { subject, room, hour, endHour, days } = data;
+        const { subject, room, location, hour, endHour, days } = data;
 
-        if (!subject || !room) {
-            return NextResponse.json({ error: "Subject e Room são obrigatórios" }, { status: 400 });
+        if (!subject || !room || !location || hour == null || endHour == null || !days || days.length === 0) {
+            return NextResponse.json({ error: "Todos os campos (Subject, Room, Location, Hour, EndHour, Days) são obrigatórios" }, { status: 400 });
         }
 
         const token = crypto.randomBytes(16).toString('hex');
@@ -32,9 +32,10 @@ export async function POST(req: Request) {
                 teacherId: teacher.id,
                 subject,
                 room,
-                hour: hour || null,
-                endHour: endHour || null,
-                days: days || []
+                location,
+                hour,
+                endHour,
+                days
             }
         });
 

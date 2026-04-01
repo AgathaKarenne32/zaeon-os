@@ -23,6 +23,10 @@ const nextConfig = {
             {
                 protocol: 'https',
                 hostname: '**.googleusercontent.com', // Wildcard para outras variantes do Google
+            },
+            {
+                protocol: 'https',
+                hostname: 'cdn.simpleicons.org', 
             }
         ],
         // Otimização: permite que o Next.js redimensione imagens de qualquer lugar se necessário

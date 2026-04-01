@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSession } from 'next-auth/react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import NextImage from 'next/image';
 
 // --- INITIAL DATA ---
@@ -505,6 +506,11 @@ export const getThemeClasses = (color: string) => {
 export default function ClassesView({ room, themeColor = 'cyan' }: ClassesViewProps) {
     const t = getThemeClasses(themeColor);
     const { data: session, status } = useSession();
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const pendingInvite = searchParams.get('pendingInvite');
+    
+    const [invitedClass, setInvitedClass] = useState<any>(null);
     const [isDataLoaded, setIsDataLoaded] = useState(false);
     
     // STATE - Agenda e Módulos
@@ -561,6 +567,17 @@ export default function ClassesView({ room, themeColor = 'cyan' }: ClassesViewPr
     useEffect(() => {
         if (zaeonChatScrollRef.current) zaeonChatScrollRef.current.scrollTop = zaeonChatScrollRef.current.scrollHeight;
     }, [liquidChatHistory]);
+
+    // LOAD PENDING INVITE
+    useEffect(() => {
+        if (!pendingInvite) return;
+        fetch('/api/student/join?token=' + pendingInvite)
+            .then(res => res.json())
+            .then(data => {
+                if (!data.error) setInvitedClass(data);
+            })
+            .catch(console.error);
+    }, [pendingInvite]);
 
     // LOAD DATA
     useEffect(() => {
@@ -746,6 +763,7 @@ export default function ClassesView({ room, themeColor = 'cyan' }: ClassesViewPr
 
         const finalizedClass = { 
             ...selectedClass, 
+            location: selectedClass.location || "Online",
             hour: start, 
             endHour: end, 
             duration: end - start,
@@ -760,6 +778,26 @@ export default function ClassesView({ room, themeColor = 'cyan' }: ClassesViewPr
                 return [...prevClasses, finalizedClass];
             }
         });
+
+        // VALIDAR MATRÍCULA SE HOUVER INVITE
+        if (invitedClass && pendingInvite) {
+            const sameSubject = finalizedClass.name.toLowerCase().trim() === invitedClass.subject.toLowerCase().trim();
+            const sameDay = finalizedClass.days.some((d: number) => invitedClass.days.includes(d));
+            const sameHour = finalizedClass.hour === Number(invitedClass.hour);
+            
+            // Opcional: checar room ou location, mas isso já basta pra intenção.
+            if (sameSubject && sameDay && sameHour) {
+                fetch('/api/student/confirm-join', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: pendingInvite })
+                }).then(() => {
+                    alert("Aula Validada! Vínculo com professor estabelecido. O Chat Seguro foi liberado.");
+                    setInvitedClass(null);
+                    router.replace(`/study-rooms/${room}`);
+                }).catch(console.error);
+            }
+        }
         
         setSelectedClass(finalizedClass);
         setHasUnsavedChanges(false);
@@ -880,6 +918,41 @@ export default function ClassesView({ room, themeColor = 'cyan' }: ClassesViewPr
     return (
         <div ref={constraintsRef} onClick={handleBackgroundClick} className="relative min-h-screen w-full flex flex-col items-center p-8 bg-transparent font-sans selection:bg-cyan-500/30 text-slate-900 dark:text-white transition-colors duration-500 overflow-x-hidden">
             <div className="h-10 pointer-events-none"></div>
+
+            {/* CARTÃO DE COLA (PENDING INVITE) */}
+            <AnimatePresence>
+                {invitedClass && pendingInvite && (
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.9, y: -20 }}
+                        className="w-full max-w-[1400px] mx-auto mb-8 z-30"
+                    >
+                        <div className={`w-full bg-[#0a0a0a]/90 backdrop-blur-3xl border ${t.border} p-6 rounded-[2rem] shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6`}>
+                            <div className="flex items-center gap-4">
+                                <div className={`p-4 ${t.bg} rounded-2xl ${t.text}`}>
+                                    <Sparkles size={32} className="animate-pulse" />
+                                </div>
+                                <div>
+                                    <h3 className={`text-xs font-black uppercase tracking-[0.2em] ${t.text} mb-1 drop-shadow-md`}>Matrícula Pendente</h3>
+                                    <p className="text-[11px] font-medium text-white/70 max-w-sm leading-relaxed">
+                                        Para oficializar sua entrada na turma de <strong className="text-white">{invitedClass.teacherName}</strong>, use o botão <strong>+</strong> na agenda abaixo e registre <strong>exatamente os mesmos dados</strong> deste cartão.
+                                    </p>
+                                </div>
+                            </div>
+                            <div className={`flex flex-wrap items-center gap-4 lg:gap-8 bg-black/50 p-5 rounded-[1.5rem] border ${t.border}`}>
+                                <div className="flex flex-col"><span className="text-[9px] font-bold uppercase tracking-widest text-white/40 mb-1">Disciplina</span><strong className="text-white text-sm">{invitedClass.subject}</strong></div>
+                                <div className="hidden sm:block w-px h-8 bg-white/10" />
+                                <div className="flex flex-col"><span className="text-[9px] font-bold uppercase tracking-widest text-white/40 mb-1">Dias</span><strong className="text-white text-sm">{invitedClass.days.map((d:number) => ["Seg","Ter","Qua","Qui","Sex","Sab","Dom"][d-1]).join(', ')}</strong></div>
+                                <div className="hidden sm:block w-px h-8 bg-white/10" />
+                                <div className="flex flex-col"><span className="text-[9px] font-bold uppercase tracking-widest text-white/40 mb-1">Horário</span><strong className="text-white text-sm">{invitedClass.hour}h <span className="text-white/30 mx-1">até</span> {invitedClass.endHour}h</strong></div>
+                                <div className="hidden sm:block w-px h-8 bg-white/10" />
+                                <div className="flex flex-col"><span className="text-[9px] font-bold uppercase tracking-widest text-white/40 mb-1">Local</span><strong className="text-white text-sm">{invitedClass.location || "Não especificado"}</strong></div>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             <div className="flex justify-start items-start gap-8 flex-wrap z-20 relative w-full max-w-[1400px] mx-auto pb-10 min-h-[400px]">
 

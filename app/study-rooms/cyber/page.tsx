@@ -228,7 +228,6 @@ export default function ZaeonComputerScienceRoom() {
 
             <motion.div className="absolute inset-0 z-0 pointer-events-none" animate={{ opacity: isLoaded ? 1 : 0 }} transition={{ duration: 1 }}>
                 <div className="absolute top-16 bottom-0 left-0 w-1/3 border-r border-slate-300 dark:border-white/5 bg-transparent">
-                    <Image src="/assets/computer.png" alt="Cyber Room" fill className="object-cover object-center opacity-80" priority />
                     <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-[#e2e8f0] dark:from-[#010816] to-transparent"></div>
                 </div>
             </motion.div>

@@ -223,7 +223,7 @@ export default function ZaeonMedLabRoom() {
                 />
                 
                 <div className="absolute top-16 bottom-0 left-0 w-1/3 border-r border-rose-200 dark:border-white/5 bg-transparent">
-                    <Image src="/assets/medlab-room.png" alt="MedLab" fill className="object-cover object-center opacity-30 dark:opacity-60 mix-blend-multiply dark:mix-blend-overlay" priority />
+
                     <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-slate-50 dark:from-zinc-950 to-transparent"></div>
                 </div>
             </motion.div>
