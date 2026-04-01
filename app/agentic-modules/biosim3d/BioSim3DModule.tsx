@@ -15,6 +15,7 @@ import { ROOM_POLICY } from './accessPolicy';
 import { buildVoxels } from './voxelGenerators';
 import type { SavedSession } from './SessionManager';
 import type { Annotation } from './PDAOverlay';
+import AnatomyCanvas, { type AnatomyAsset } from './AnatomyCanvas';
 
 // ─── Dynamic imports (Three.js + complex components can't SSR) ───────────────
 const VoxelCanvas = dynamic(() => import('./VoxelCanvas'), {
@@ -103,7 +104,7 @@ export default function BioSim3DModule({ courseRoom = DEFAULT_ROOM }: BioSim3DMo
   const [error, setError] = useState<string | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
   const [outOfScope, setOutOfScope] = useState<string | null>(null);
-  const [dataSource, setDataSource] = useState<'generator' | 'generator-ai' | 'pubchem' | 'rcsb_pdb' | null>(null);
+  const [dataSource, setDataSource] = useState<'generator' | 'generator-ai' | 'pubchem' | 'rcsb_pdb' | 'anatomy_glb' | null>(null);
   const [realMetadata, setRealMetadata] = useState<Record<string,any> | null>(null);
 
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -119,12 +120,14 @@ export default function BioSim3DModule({ courseRoom = DEFAULT_ROOM }: BioSim3DMo
   type RoomState = {
     scene: SceneDescriptor | null;
     voxels: VoxelBlock[];
-    dataSource: 'generator' | 'generator-ai' | 'pubchem' | 'rcsb_pdb' | null;
+    dataSource: 'generator' | 'generator-ai' | 'pubchem' | 'rcsb_pdb' | 'anatomy_glb' | null;
     metadata: Record<string,any> | null;
     prompt: string;
     sessionId: string | null;
+    anatomyAssets: AnatomyAsset[];
   };
   const [roomStates, setRoomStates] = useState<Record<string, RoomState>>({});
+  const [anatomyAssets, setAnatomyAssets] = useState<AnatomyAsset[]>([]);
 
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -136,6 +139,7 @@ export default function BioSim3DModule({ courseRoom = DEFAULT_ROOM }: BioSim3DMo
     if (presets.length > 0 && !activeScene) {
       applyScene(presets[0].descriptor, undefined);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeRoom, presets, activeScene]);
 
   const handleRoomChange = useCallback((newRoom: string) => {
@@ -149,7 +153,8 @@ export default function BioSim3DModule({ courseRoom = DEFAULT_ROOM }: BioSim3DMo
         dataSource,
         metadata: realMetadata,
         prompt,
-        sessionId: currentSessionId
+        sessionId: currentSessionId,
+        anatomyAssets,
       }
     }));
 
@@ -162,6 +167,7 @@ export default function BioSim3DModule({ courseRoom = DEFAULT_ROOM }: BioSim3DMo
         setRealMetadata(saved.metadata);
         setPrompt(saved.prompt);
         setCurrentSessionId(saved.sessionId);
+        setAnatomyAssets(saved.anatomyAssets || []);
       } else {
         setActiveScene(null);
         setVoxels([]);
@@ -169,6 +175,7 @@ export default function BioSim3DModule({ courseRoom = DEFAULT_ROOM }: BioSim3DMo
         setRealMetadata(null);
         setPrompt('');
         setCurrentSessionId(null);
+        setAnatomyAssets([]);
       }
       return prev;
     });
@@ -176,7 +183,7 @@ export default function BioSim3DModule({ courseRoom = DEFAULT_ROOM }: BioSim3DMo
     setActiveRoom(newRoom);
     setAiError(null);
     setOutOfScope(null);
-  }, [activeRoom, activeScene, voxels, dataSource, realMetadata, prompt, currentSessionId]);
+  }, [activeRoom, activeScene, voxels, dataSource, realMetadata, prompt, currentSessionId, anatomyAssets]);
 
   // Rebuild voxels when scene changes (only if it wasn't pre-populated by AI/APIs)
   useEffect(() => {
@@ -291,7 +298,7 @@ export default function BioSim3DModule({ courseRoom = DEFAULT_ROOM }: BioSim3DMo
     setAiError(null);
   };
 
-  const removeImage = () => {
+  const removeImage = useCallback(() => {
     setSelectedImage(null);
     if (imagePreview) {
       URL.revokeObjectURL(imagePreview);
@@ -300,7 +307,7 @@ export default function BioSim3DModule({ courseRoom = DEFAULT_ROOM }: BioSim3DMo
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-  };
+  }, [imagePreview]);
 
   // ─── AI prompt updated to use FormData ───────────────────────────────────────
   const handlePromptSubmit = useCallback(async () => {
@@ -339,10 +346,17 @@ export default function BioSim3DModule({ courseRoom = DEFAULT_ROOM }: BioSim3DMo
       }
       const data = await res.json();
 
-      // ── Real coordinates from PubChem, PDB, or AI generative vision ────────
-      if (data.voxels && data.voxels.length > 0) {
-        setVoxels(data.voxels);
-        setDataSource(data.source);
+      // ── Real coordinates from PubChem, PDB, Anatomy GLB or AI generative vision ────────
+      if ((data.voxels && data.voxels.length > 0) || data.type === 'anatomy_glb') {
+        if (data.type === 'anatomy_glb') {
+           setAnatomyAssets(data.assets || []);
+           setVoxels([]);
+        } else {
+           setVoxels(data.voxels);
+           setAnatomyAssets([]);
+        }
+
+        setDataSource(data.source || data.type);
         setRealMetadata(data.metadata ?? null);
         
         if (data.descriptor) {
@@ -372,7 +386,7 @@ export default function BioSim3DModule({ courseRoom = DEFAULT_ROOM }: BioSim3DMo
     } finally {
       setIsLoading(false);
     }
-  }, [prompt, selectedImage, activeRoom, isLoading, applyScene, autoSave]);
+  }, [prompt, selectedImage, activeRoom, isLoading, applyScene, autoSave, removeImage]);
 
   const handleAddAnnotation = useCallback(async (text: string, color: string) => {
     const res = await fetch('/api/agentic/biosim/annotations', {
@@ -440,7 +454,7 @@ export default function BioSim3DModule({ courseRoom = DEFAULT_ROOM }: BioSim3DMo
         <div className="flex items-center gap-2 flex-wrap justify-end">
           <SaveIndicator status={saveStatus} />
           <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded-full ${roomColor.pill}`}>
-            {voxelCount.toLocaleString()} pt
+            {dataSource === 'anatomy_glb' ? `${anatomyAssets.length} obj` : `${voxelCount.toLocaleString()} pt`}
           </span>
           <SessionManager
             currentSessionId={currentSessionId}
@@ -580,7 +594,13 @@ export default function BioSim3DModule({ courseRoom = DEFAULT_ROOM }: BioSim3DMo
           </div>
         )}
 
-        {!isLoading && !error && voxels.length > 0 && (
+        {!isLoading && !error && dataSource === 'anatomy_glb' && anatomyAssets.length > 0 && (
+          <div className="absolute inset-0 z-0">
+            <AnatomyCanvas assets={anatomyAssets} autoRotate={autoRotate} />
+          </div>
+        )}
+
+        {!isLoading && !error && dataSource !== 'anatomy_glb' && voxels.length > 0 && (
           <VoxelCanvas
             voxels={voxels}
             backgroundColor="#030014"
@@ -630,8 +650,8 @@ export default function BioSim3DModule({ courseRoom = DEFAULT_ROOM }: BioSim3DMo
                   <p className="text-sm font-black text-white">{activeScene.title}</p>
                   <span className={`text-[8px] font-bold uppercase tracking-widest ${roomColor.text}`}>{activeScene.renderMode}</span>
                 </div>
-                <span className={`text-[8px] font-bold uppercase tracking-widest px-2 py-1 rounded-full ${roomColor.pill}`}>
-                  {voxelCount.toLocaleString()} pts
+                  <span className={`text-[8px] font-bold uppercase tracking-widest px-2 py-1 rounded-full ${roomColor.pill}`}>
+                  {dataSource === 'anatomy_glb' ? `${anatomyAssets.length} models` : `${voxelCount.toLocaleString()} pts`}
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 dark:text-white/60 leading-relaxed">{activeScene.description}</p>

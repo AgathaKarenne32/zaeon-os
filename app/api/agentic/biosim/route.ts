@@ -18,6 +18,8 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/src/lib/auth';
 import { VertexAI } from '@google-cloud/vertexai';
+import fs from 'fs';
+import path from 'path';
 import {
   ROOM_POLICY,
   buildPolicyContext,
@@ -118,6 +120,42 @@ async function fetchPDB(searchOrId: string, baseUrl: string) {
   return res.ok ? res.json() : null;
 }
 
+// ─── Local JSON Anatomy RAG ───────────────────────────────────────────────────
+function findAnatomy(query: string) {
+  try {
+    const indexPath = path.join(process.cwd(), 'public/assets/anatomy/anatomy-index.json');
+    const groupsPath = path.join(process.cwd(), 'public/assets/anatomy/groups.json');
+    if (!fs.existsSync(indexPath) || !fs.existsSync(groupsPath)) return null;
+
+    const indexStr = fs.readFileSync(indexPath, 'utf8');
+    const groupsStr = fs.readFileSync(groupsPath, 'utf8');
+    const index = JSON.parse(indexStr);
+    const groups = JSON.parse(groupsStr);
+
+    const q = query.toLowerCase().trim();
+    
+    // Check groups first
+    for (const [groupId, group] of Object.entries<any>(groups)) {
+      const syns = [...(group.synonyms_pt || []), ...(group.synonyms_en || []), group.canonical_name];
+      if (syns.some(s => q.includes(s.toLowerCase()))) {
+        const assets = index.filter((a: any) => group.assets.includes(a.id));
+        return { type: 'anatomy_glb', source: 'anatomy_glb', assets, title: group.canonical_name };
+      }
+    }
+    
+    // Check individuals
+    for (const item of index) {
+      const syns = [...(item.synonyms_pt || []), ...(item.synonyms_en || []), item.canonical_name];
+      if (syns.some(s => q.includes(s.toLowerCase()))) {
+        return { type: 'anatomy_glb', source: 'anatomy_glb', assets: [item], title: item.canonical_name };
+      }
+    }
+  } catch (e) {
+    console.error('[biosim] Anatomy index read error', e);
+  }
+  return null;
+}
+
 // ─── Main handler ─────────────────────────────────────────────────────────────
 export async function POST(req: Request) {
   try {
@@ -158,6 +196,25 @@ export async function POST(req: Request) {
       imagePart = {
         inlineData: { data: base64, mimeType: imageFile.type },
       };
+    }
+
+    // ── Pre-flight: Anatomy Database (Med Room) ─────────────────────────────
+    // Intercept standard NLP calls for physical GLB loaded assets
+    if (courseRoom === 'med' && prompt) {
+      const anatomyMatch = findAnatomy(prompt);
+      if (anatomyMatch) {
+         return NextResponse.json({
+           ...anatomyMatch,
+           descriptor: {
+             renderMode: 'anatomy',
+             title: anatomyMatch.title,
+             description: `Modelo anatômico preciso 3D de alta fidelidade (${anatomyMatch.assets.length} malha(s) nativa(s)).`,
+             hint: 'Carregamento estrutural nativo via Open Anatomy GLB. Controle a câmera para visualizar.',
+             parameters: {},
+             accentColor: '#fb7185',
+           }
+         });
+      }
     }
 
     // ── Step 1: Validate room ────────────────────────────────────────────────

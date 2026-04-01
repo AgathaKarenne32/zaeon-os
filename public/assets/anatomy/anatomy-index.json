@@ -1,0 +1,67 @@
+[
+  {
+    "id": "bone_humerus_l",
+    "canonical_name": "Left Humerus",
+    "synonyms_pt": ["úmero esquerdo", "osso do braço esquerdo", "umero", "úmero", "osso do braço"],
+    "synonyms_en": ["left arm bone", "humerus", "left humerus"],
+    "source": "ZaeonMock",
+    "category": "bone",
+    "body_region": "upper_limb",
+    "system": "skeletal",
+    "file_glb": "/assets/anatomy/geometry/humerus_l.glb",
+    "unit_scale": 1.0,
+    "position": [-0.2, 1.2, 0]
+  },
+  {
+    "id": "bone_radius_l",
+    "canonical_name": "Left Radius",
+    "synonyms_pt": ["rádio esquerdo", "osso rádio", "radio", "rádio"],
+    "synonyms_en": ["left radius bone", "radius"],
+    "source": "ZaeonMock",
+    "category": "bone",
+    "body_region": "upper_limb",
+    "system": "skeletal",
+    "file_glb": "/assets/anatomy/geometry/radius_l.glb",
+    "unit_scale": 1.0,
+    "position": [-0.2, 0.8, -0.05]
+  },
+  {
+    "id": "bone_ulna_l",
+    "canonical_name": "Left Ulna",
+    "synonyms_pt": ["ulna esquerda", "osso ulna", "ulna"],
+    "synonyms_en": ["left ulna bone", "ulna"],
+    "source": "ZaeonMock",
+    "category": "bone",
+    "body_region": "upper_limb",
+    "system": "skeletal",
+    "file_glb": "/assets/anatomy/geometry/ulna_l.glb",
+    "unit_scale": 1.0,
+    "position": [-0.15, 0.8, 0.05]
+  },
+  {
+    "id": "bone_skull",
+    "canonical_name": "Skull",
+    "synonyms_pt": ["crânio", "osso da cabeça", "cranio"],
+    "synonyms_en": ["skull", "head bone", "cranium"],
+    "source": "ZaeonMock",
+    "category": "bone",
+    "body_region": "head",
+    "system": "skeletal",
+    "file_glb": "/assets/anatomy/geometry/skull.glb",
+    "unit_scale": 1.0,
+    "position": [0, 1.7, 0]
+  },
+  {
+    "id": "artery_brachial_l",
+    "canonical_name": "Left Brachial Artery",
+    "synonyms_pt": ["artéria braquial esquerda", "arteria do braço", "sangue braquial", "artérias do braço", "veias do braço"],
+    "synonyms_en": ["left brachial artery", "upper arm artery"],
+    "source": "ZaeonMock",
+    "category": "artery",
+    "body_region": "upper_limb",
+    "system": "cardiovascular",
+    "file_glb": "/assets/anatomy/geometry/artery_brachial_l.glb",
+    "unit_scale": 1.0,
+    "position": [-0.18, 1.2, 0.02]
+  }
+]

@@ -1,0 +1,14 @@
+{
+  "group_arm_bones_l": {
+    "canonical_name": "Bones of Left Arm",
+    "synonyms_pt": ["ossos do braço esquerdo", "braço esquerdo", "osso do braço", "ossos do braço"],
+    "synonyms_en": ["left arm bones", "left arm", "arm bones"],
+    "assets": ["bone_humerus_l", "bone_radius_l", "bone_ulna_l"]
+  },
+  "group_upper_limb_vasculature_l": {
+    "canonical_name": "Left Upper Limb Vasculature",
+    "synonyms_pt": ["artérias do braço", "veias do braço", "estruturas sanguineas do braço", "vasos do braço"],
+    "synonyms_en": ["left upper limb vessels", "arm vasculature", "arm arteries"],
+    "assets": ["artery_brachial_l"]
+  }
+}

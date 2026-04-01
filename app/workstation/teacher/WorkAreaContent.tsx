@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import {
     Users, FileText, CheckCircle, MessageSquare, Link as LinkIcon, UploadCloud,
-    Sparkles, ArrowRight, Loader2, Trash2, ExternalLink, Printer, Plus, RefreshCw, Save, Send, Edit2
+    Sparkles, ArrowRight, Loader2, Trash2, ExternalLink, Printer, Plus, RefreshCw, Save, Send, Edit2, X, Copy
 } from "lucide-react";
 
 type StudentRecord = { id: string; name: string | null; image: string | null; course: string | null; };
@@ -25,6 +25,16 @@ export default function WorkAreaContent() {
     const [docPrompt, setDocPrompt] = useState("");
     const [docContext, setDocContext] = useState("");
     const [isGeneratingDoc, setIsGeneratingDoc] = useState(false);
+
+    // Invite Link Generation (Novo)
+    const [showInviteModal, setShowInviteModal] = useState(false);
+    const [inviteSubject, setInviteSubject] = useState("");
+    const [inviteRoom, setInviteRoom] = useState("cyber");
+    const [inviteHour, setInviteHour] = useState("");
+    const [inviteEndHour, setInviteEndHour] = useState("");
+    const [inviteDays, setInviteDays] = useState<number[]>([]);
+    const [generatedLink, setGeneratedLink] = useState<string | null>(null);
+    const [isGeneratingLink, setIsGeneratingLink] = useState(false);
     const [activeDocument, setActiveDocument] = useState<any>(null); // null = show prompt/list
     const [regeneratingQuestionId, setRegeneratingQuestionId] = useState<number | null>(null);
     const [isSaving, setIsSaving] = useState(false);
@@ -36,6 +46,12 @@ export default function WorkAreaContent() {
     }, []);
 
     const userName = session?.user?.name?.split(" ")[0] || "Professor";
+    const userGender = (session?.user as any)?.gender === 'male' ? 'male' : 'female';
+    const cardColor = userGender === 'male' ? "from-sky-200 to-blue-300" : "from-pink-200 to-rose-300";
+
+    const greetingEmoji = greeting === "Boa madrugada" ? "🍷" 
+        : greeting === "Boa noite" ? "🌙" 
+        : (userGender === "male" ? "☀️" : "🌸");
 
     const fetchMyStudents = useCallback(async () => {
         setIsLoadingStudents(true);
@@ -69,6 +85,33 @@ export default function WorkAreaContent() {
             if (res.ok) setMyStudents(prev => prev.filter(s => s.id !== studentId));
         } catch (error) { console.error(error); }
         finally { setRemovingId(null); }
+    };
+
+    const handleGenerateInvite = async () => {
+        if (!inviteSubject || !inviteRoom) return;
+        setIsGeneratingLink(true);
+        try {
+            const res = await fetch('/api/teacher/invite', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    subject: inviteSubject,
+                    room: inviteRoom,
+                    hour: inviteHour ? parseInt(inviteHour) : null,
+                    endHour: inviteEndHour ? parseInt(inviteEndHour) : null,
+                    days: inviteDays
+                })
+            });
+            const data = await res.json();
+            if (res.ok && data.inviteUrl) {
+                setGeneratedLink(data.inviteUrl);
+            }
+        } catch (error) { console.error(error); }
+        finally { setIsGeneratingLink(false); }
+    };
+
+    const toggleDay = (d: number) => {
+        setInviteDays(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d]);
     };
 
     const handleGenerateDocument = async () => {
@@ -177,7 +220,79 @@ export default function WorkAreaContent() {
                         <Sparkles size={20} className="text-cyan-500" /> Meus Alunos
                     </h3>
                 </div>
+                <button 
+                    onClick={() => setShowInviteModal(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full text-sm font-bold shadow-md transition-all"
+                >
+                    <LinkIcon size={16} /> Novo Link de Matrícula
+                </button>
             </div>
+
+            {/* Modal de Convite (Inline) */}
+            <AnimatePresence>
+                {showInviteModal && (
+                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                        <div className="p-6 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 rounded-2xl flex flex-col gap-4 relative">
+                            <button onClick={() => { setShowInviteModal(false); setGeneratedLink(null); }} className="absolute top-4 right-4 text-indigo-400 hover:text-indigo-600"><X size={20}/></button>
+                            <h4 className="text-lg font-bold text-indigo-900 dark:text-indigo-300">Criar Matrícula Mágica</h4>
+                            
+                            {!generatedLink ? (
+                                <>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="flex flex-col gap-1">
+                                            <label className="text-xs font-bold text-indigo-700 uppercase">Nome da Disciplina</label>
+                                            <input type="text" value={inviteSubject} onChange={e => setInviteSubject(e.target.value)} placeholder="Ex: Anatomia Sistêmica I" className="px-4 py-2 rounded-xl border border-indigo-200 outline-none focus:border-indigo-500 bg-white" />
+                                        </div>
+                                        <div className="flex flex-col gap-1">
+                                            <label className="text-xs font-bold text-indigo-700 uppercase">Estúdio/Módulo</label>
+                                            <select value={inviteRoom} onChange={e => setInviteRoom(e.target.value)} className="px-4 py-2 rounded-xl border border-indigo-200 outline-none focus:border-indigo-500 bg-white">
+                                                <option value="cyber">Cyber</option>
+                                                <option value="med">Med (Anatomia)</option>
+                                                <option value="quantic">Quantic</option>
+                                                <option value="humanities">Humanities</option>
+                                                <option value="lounge">Lounge / Collective</option>
+                                                <option value="bio">Biology</option>
+                                            </select>
+                                        </div>
+                                        <div className="flex gap-4 col-span-1 md:col-span-2">
+                                            <div className="flex flex-col gap-1 flex-1">
+                                                <label className="text-xs font-bold text-indigo-700 uppercase">Início (Hora ex: 8)</label>
+                                                <input type="number" value={inviteHour} onChange={e => setInviteHour(e.target.value)} placeholder="Opcional" className="px-4 py-2 rounded-xl border border-indigo-200 outline-none focus:border-indigo-500 bg-white" />
+                                            </div>
+                                            <div className="flex flex-col gap-1 flex-1">
+                                                <label className="text-xs font-bold text-indigo-700 uppercase">Fim (Hora ex: 10)</label>
+                                                <input type="number" value={inviteEndHour} onChange={e => setInviteEndHour(e.target.value)} placeholder="Opcional" className="px-4 py-2 rounded-xl border border-indigo-200 outline-none focus:border-indigo-500 bg-white" />
+                                            </div>
+                                        </div>
+                                        <div className="col-span-1 md:col-span-2 flex flex-col gap-2">
+                                            <label className="text-xs font-bold text-indigo-700 uppercase">Dias da Semana</label>
+                                            <div className="flex gap-2 flex-wrap">
+                                                {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].map((d, i) => (
+                                                    <button key={d} onClick={() => toggleDay(i+1)} className={`w-8 h-8 rounded-full text-xs font-bold transition-colors ${inviteDays.includes(i+1) ? 'bg-indigo-600 text-white' : 'bg-white border border-indigo-200 text-indigo-600 hover:bg-indigo-50'}`}>
+                                                        {d[0]}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button onClick={handleGenerateInvite} disabled={!inviteSubject || !inviteRoom || isGeneratingLink} className="mt-2 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50 transition-colors w-full flex items-center justify-center gap-2">
+                                        {isGeneratingLink ? <Loader2 className="animate-spin" size={20} /> : <LinkIcon size={20} />} Gerar Link de Matrícula
+                                    </button>
+                                </>
+                            ) : (
+                                <div className="flex flex-col items-center gap-4 py-4">
+                                    <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-2"><CheckCircle size={32} /></div>
+                                    <p className="text-sm font-bold text-slate-700 dark:text-slate-300 text-center">Link gerado com sucesso! Envie para seus alunos:</p>
+                                    <div className="w-full bg-white dark:bg-black/20 p-4 border border-indigo-200 dark:border-indigo-500/20 rounded-xl overflow-hidden flex items-center justify-between">
+                                        <span className="font-mono text-xs text-indigo-900 dark:text-indigo-300 truncate mr-2 select-all">{generatedLink}</span>
+                                        <button onClick={() => { navigator.clipboard.writeText(generatedLink); alert("Copiado!"); }} className="flex-shrink-0 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors"><Copy size={12}/> Copiar</button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
             {isLoadingStudents ? (
                 <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-cyan-500" /></div>
             ) : myStudents.map(student => (
@@ -372,11 +487,11 @@ export default function WorkAreaContent() {
             {/* WIDGETS E MINI MODULOS (Hidden on Print) */}
             <div className="print:hidden flex flex-col gap-6 w-full">
                 <div className="flex flex-col md:flex-row gap-6 w-full">
-                    <div className="flex-[2] rounded-[3rem] p-10 bg-gradient-to-br from-pink-200 to-rose-300 text-slate-900 shadow-xl relative overflow-hidden flex flex-col justify-center min-h-[220px]">
+                    <div className={`flex-[2] rounded-[3rem] p-10 bg-gradient-to-br ${cardColor} text-slate-900 shadow-xl relative overflow-hidden flex flex-col justify-center min-h-[220px]`}>
                         <div className="absolute top-0 inset-x-0 h-32 bg-white/20 blur-[50px] -translate-y-1/2 rounded-full pointer-events-none"></div>
                         <div className="relative z-10">
                             <h1 className="text-4xl md:text-5xl font-medium tracking-tight">
-                                {greeting}, <br/> <span className="font-semibold">{userName} 🌸</span>.
+                                {greeting}, <br/> <span className="font-semibold">{userName} {greetingEmoji}</span>.
                             </h1>
                         </div>
                     </div>

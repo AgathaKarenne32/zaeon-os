@@ -70,8 +70,26 @@ model User {
   // 🔥 NOVO: Documentos do Professor (Tarefas e Provas)
   teacherDocuments TeacherDocument[] @relation("TeacherDocuments")
 
+  // 🔥 NOVO: Links de convite gerados
+  teacherLinks     ClassLink[] @relation("TeacherLinks")
+
   // 🔥 CRÍTICO: Sincroniza o Prisma com o NextAuth (coleção 'users')
   @@map("users") 
+}
+
+// --- NOVO: LINKS DE CONVITE DO PROFESSOR ---
+model ClassLink {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  token     String   @unique
+  teacherId String   @db.ObjectId
+  subject   String
+  room      String   // Ex: 'cyber', 'med'
+  hour      Int?
+  endHour   Int?
+  days      Int[]    @default([])
+  createdAt DateTime @default(now())
+  
+  teacher   User     @relation("TeacherLinks", fields: [teacherId], references: [id])
 }
 
 // --- MEMÓRIA DO LOUNGE & SALAS ---
@@ -255,6 +273,7 @@ model TeacherStudent {
   id         String   @id @default(auto()) @map("_id") @db.ObjectId
   teacherId  String   @db.ObjectId
   studentId  String   @db.ObjectId
+  subjects   String[] @default([]) // <--- NOVO: Array de disciplinas que o aluno cursa com o professor
   createdAt  DateTime @default(now())
 
   teacher    User     @relation("TeacherStudents", fields: [teacherId], references: [id])

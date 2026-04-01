@@ -210,7 +210,7 @@ export default function SessionManager({
                     <FolderOpen size={32} className="text-slate-700" />
                     <p className="text-[11px] text-slate-600 text-center leading-relaxed">
                       No saved sessions yet.<br />
-                      Click "Save Current Scene" to begin.
+                      Click &quot;Save Current Scene&quot; to begin.
                     </p>
                   </div>
                 )}
@@ -246,7 +246,7 @@ export default function SessionManager({
                               </p>
                               {session.prompt && (
                                 <p className="text-[9px] text-slate-500 truncate mt-0.5">
-                                  "{session.prompt}"
+                                  &quot;{session.prompt}&quot;
                                 </p>
                               )}
                             </div>
