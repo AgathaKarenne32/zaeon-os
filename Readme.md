@@ -1,224 +1,512 @@
-# 🌌 Zaeon (载恩 / 제온)
-### The Liquidity Protocol for Intellectual Property Powered by AI & **VERY Network**
+# 🌌 Zaeon OS (载恩 / 제온)
+### The Research Operating System — AI × Science × Web3
 
 ![Zaeon Banner](public/zaeon-logo.png)
 
 <div align="center">
 
-[English](#-english) | [Português](#-português-brazil) | [Français](#-français) | [中文 (Chinese)](#-中文-chinese) | [한국어 (Korean)](#-한국어-korean)
+[![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js)](https://nextjs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript)](https://www.typescriptlang.org)
+[![Three.js](https://img.shields.io/badge/Three.js-r160-black?logo=three.js)](https://threejs.org)
+[![MongoDB](https://img.shields.io/badge/MongoDB-6.x-47a248?logo=mongodb)](https://mongodb.com)
+[![Prisma](https://img.shields.io/badge/Prisma-6.x-2d3748?logo=prisma)](https://prisma.io)
+[![Google AI](https://img.shields.io/badge/Gemini-2.0-4285F4?logo=google)](https://ai.google.dev)
 
 </div>
 
 ---
 
-## 🇺🇸 English
+## 🌍 Overview
 
-### 🌍 Overview
-**Zaeon** is the **Operating System for Science** evolving into a **Liquidity Protocol for Intellectual Property**. We bridge the gap between academic potential and global market reality.
+**Zaeon** is an **Operating System for Science** — a comprehensive academic workspace powering student-teacher collaboration, AI-driven research tools, real-time 3D scientific visualization, and a Liquidity Protocol for Intellectual Property (IP) built on the **VERY Network** (EVM-compatible blockchain).
 
-For the academic community, Zaeon is a comprehensive workspace managed by AI that simplifies daily chaos. For the financial market, Zaeon is an **RWA (Real World Asset) Engine** that transforms validated scientific data into liquid, tradeable financial titles on the **VERY Network**. We use VERY’s EVM compatibility to create an "Edge-to-Edge" ecosystem: from the student's first idea to a fully funded, patent-ready asset—building a transparent **Data Market** based on research.
-
-### 🚀 Key Features
-
-#### 1. The Academic Workspace (B2C - Input)
-*Solving the daily pain of 200M+ students worldwide.*
-
-- **AI Daily Co-Pilot:** Agents manage study schedules, deadline reminders, and task organization—turning academic chaos into structured routine.
-- **Global Collaboration Room:** Real-time AI translation enables cross-border collaboration without language barriers.
-- **Advanced Research Workstation:** AI helps structure arguments, check citations against standards, and validate data quality.
-- **Professors' Command Center:** Tools to manage classes, create exams, and automate grading with performance analytics.
-
-#### 2. The IP Liquidity Engine (Tokenization Logic)
-*Transforming Science into Financial Instruments.*
-
-In Zaeon, research is not just a PDF; it is a **Financial Asset**. We utilize the **VERY Network’s EVM capabilities** to tokenize Intellectual Property (IP).
-
-- **The "Science Bond":** When a researcher starts a high-potential project, Zaeon mints a dynamic asset representing legal rights to future royalties or patents.
-- **Data Proof Layer:** To prove asset value without congesting the network, heavy proofs of research (datasets, logs, genomic data) can be anchored on-chain—creating an immutable "Proof of Development" that can be audited in real-time.
-
-#### 3. Compliance & Value Distribution (The Trust Layer)
-*Institutional-Grade Security & IP Equity.*
-
-To make academic IPs tradeable in a regulated world, we implement a strict **On-Chain Compliance Stack** and a value distribution model based on real market results.
-
-- **Identity & Whitelisting (Soulbound Tokens):**
-  - **Researcher SBT:** Issued upon institutional SSO verification (University Email/ORCID).
-  - **Investor SBT:** Issued after KYC/KYB verification.
-  - **The "Digital Gatekeeper":** Smart contracts prevent assets from being bought, sold, or funded by wallets without valid Identity SBT—ensuring regulatory compliance.
-
-- **Smart Custody & IP Royalties:**
-  - **Non-Custodial Escrow:** Funds raised are locked in smart contracts and released only upon proof of research milestones.
-  - **Ownership & Profit Sharing:** Investors receive tokenized exposure to a project's IP equity.
-  - **The Logic:** When research becomes a product, patent, or licensed dataset, smart contracts route royalties to stakeholders proportionally.
-
-#### 4. The Innovation Exchange (B2B - Output)
-- **High-Fidelity Data Access:** Companies query the Zaeon Data Market for academically validated and AI-structured data.
-- **On-Demand Research:** Companies issue requests for research; the lifecycle—from proposal to final delivery—is tracked on-chain for transparency.
-
-### 🏆 Why Zaeon chose VERY?
-**RWA demands performance + verification.**
-- **Economic Finality:** VERY provides speed and low fees for scalable research funding workflows.
-- **EVM Compatibility:** Enables composable asset logic and smart-contract automation.
-- **On-Chain Proofs:** A transparent execution layer for research milestones and auditability.
+**Three core pillars:**
+1. **Academic Workspace** — AI tools for students, teachers, and researchers
+2. **BioSim 3D Engine** — Voxel science visualizer powered by Gemini AI + Three.js
+3. **IP Liquidity Engine** — Tokenize research as tradeable on-chain assets
 
 ---
 
-## 🇧🇷 Português (Brazil)
+## 📁 Repository Structure
 
-### 🌌 Zaeon: O Protocolo de Liquidez para Propriedade Intelectual
-### 🌍 Visão Geral
-**Zaeon** é o **Sistema Operacional da Ciência** evoluindo para um **Protocolo de Liquidez de Propriedade Intelectual**. Nós preenchemos a lacuna entre o potencial acadêmico e a realidade do mercado financeiro global.
-
-Para a comunidade acadêmica, o Zaeon é um workspace guiado por IA que simplifica o caos diário. Para o mercado financeiro, é um **Motor de RWA (Ativos do Mundo Real)** que transforma dados científicos em títulos financeiros líquidos na **VERY Network**. Usamos a compatibilidade EVM da VERY para criar um ecossistema de ponta a ponta: da primeira ideia do estudante até um ativo pronto para patente e financiamento — construindo um **Mercado de Dados** transparente baseado em pesquisa.
-
-### 🚀 Principais Recursos
-
-#### 1. O Workspace Acadêmico (B2C - Input)
-*Resolvendo a dor diária de milhões de estudantes.*
-
-- **Co-Piloto Diário de IA:** Agentes organizam cronogramas, lembretes e tarefas, transformando caos acadêmico em rotina estruturada.
-- **Sala de Colaboração Global:** Tradução instantânea por IA para colaboração sem barreiras linguísticas.
-- **Estação de Pesquisa Avançada:** IA para estruturar argumentos, verificar citações e validar qualidade de dados.
-- **Centro de Comando dos Professores:** Ferramentas para gerenciar turmas, criar provas e automatizar correções com analytics.
-
-#### 2. O Motor de Liquidez de IP (Tokenização)
-*Transformando Ciência em Instrumentos Financeiros.*
-
-Na Zaeon, uma pesquisa não é apenas um PDF; é um **Ativo Financeiro**. Utilizamos as **capacidades EVM da VERY Network** para tokenizar Propriedade Intelectual (IP).
-
-- **O "Título Científico":** Ao iniciar um projeto de alto potencial, a Zaeon cunha um ativo dinâmico que representa direitos legais sobre royalties ou patentes futuras.
-- **Camada de Provas de Dados:** Provas pesadas (datasets, logs, dados genômicos) podem ser ancoradas on-chain, criando uma "Prova de Desenvolvimento" imutável e auditável.
-
-#### 3. Compliance & Distribuição de Valor (A Camada de Confiança)
-*Segurança Institucional e Equity de IP.*
-
-Para tornar IPs acadêmicas negociáveis em um mundo regulado, implementamos uma **Pilha de Compliance On-Chain** e um modelo de distribuição baseado em resultados reais.
-
-- **Identidade e Whitelisting (Soulbound Tokens):**
-  - **SBT do Pesquisador:** Emitido após verificação institucional (Email Universitário/ORCID).
-  - **SBT do Investidor:** Emitido após verificação de KYC/KYB.
-  - **O "Porteiro Digital":** Contratos impedem compra/venda/financiamento por carteiras sem SBT válido.
-
-- **Custódia Inteligente e Royalties de IP:**
-  - **Escrow Não-Custodial:** Fundos ficam travados em contratos e são liberados mediante comprovação de marcos.
-  - **Propriedade e Participação nos Lucros:** Exposição tokenizada ao equity da ideia.
-  - **A Lógica:** Quando a pesquisa vira produto/patente/licenciamento, contratos distribuem royalties proporcionalmente.
-
-#### 4. O Câmbio de Inovação (B2B - Output)
-- **Acesso a Dados de Alta Fidelidade:** Empresas consultam o Mercado de Dados da Zaeon por dados validados e estruturados por IA.
-- **Pesquisa Sob Demanda:** O ciclo (proposta → entrega) é rastreado on-chain para transparência.
-
-### 🏆 Por que a Zaeon escolheu a VERY?
-**RWA exige performance + verificação.**
-- **Finalidade Econômica:** Velocidade e taxas baixas para fluxos escaláveis de funding.
-- **Compatibilidade EVM:** Automação via smart contracts e lógica componível.
-- **Provas On-Chain:** Execução transparente e auditabilidade de marcos.
-
----
-
-## 🇫🇷 Français
-
-### 🌌 Zaeon : Protocole de Liquidité pour la Propriété Intellectuelle
-### 🌍 Vue d'ensemble
-**Zaeon** est un **Système d’Exploitation pour la Science** évoluant vers un **Protocole de Liquidité pour la Propriété Intellectuelle**. Nous comblons l’écart entre le potentiel académique et la réalité du marché mondial.
-
-Pour la communauté académique, Zaeon est un espace de travail piloté par l’IA qui simplifie le chaos quotidien. Pour le marché financier, Zaeon est un **moteur RWA** transformant des données scientifiques validées en actifs financiers liquides sur le **VERY Network**. Grâce à la compatibilité EVM de VERY, nous créons un écosystème de bout en bout : de l’idée initiale à un actif prêt à être financé et breveté — avec un **Marché de Données** transparent.
-
-### 🚀 Fonctionnalités Clés
-
-#### 1. L'Espace Académique (B2C)
-- **Copilote IA Quotidien :** Gestion des horaires, rappels et tâches.
-- **Salle de Collaboration Mondiale :** Traduction instantanée pour collaborer sans frontières.
-- **Station de Recherche Avancée :** Structuration, citations, validation de qualité.
-- **Centre de Commandement des Professeurs :** Gestion de cours, examens, notation automatisée.
-
-#### 2. Moteur de Liquidité IP (Tokenisation)
-- **"Obligation Scientifique" :** Un actif dynamique représentant des droits sur royalties/brevets futurs.
-- **Couche de Preuves de Données :** Ancrage on-chain des preuves lourdes pour une "Preuve de Développement" audit-able.
-
-#### 3. Conformité & Distribution de Valeur
-- **Identité & Whitelisting (SBT) :** Vérifications institutionnelles + KYC/KYB.
-- **Séquestre Non-Custodial & Royalties :** Libération des fonds par jalons, distribution proportionnelle des royalties.
-
-#### 4. Échange d'Innovation (B2B)
-- **Accès Données Haute Fidélité :** Données validées et structurées.
-- **Recherche à la Demande :** Cycle suivi on-chain pour transparence.
-
-### 🏆 Pourquoi VERY ?
-- **Finalité économique :** Vitesse et faibles frais.
-- **Compatibilité EVM :** Automatisation via smart contracts.
-- **Preuves on-chain :** Traçabilité et auditabilité.
-
----
-
-## 🇨🇳 中文 (Chinese)
-
-### 🌌 Zaeon：知识产权流动性协议
-### 🌍 项目概况
-**Zaeon** 是一个面向科学的 **“操作系统”**，并逐步演进为 **知识产权（IP）流动性协议**，连接学术潜力与全球市场现实。
-
-对学术社区来说，Zaeon 是一个由 AI 管理的工作空间，帮助简化学习与研究的日常混乱。对金融市场来说，Zaeon 是一个 **RWA 引擎**，将经验证的科研数据转化为可交易的金融资产，并部署在 **VERY Network** 上。我们利用 VERY 的 EVM 兼容性，打造端到端生态：从学生的第一想法到可融资、可申请专利的资产，形成透明的 **数据市场**。
-
-### 🚀 核心功能
-
-#### 1. 学术工作区 (B2C)
-- **AI 日常副驾驶：** 管理学习计划、提醒与任务。
-- **全球协作室：** AI 即时翻译，跨语言协作。
-- **高级研究工作站：** 结构化写作、引用检查与数据质量验证。
-- **教授指挥中心：** 课程管理、考试生成与自动化评分。
-
-#### 2. IP 流动性引擎 (代币化)
-- **“科学债券”：** 高潜力项目启动时铸造动态资产，代表未来专利/版权收益权利。
-- **数据证明层：** 大型证明数据可 on-chain 锚定，形成可审计的“开发证明”。
-
-#### 3. 合规与价值分配
-- **身份与白名单 (SBT)：** 机构验证 + KYC/KYB。
-- **非托管托管与版税：** 里程碑释放资金，版税按比例分配。
-
-#### 4. 创新交易平台 (B2B)
-- **高保真数据访问：** 企业访问经验证并由 AI 结构化的数据。
-- **按需研究：** 项目流程可 on-chain 跟踪，确保透明。
-
-### 🏆 为什么选择 VERY？
-- **速度与低费用**
-- **EVM 兼容**
-- **链上证明与可审计性**
+```
+zaeon-os/
+├── app/                              # Next.js App Router
+│   ├── layout.tsx                    # Root layout (fonts, providers, navbar)
+│   ├── page.tsx                      # Landing page
+│   ├── globals.css                   # Global CSS (tokens, dark/light mode)
+│   ├── fonts.ts                      # Google Fonts configuration
+│   ├── providers.tsx                 # next-themes ThemeProvider
+│   │
+│   ├── agentic-modules/              # 🆕 Modular AI agents
+│   │   └── biosim3d/                 # 🆕 BioSim 3D Voxel Engine
+│   │       ├── index.ts              # Barrel exports
+│   │       ├── types.ts              # TypeScript interfaces
+│   │       ├── presets.ts            # Room-specific preset catalog
+│   │       ├── BioSim3DModule.tsx    # Main UI component
+│   │       ├── VoxelCanvas.tsx       # Three.js InstancedMesh renderer
+│   │       └── voxelGenerators/      # Structure generators
+│   │           ├── index.ts          # Registry / dispatcher
+│   │           ├── dna.ts            # DNA / RNA double helix
+│   │           ├── molecule.ts       # Atoms, bonds, crystal lattice
+│   │           ├── cell.ts           # Plant / animal / bacteria cell
+│   │           ├── plant.ts          # Trees, ferns, seeds, flowers
+│   │           ├── fungus.ts         # Mushrooms, mycelium (in plant.ts)
+│   │           ├── animal.ts         # Horse, dog, human, fish
+│   │           ├── quantum.ts        # Electron orbitals, probability clouds
+│   │           ├── math.ts           # 3D surfaces (ripple, saddle, torus…)
+│   │           └── protein.ts        # Alpha-helix protein chain
+│   │
+│   ├── api/                          # Next.js API Routes
+│   │   ├── agentic/
+│   │   │   └── biosim/route.ts       # 🆕 Gemini → SceneDescriptor
+│   │   ├── ai/
+│   │   │   └── generate-document/    # Homework / exam generation (Vertex AI)
+│   │   ├── auth/[...nextauth]/       # NextAuth.js handlers
+│   │   ├── admin/                    # Admin-only endpoints
+│   │   ├── chat/messages/            # Lounge real-time chat (Pusher)
+│   │   ├── citations/                # Academic citation engine
+│   │   ├── cyber/                    # Cyber Room data
+│   │   ├── feed/                     # Social feed posts / comments
+│   │   ├── gemini/                   # Direct Gemini streaming
+│   │   ├── network/request/          # Connection requests
+│   │   ├── news/                     # Zaeon news posts
+│   │   ├── plugins/                  # Plugin store CRUD
+│   │   ├── posts/                    # Study room posts
+│   │   ├── research/                 # Research workspace
+│   │   ├── teacher/                  # Teacher document management
+│   │   ├── user/                     # User profile / avatar / skills
+│   │   ├── user-space/               # Persistent layout / notes state
+│   │   └── workspace/                # Workspace state
+│   │
+│   ├── about/                        # About page
+│   ├── plugin-store/                 # Plugin marketplace
+│   ├── research-lab/                 # Research lab workspace
+│   ├── study-rooms/                  # Study rooms hub
+│   │   ├── page.tsx                  # Rooms index
+│   │   ├── bio/                      # Biology room
+│   │   ├── cyber/                    # Computer Science room
+│   │   ├── humanities/               # Humanities room
+│   │   ├── lounge/                   # Social lounge (chat, feed)
+│   │   ├── med/                      # Medicine / Health Sciences room
+│   │   └── quantic/                  # Math / Physics / Quantic room
+│   └── workstation/                  # Main workstation
+│       ├── page.tsx                  # Student workstation (RPG profile)
+│       ├── WorkStationContent.tsx
+│       ├── [id]/                     # Social profiles (visit)
+│       ├── admin/                    # Admin dashboard
+│       ├── profiles/                 # Network mural
+│       └── teacher/                  # Teacher workstation
+│           ├── layout.tsx            # Teacher sidebar layout
+│           ├── AgenticAreaContent.tsx # 🆕 Aura + BioSim3D
+│           ├── FinancesContent.tsx
+│           ├── LoungeContent.tsx
+│           ├── ResearchAreaContent.tsx
+│           ├── WorkAreaContent.tsx    # Homework / exam generator
+│           └── [module]/             # Dynamic teacher modules
+│
+├── components/
+│   ├── main/
+│   │   ├── navbar.tsx                # Top navigation bar
+│   │   ├── star-background.tsx       # MatrixRain particle background
+│   │   ├── OnboardModal.tsx          # User onboarding flow
+│   │   ├── ParticleSystem.tsx
+│   │   ├── footer.tsx
+│   │   └── GlobalClickSound.tsx      # Audio feedback system
+│   ├── sub/
+│   │   ├── LoungeChatWidget.tsx      # Floating global chat widget
+│   │   └── MenuNavigation.tsx        # Study room navigation
+│   └── ui/                           # Shared UI primitives
+│
+├── config/                           # Site configuration (metadata, SEO)
+├── constants/                        # App-wide constants
+├── lib/
+│   └── utils.ts                      # cn() and utility helpers
+├── prisma/
+│   └── schema.prisma                 # MongoDB schema (Prisma ODM)
+├── public/                           # Static assets
+├── src/
+│   ├── context/Web3Context.tsx        # Wagmi / Web3 provider
+│   ├── i18n.ts                       # i18next multilingual setup
+│   ├── lib/auth.ts                   # NextAuth config (Google OAuth, Email)
+│   └── providers/SessionProvider.tsx
+├── backend/                          # Express server utilities
+├── server.js                         # Custom Next.js + Socket.io server
+├── next.config.mjs                   # Next.js configuration
+├── tailwind.config.ts                # Tailwind CSS config
+├── tsconfig.json                     # TypeScript config
+└── prisma/schema.prisma              # Database schema
+```
 
 ---
 
-## 🇰🇷 한국어 (Korean)
+## 🛣️ API Routes
 
-### 🌌 Zaeon (제온): 지적 재산 유동성 프로토콜
-### 🌍 프로젝트 개요
-**Zaeon**은 과학을 위한 **운영체제(OS)**로 시작해 **지적 재산(IP) 유동성 프로토콜**로 진화하며, 학술 잠재력과 글로벌 시장 현실 사이의 간극을 연결합니다.
-
-학술 커뮤니티에게 Zaeon은 AI가 관리하는 워크스페이스로 일상의 혼란을 정리합니다. 금융 시장에게 Zaeon은 검증된 과학 데이터를 **RWA 자산**으로 전환하여 **VERY Network** 위에서 유동화·거래 가능하게 만드는 엔진입니다. VERY의 EVM 호환성을 활용해 학생의 아이디어부터 투자/특허 준비가 된 자산까지 이어지는 **데이터 마켓** 생태계를 구축합니다.
-
-### 🚀 주요 기능
-
-#### 1. 학술 워크스페이스 (B2C)
-- **AI 데일리 코파일럿:** 일정/마감/할 일 관리 자동화
-- **글로벌 협업 룸:** 실시간 번역 기반 협업
-- **고급 연구 워크스테이션:** 논리 구조/인용/데이터 품질 검증
-- **교수 지휘 센터:** 수업 운영, 시험 생성, 자동 채점 및 분석
-
-#### 2. IP 유동성 엔진 (토큰화)
-- **"과학 채권":** 프로젝트 시작 시 동적 자산을 발행해 미래 로열티/특허 권리를 표현
-- **데이터 증명 레이어:** 대용량 연구 증거를 온체인에 앵커링하여 감사 가능한 "개발 증명" 제공
-
-#### 3. 규정 준수 및 가치 분배
-- **신원 및 화이트리스팅(SBT):** 기관 인증 + KYC/KYB
-- **비수탁 에스크로 & 로열티:** 마일스톤 기반 자금 집행, 로열티 비율 분배
-
-#### 4. 혁신 거래소 (B2B)
-- **고충실도 데이터:** 검증된 데이터를 조회
-- **주문형 연구:** 전 과정 온체인 추적을 통한 투명성
-
-### 🏆 왜 VERY인가?
-- **빠른 처리 속도와 낮은 수수료**
-- **EVM 호환성**
-- **온체인 증명 및 감사 가능성**
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/agentic/biosim` | 🆕 Gemini → SceneDescriptor for BioSim3D |
+| POST | `/api/ai/generate-document` | Generate homework/exam via Vertex AI |
+| GET/POST | `/api/auth/[...nextauth]` | NextAuth authentication |
+| GET/POST | `/api/feed` | Social feed posts |
+| GET/POST | `/api/posts` | Study room posts |
+| POST | `/api/chat/messages` | Lounge real-time chat |
+| GET/POST | `/api/user` | User profile |
+| PATCH | `/api/user/avatar` | Upload compressed avatar |
+| GET/PUT | `/api/user/skills` | RPG skill tree (XP, rank) |
+| GET/PUT | `/api/user-space` | Persistent workspace state |
+| GET/POST | `/api/network/request` | Connection request send/accept |
+| GET/POST | `/api/research` | Research workspace data |
+| GET/POST/DELETE | `/api/teacher` | Teacher documents |
+| GET/POST | `/api/plugins` | Plugin store listing |
+| GET/POST | `/api/news` | News posts (admin) |
+| GET/POST | `/api/citations` | Academic citation engine |
+| POST | `/api/gemini` | Streaming Gemini responses |
+| GET | `/api/admin` | Admin dashboard data |
 
 ---
 
-Built hardcore love ❤️ 
+## 🗄️ Database Architecture (MongoDB via Prisma)
+
+**Database:** MongoDB Atlas  
+**ORM:** Prisma 6.x  
+**Provider string:** `mongodb`
+
+### Core Models
+
+#### `User`
+Primary identity model — mapped to NextAuth's `users` collection.
+```
+id              ObjectId    Primary key
+name            String?     Display name
+email           String?     @unique — used for auth
+image           String?     Avatar URL or Base64
+
+// Academic profile
+course          String?     e.g. "Ciências Biológicas"
+bio             String?
+age             Int?
+gender          String?     "masculino"|"feminino"|"lgbtqi+"
+countryCode     String?     Flag code for onboarding
+role            String?     "student"|"teacher"|"professor"
+academicLevel   String      "Graduação"|"Mestrado"|"Doutorado"
+
+// Gamification
+level           Int         @default(1)
+streak          Int         @default(0)
+xp              Int         @default(0)
+skills          Json?       { writing, focus, collab, participation }
+
+// Web3 identity
+walletAddress   String?
+identityId      String?
+kycStatus       String      "pending"|"approved"|"rejected"
+
+// Relations
+accounts        Account[]
+sessions        Session[]
+posts           Post[]
+sentMessages    Message[]   @relation("SentMessages")
+sentRequests    ConnectionRequest[] @relation("SentRequests")
+teacherStudents TeacherStudent[]   @relation("TeacherStudents")
+teacherDocuments TeacherDocument[]
+```
+
+#### `UserSpaceData`
+Persistent workspace state (layout, notes, history) — one per user.
+```
+userId          ObjectId    @unique
+layout          Json?       Window positions
+settings        Json?       Theme preferences
+chatHistory     Json?       Aura / AI conversations
+schedule        Json?       Study schedule
+stickyNote      String?
+objectives      Json?       Research objectives
+```
+
+#### `Post`
+Study room posts (social feed per room).
+```
+id              ObjectId
+title           String?
+content         String
+tags            String[]
+images          String[]    Max 5 base64/URLs
+room            String      "cyber"|"bio"|"med"|"quantic"|"humanities"
+userId          ObjectId?   → User
+comments        Comment[]
+```
+
+#### `TeacherDocument`
+AI-generated homework/exams created by teachers.
+```
+id              ObjectId
+teacherId       ObjectId    → User (teacher)
+title           String
+type            String      "tarefa"|"prova"
+subject         String?
+questions       Json        Array<{ number, statement, type, options, answer }>
+headerImage     String?     Institution logo (Base64)
+status          String      "draft"|"published"
+assignedTo      String[]    Array of student IDs
+```
+
+#### `TeacherStudent`
+Teacher-to-student assignment relationship (no approval needed).
+```
+teacherId       ObjectId    → User
+studentId       ObjectId    → User
+@@unique([teacherId, studentId])
+```
+
+#### `ConnectionRequest`
+Academic networking requests (like LinkedIn).
+```
+senderId        ObjectId    → User
+receiverId      ObjectId    → User
+message         String
+status          String      "PENDING"|"ACCEPTED"|"REJECTED"
+```
+
+#### `Message`
+Direct messages between users (Pusher-powered).
+```
+senderId        ObjectId    → User
+receiverId      ObjectId    → User
+text            String
+```
+
+#### Other models: `Plugin`, `Post`, `Comment`, `NewsPost`, `PersonalPhoto`, `SystemLog`, `SystemSetting`
+
+---
+
+## 🎨 Visual Design System
+
+### Typography
+
+| Variable | Font | Usage |
+|----------|------|-------|
+| `--font-space` | Space Grotesk | Primary UI text, headings |
+| `--font-code` | JetBrains Mono | Code blocks, technical data |
+| `--font-outfit` | Outfit | Display text, hero elements |
+| `Cedarville Cursive` | (Google Fonts) | `.cursive` accent text |
+
+Loaded via `next/font/google` in `app/layout.tsx`.
+
+### CSS Custom Properties (Dark / Light Mode)
+
+Defined in `app/globals.css` via `@layer base`:
+
+```css
+/* ─── Light Mode ─────────────────────────── */
+:root {
+  --background: #f8fafc;   /* slate-50 */
+  --foreground: #0f172a;   /* slate-900 */
+}
+
+/* ─── Dark Mode ──────────────────────────── */
+.dark {
+  --background: #030014;   /* deep space indigo */
+  --foreground: #ffffff;
+}
+```
+
+### Tailwind Color Tokens (thematic rooms)
+
+| Room | Primary | Accent | Background (dark) |
+|------|---------|--------|-------------------|
+| Bio | `emerald-400` | `#22c55e` | `bg-emerald-500/10` |
+| Med | `rose-400` | `#f87171` | `bg-rose-500/10` |
+| Quantic | `indigo-400` | `#818cf8` | `bg-indigo-500/10` |
+| Cyber | `cyan-400` | `#22d3ee` | `bg-cyan-500/10` |
+| Humanities | `amber-400` | `#f59e0b` | `bg-amber-500/10` |
+
+### Glass Morphism Design Language
+
+Zaeon uses a consistent glass-card pattern throughout:
+```css
+/* Glass card — dark mode */
+bg-white/5 dark:bg-black/20
+backdrop-blur-2xl
+border border-white/60 dark:border-white/10
+shadow-[0_8px_30px_rgb(0,0,0,0.2)]
+rounded-[2rem]
+
+/* Glow blobs (background decoration) */
+.glow-blob {
+  background: radial-gradient(circle, <accent-color>/10 0%, transparent 70%);
+  filter: blur(80px);
+  border-radius: 50%;
+}
+```
+
+### Global CSS Utilities
+
+| Class | Effect |
+|-------|--------|
+| `.cursive` | Cedarville Cursive font |
+| `.Welcome-text` | Gradient text (violet → blue) |
+| `.Welcome-box` | Glassmorphism pill component |
+| `.button-primary` | Glowing purple CTA button |
+| `.scrollbar-hidden` | Hides scrollbar cross-browser |
+
+### Dark / Light Mode Implementation
+
+- Managed by `next-themes` via `<ThemeProvider attribute="class" defaultTheme="dark">`
+- CSS class `.dark` on `<html>` triggers all dark-mode Tailwind variants
+- Transition: `transition: background-color 0.3s ease, color 0.3s ease`
+- Theme toggle in `<Navbar />` sets `useTheme().setTheme()`
+
+### Gender-Adaptive Themes (Workstation)
+
+The `WorkStationPage` dynamically adjusts its color theme based on user gender profile:
+
+| Gender | Theme |
+|--------|-------|
+| Feminino | Rose / Fuchsia palette, `bg-[#1a0a13]` dark base |
+| Masculino | Blue / Cyan palette, `bg-[#050a1f]` dark base |
+| Default / LGBTQI+ | Slate / Cyan, `bg-[#030014]` dark base |
+
+---
+
+## 🧬 BioSim 3D Engine (Agentic Module)
+
+### Architecture
+
+```
+User prompt / preset click
+        │
+        ▼
+┌─────────────────────────┐
+│  BioSim3DModule.tsx     │  ← UI: presets, prompt, canvas wrapper
+│  (React, "use client")  │
+└────────┬────────────────┘
+         │
+    ┌────┴────────────────────────────────┐
+    │    Gemini API                       │
+    │    POST /api/agentic/biosim         │
+    │    → SceneDescriptor JSON           │
+    └────┬────────────────────────────────┘
+         │
+    ┌────▼────────────────────────────────┐
+    │  buildVoxels(mode, params)          │  ← voxelGenerators/index.ts
+    │  → VoxelBlock[]                     │
+    └────┬────────────────────────────────┘
+         │
+    ┌────▼────────────────────────────────┐
+    │  VoxelCanvas.tsx                    │  ← Three.js InstancedMesh
+    │  @react-three/fiber + drei          │
+    │  OrbitControls, auto-rotate, fog    │
+    └─────────────────────────────────────┘
+```
+
+### Voxel Generators
+
+Each generator is a pure TypeScript function:  
+`(params: SceneParameters) => VoxelBlock[]`
+
+| Generator | Structures | Key Algorithm |
+|-----------|-----------|---------------|
+| `dna.ts` | DNA helix, RNA strand | Sinusoidal parametric path, base-pair fill |
+| `molecule.ts` | H₂O, CO₂, CH₄, adenine, glucose, NaCl | Pre-built CPK layouts + 3D Bresenham line |
+| `cell.ts` | Plant cell, animal cell | Sphere shell algorithm + box organelles |
+| `plant.ts` | Tree, flower, fern, seed | Recursive branching, leaf pads |
+| `plant.ts` | Mushroom, mycelium | Hemisphere + recursive stochastic growth |
+| `animal.ts` | Horse, dog, human, fish | Joint-based box & line anatomy |
+| `quantum.ts` | 1s, 2p, 3d orbitals | Probability density functions → stochastic blocks |
+| `math.ts` | Ripple, saddle, paraboloid, torus | Discrete function evaluation → height map |
+| `protein.ts` | Alpha-helix | 3.6 residues/turn parametric helix + H-bond render |
+
+### SceneDescriptor JSON Schema
+
+```typescript
+interface SceneDescriptor {
+  renderMode: 'dna'|'rna'|'molecule'|'crystal'|'cell'|'plant'|
+              'fungus'|'animal'|'quantum'|'atom'|'math'|'protein';
+  title:       string;          // e.g. "DNA Double Helix"
+  description: string;          // 2-3 sentence educational text
+  hint?:       string;          // "Blue blocks = Oxygen"
+  parameters:  SceneParameters; // mode-specific (see types.ts)
+  accentColor?: string;         // hex, e.g. "#22c55e"
+  backgroundColor?: string;     // hex, default "#030014"
+}
+```
+
+### Room Preset Catalog
+
+Each study room has 8 curated presets:
+
+| Room | Presets include |
+|------|----------------|
+| **bio** | DNA, Plant Cell, Animal Cell, Fungus, Plant, Fern, Protein, Glucose |
+| **med** | Human Cell, CRISPR DNA, Protein, H₂O, Glucose, Adenine, DNA, NaCl Crystal |
+| **quantic** | 1s Orbital, 2p Orbital, 3d Orbital, Ripple Wave, Saddle Surface, Crystal, DNA, H₂O |
+| **cyber** | Wave Surface, Saddle, Crystal Lattice, 2p Orbital, DNA, H₂O, Protein, mRNA |
+| **humanities** | Plant, Horse Skeleton, DNA, Human Cell, Mushroom, Crystal, Wave Math, Fern |
+
+---
+
+## 🚀 Developer Setup
+
+### Prerequisites
+- Node.js 20+, npm/yarn
+- MongoDB Atlas connection string
+- Google Cloud project with Vertex AI enabled
+- Google OAuth credentials (for NextAuth)
+
+### Environment Variables (`.env.local`)
+
+```bash
+# Database
+DATABASE_URL="mongodb+srv://..."
+
+# Authentication
+NEXTAUTH_SECRET="..."
+NEXTAUTH_URL="http://localhost:3000"
+GOOGLE_CLIENT_ID="..."
+GOOGLE_CLIENT_SECRET="..."
+
+# Google AI / Vertex AI
+GOOGLE_CREDENTIALS='{"project_id":"...","client_email":"...","private_key":"..."}'
+GOOGLE_PROJECT_ID="your-gcp-project"
+GOOGLE_LOCATION="us-central1"
+
+# Real-time (Pusher)
+NEXT_PUBLIC_PUSHER_KEY="..."
+PUSHER_APP_ID="..."
+PUSHER_SECRET="..."
+PUSHER_CLUSTER="..."
+
+# Redis (Upstash)
+UPSTASH_REDIS_REST_URL="..."
+UPSTASH_REDIS_REST_TOKEN="..."
+```
+
+### Run Locally
+
+```bash
+npm install
+npx prisma generate
+npm run dev             # → http://localhost:3000
+```
+
+---
+
+## 🏆 Tech Stack Summary
+
+| Layer | Technology |
+|-------|-----------|
+| Framework | Next.js 14 (App Router) |
+| Language | TypeScript 5 |
+| Styling | Tailwind CSS 3, Framer Motion |
+| 3D Engine | Three.js r160, @react-three/fiber, @react-three/drei |
+| AI | Google Gemini 2.0 Flash (Vertex AI) |
+| Database | MongoDB 6 + Prisma 6 |
+| Auth | NextAuth.js 4 (Google OAuth) |
+| Real-time | Pusher + Socket.io |
+| Cache | Redis (Upstash) |
+| Web3 | Viem, Ethers.js, Wagmi |
+| Fonts | Space Grotesk, JetBrains Mono, Outfit |
+
+---
+
+Built with hardcore love ❤️ — Zaeon Team
