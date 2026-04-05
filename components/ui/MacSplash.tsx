@@ -4,7 +4,7 @@ import Image, { type StaticImageData } from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 // Definimos o caminho da imagem como uma constante
-const LOGO_DEFAULT = "/assets/zaeon-brain.png";
+const LOGO_DEFAULT = "@/assets/zaeon-brain.png";
 
 type Props = {
     show?: boolean;

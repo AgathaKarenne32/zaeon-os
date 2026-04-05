@@ -3,13 +3,13 @@
 import Image, { type StaticImageData } from "next/image";
 import { useEffect, useRef, useState } from "react";
 
-const LOGO_DEFAULT = "/assets/zaeon-sleep.png";
+const LOGO_DEFAULT = "/assets/zaeon-brain.png";
 
 // Substitua pelos caminhos reais dos PNGs do seu personagem para a animação
-const IMG_25_SRC = "/assets/zaeon-baby3.png";
-const IMG_50_SRC = "/assets/zaeon-baby4.png";
-const IMG_75_SRC = "/assets/zaeon-baby4.png";
-const IMG_100_SRC = "/assets/zaeon-baby4.png";
+const IMG_25_SRC = "/assets/zaeon-brain.png";
+const IMG_50_SRC = "/assets/zaeon-brain.png";
+const IMG_75_SRC = "/assets/zaeon-brain.png";
+const IMG_100_SRC = "/assets/zaeon-brain.png";
 
 const TIMELINE = {
     AUDIO_SRC: "/assets/sounds/boot-track.mp3",
@@ -191,7 +191,7 @@ export default function MacSplash({ show = true, onDone, logoSrc = LOGO_DEFAULT 
                             className="mb-4 object-contain transition-transform duration-300"
                         />
 
-                        {!hasStarted && <span className="text-white/80 tracking-[0.2em] text-xs font-medium animate-pulse">CLICK TO START ZAEONBOT</span>}
+                        {!hasStarted && <span className="text-white/80 tracking-[0.2em] text-xs font-medium animate-pulse">CLICK TO START ZAEON</span>}
                     </button>
 
                     <div className="h-[90px] flex flex-col items-center justify-start mt-6 w-full">
