@@ -17,7 +17,9 @@ export async function POST(req: Request) {
             zaeonChat, 
             library, 
             personalModules, 
-            layoutState 
+            layoutState,
+            workTitle,
+            workContent
         } = body;
 
         if (!userId) {
@@ -49,7 +51,9 @@ export async function POST(req: Request) {
                 zaeonChat,
                 library,
                 personalModules,
-                layoutState
+                layoutState,
+                workTitle,
+                workContent
             },
             create: {
                 userId: user.id,
@@ -59,7 +63,9 @@ export async function POST(req: Request) {
                 zaeonChat,
                 library,
                 personalModules,
-                layoutState
+                layoutState,
+                workTitle,
+                workContent
             }
         });
 
@@ -112,7 +118,9 @@ export async function GET(req: Request) {
                         { id: 1, title: "Personal Backpack", items: [] },
                         { id: 2, title: "Project Archives", items: [] }
                     ],
-                    layoutState: null
+                    layoutState: null,
+                    workTitle: null,
+                    workContent: null
                 }
             });
         }

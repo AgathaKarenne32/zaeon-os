@@ -1,8 +1,8 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   ChevronRightIcon, ChevronLeftIcon, ArrowLeftIcon, 
-  ArrowRightStartOnRectangleIcon 
+  ArrowRightStartOnRectangleIcon, BeakerIcon, DocumentTextIcon
 } from "@heroicons/react/24/outline";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
@@ -37,9 +37,36 @@ export default function MenuNavigation() {
   const [onboardOpen, setOnboardOpen] = useState(false);
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
 
+  // 🔥 NOVO: Estado para verificar pesquisa ativa
+  const [workTitle, setWorkTitle] = useState<string | null>(null);
+  const [isLoadingResearch, setIsLoadingResearch] = useState(false);
+
   const isLoggedIn = status === "authenticated";
+  const isStudent = (session?.user as any)?.role === "student" || !(session?.user as any)?.role;
   // @ts-ignore
   const isAdmin = !!session?.user?.isAdmin;
+
+  // 🔥 NOVO: Consulta a pesquisa ativa do aluno quando monta
+  useEffect(() => {
+    if (!isLoggedIn || !isStudent) return;
+    const fetchResearch = async () => {
+      setIsLoadingResearch(true);
+      try {
+        const email = session?.user?.email;
+        if (!email) return;
+        const res = await fetch(`/api/workspace?userId=${encodeURIComponent(email)}`);
+        if (res.ok) {
+          const json = await res.json();
+          setWorkTitle(json.data?.workTitle || null);
+        }
+      } catch (e) {
+        console.error("Failed to fetch research status", e);
+      } finally {
+        setIsLoadingResearch(false);
+      }
+    };
+    fetchResearch();
+  }, [isLoggedIn, isStudent, session?.user?.email]);
 
   const visibleMenuItems = MENU_ITEMS.filter(item => {
     if (item.labelKey === "menu.manual") return isAdmin;
@@ -64,8 +91,9 @@ export default function MenuNavigation() {
               className="flex flex-col gap-2 w-full"
             >
               
+              {/* 🔥 PRIMEIRO ITEM: CONTA (com highlight para nova conta ou glow para logado) */}
               <li className="w-full" onMouseEnter={() => setIndex(0)} onClick={() => !isLoggedIn && setPickerOpen(true)}>
-                <div className={`${cardBase} ${index === 0 ? cardSelected : ""}`}>
+                <div className={`${cardBase} ${index === 0 ? cardSelected : ""} ${!isLoggedIn ? "ring-1 ring-cyan-400/40 animate-pulse-slow shadow-[0_0_20px_rgba(34,211,238,0.15)]" : ""} ${isLoggedIn ? "shadow-[0_0_12px_rgba(34,211,238,0.1)]" : ""}`}>
                   <div className={accentBar(index === 0)} />
                   <span className="truncate pr-2 text-sm tracking-tight pl-2">
                     {isLoggedIn ? `${session?.user?.name || 'User'} Lv.1` : t("menu.new")}
@@ -101,6 +129,34 @@ export default function MenuNavigation() {
                   ) : <ChevronRightIcon className="h-4 w-4 opacity-30 group-hover:opacity-100 transition-opacity" />}
                 </div>
               </li>
+
+              {/* 🔥 NOVO: CARD DE PESQUISA (Apenas para alunos logados) */}
+              {isLoggedIn && isStudent && (
+                <li className="w-full">
+                  <div
+                    onClick={() => router.push("/research-lab")}
+                    className={`${cardBase} ${workTitle ? "border-emerald-400/30 hover:border-emerald-400/50" : "border-cyan-400/20 hover:border-cyan-400/40"}`}
+                  >
+                    <div className={`absolute left-1 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-full transition-all duration-500 ${workTitle ? "bg-emerald-400 opacity-100 scale-y-100" : "bg-cyan-400 opacity-60 scale-y-75"}`} />
+                    <div className="flex items-center gap-3 pl-2 flex-1 min-w-0">
+                      {workTitle ? (
+                        <DocumentTextIcon className="w-4 h-4 text-emerald-400 shrink-0" />
+                      ) : (
+                        <BeakerIcon className="w-4 h-4 text-cyan-400 shrink-0" />
+                      )}
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-[9px] uppercase tracking-widest text-white/40 font-bold">
+                          {workTitle ? "Research" : "Lab"}
+                        </span>
+                        <span className="text-sm tracking-tight truncate">
+                          {isLoadingResearch ? "..." : workTitle ? `Continuar: ${workTitle}` : "Iniciar Pesquisa"}
+                        </span>
+                      </div>
+                    </div>
+                    <ChevronRightIcon className="h-4 w-4 opacity-30 group-hover:opacity-100 transition-opacity shrink-0" />
+                  </div>
+                </li>
+              )}
 
               {visibleMenuItems.slice(1).map((item, i) => {
                 const isSel = index === i + 1;

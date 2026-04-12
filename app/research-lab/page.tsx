@@ -7,8 +7,7 @@ import { useSession } from "next-auth/react";
 import Image from "next/image";
 import "@/src/i18n";
 
-// --- ASSETS ---
-import { uploadToPinata } from "@/src/utils/ipfs";
+
 
 // --- IMPORTS ---
 import { Navbar } from "@/components/main/navbar";
@@ -136,6 +135,8 @@ export default function HomeworkPage() {
     const [isImageLoading, setIsImageLoading] = useState(false);
     const [isBoosterOpen, setIsBoosterOpen] = useState(false);
     const [isSystemProcessing, setIsSystemProcessing] = useState(false);
+    const [isPublishOpen, setIsPublishOpen] = useState(false);
+    const [publishFormat, setPublishFormat] = useState<"pdf" | "docx" | null>(null);
 
     // --- REFS ---
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -143,7 +144,6 @@ export default function HomeworkPage() {
     const citationsRef = useRef<HTMLElement>(null);
     const chatContainerRef = useRef<HTMLDivElement>(null);
     const workChatRef = useRef<HTMLDivElement>(null);
-    const terminalRef = useRef<HTMLDivElement>(null);
 
     // Initial Load & Project Recall
     useEffect(() => { 
@@ -383,12 +383,7 @@ export default function HomeworkPage() {
 
     const handleBoostAndSave = async () => {
         setIsSystemProcessing(true);
-        addLog("🚀 Initiating System Synchronization...");
-
         try {
-            await new Promise(r => setTimeout(r, 1500));
-            addLog("✅ Data Integrity Verified.");
-
             const userId = session?.user?.email || "anonymous_user";
             
             const res = await fetch('/api/workspace', {
@@ -396,51 +391,65 @@ export default function HomeworkPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     userId, 
-                    title: docTitle, 
-                    content: docContent, 
-                    agent: "aura", 
-                    chatHistory: workChatHistory, 
-                    terminalLogs 
+                    workTitle: docTitle,
+                    workContent: docContent
                 })
             });
 
             if (res.ok) {
-                addLog("✅ Session saved successfully.");
                 setIsBoosterOpen(false);
+                alert("Pesquisa salva com sucesso!");
             } else {
                 throw new Error("Failed to save to database");
             }
         } catch (error: any) {
-            addLog(`❌ Error: ${error.message || "Save Failed"}`);
+            alert(`Erro ao salvar: ${error.message || "Save Failed"}`);
         } finally {
             setIsSystemProcessing(false);
         }
     };
 
-    const handleGenerateProtocol = async () => {
+    const handlePublish = async () => {
+        if (!publishFormat) return;
         setIsSystemProcessing(true);
-        addLog("⚙️ Generating Protocol via Zaeon Core...");
-        const generatedText = `RESEARCH: ${docTitle}\nAUTHOR: Zaeon Core\nDATE: ${new Date().toISOString()}\n\nANALYSIS: Verified by System.`;
-        setDocContent(generatedText);
         try {
-            const ipfsHash = await uploadToPinata({ title: docTitle, topic: docTitle, agent: "Zaeon Core", content: generatedText });
-            if (ipfsHash) addLog(t("workstation.logs.ipfs_success", { hash: ipfsHash }));
-        } catch (e) { addLog("❌ IPFS Failed."); } finally { setIsSystemProcessing(false); }
+            // Salva antes de publicar
+            const userId = session?.user?.email || "anonymous_user";
+            await fetch('/api/workspace', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, workTitle: docTitle, workContent: docContent })
+            });
+
+            // Cria blob para download
+            const blob = new Blob([docContent], { type: publishFormat === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${docTitle.replace(/\s+/g, '_')}.${publishFormat === 'pdf' ? 'pdf' : 'docx'}`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            setIsPublishOpen(false);
+            setPublishFormat(null);
+        } catch (e) {
+            alert("Erro ao publicar.");
+        } finally {
+            setIsSystemProcessing(false);
+        }
     };
 
     if (!mounted || status === "loading") {
         return ( <div className="w-full h-full flex items-center justify-center z-[999] bg-transparent"> <IosLoader status="LOADING ZAEON OS..." /> </div> );
     }
 
-    const panelStyle = "relative overflow-hidden backdrop-blur-2xl border border-white/10 shadow-[0_0_40px_rgba(34,211,238,0.12)] bg-[linear-gradient(135deg,rgba(7,38,77,0.4),rgba(11,58,164,0.3),rgba(7,38,77,0.4))] rounded-[24px] transition-all duration-300";
+    const panelStyle = "relative overflow-hidden backdrop-blur-2xl border border-slate-200 dark:border-white/10 shadow-[0_0_30px_rgba(0,0,0,0.15)] dark:shadow-[0_0_40px_rgba(34,211,238,0.12)] bg-slate-100/95 dark:bg-[#0f172a]/90 rounded-[40px] transition-all duration-300";
 
     return (
         <div
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => { e.preventDefault(); if(viewMode === 'study') handleFiles(e.dataTransfer.files); }}
-            className={`relative w-full h-full transition-all duration-500 overflow-hidden flex flex-row z-[200] 
-                ${viewMode === 'work' ? 'bg-[#030014]' : 'bg-[#f0f4f8] dark:bg-[#030014]'}
-            `}
+            className={`relative w-full h-full transition-all duration-500 overflow-hidden flex flex-row z-[200] bg-[#f0f4f8] dark:bg-[#030014]`}
         >
             <AnimatePresence>
                 {!isFocusMode && (
@@ -642,7 +651,7 @@ export default function HomeworkPage() {
             {/* --- WORK MODE --- */}
             {viewMode === "work" && (
                 <div className={`z-20 w-full max-w-[1700px] h-[95vh] flex px-4 gap-6 ${isFocusMode ? 'pt-6' : 'pt-28'}`}> 
-                    <div className="relative w-16 flex flex-col items-center gap-6 py-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl shrink-0 h-full z-[100]">
+                    <div className="relative w-16 flex flex-col items-center gap-6 py-6 rounded-[28px] bg-white/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 backdrop-blur-xl shrink-0 h-full z-[100] shadow-sm">
                         <WorkstationMenuButton icon={ChatBubbleLeftRightIcon} label="Chat" isActive={activeWorkTool === 'chat'} onClick={() => setActiveWorkTool('chat')} />
                         <WorkstationMenuButton icon={DocumentTextIcon} label="Citations" isActive={activeWorkTool === 'citations'} onClick={() => setActiveWorkTool('citations')} />
                     </div>
@@ -687,22 +696,16 @@ export default function HomeworkPage() {
                             )}
                         </div>
 
-                        {/* RIGHT PANEL: DOC & TERMINAL */}
-                        <div className="col-span-5 flex flex-col gap-4 h-full">
+                        {/* RIGHT PANEL: DOC (A4-like, full height) */}
+                        <div className="col-span-5 flex flex-col h-full">
                             <div onClick={() => setActiveWorkSection('doc')} className={`${panelStyle} flex-1 flex flex-col ${activeWorkSection === 'doc' ? 'ring-1 ring-cyan-400/50' : ''}`}>
-                                <div className="h-14 bg-black/40 border-b border-white/10 flex items-center px-6"><input value={docTitle} onChange={(e) => setDocTitle(e.target.value)} className="bg-transparent text-white/90 text-sm font-mono focus:outline-none w-full" /></div>
-                                <textarea value={docContent} onChange={(e) => setDocContent(e.target.value)} className="flex-1 p-8 font-mono text-sm text-slate-900 bg-[#f1f5f9] outline-none resize-none" />
-                                <div className="p-4 bg-[#f1f5f9] flex justify-end gap-3 rounded-b-[24px]">
+                                <div className="h-14 bg-slate-50 dark:bg-black/40 border-b border-slate-200 dark:border-white/10 flex items-center px-6 rounded-t-[40px]"><input value={docTitle} onChange={(e) => setDocTitle(e.target.value)} className="bg-transparent text-slate-800 dark:text-white/90 text-sm font-mono focus:outline-none w-full" /></div>
+                                <textarea value={docContent} onChange={(e) => setDocContent(e.target.value)} className="flex-1 p-8 font-mono text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-[#0f172a]/80 outline-none resize-none leading-relaxed" style={{ minHeight: '60vh' }} />
+                                <div className="p-4 bg-slate-50 dark:bg-[#0f172a]/60 flex justify-end gap-3 rounded-b-[40px] border-t border-slate-200 dark:border-white/5">
                                     <button type="button" onClick={() => setIsBoosterOpen(true)} className="px-4 py-2 rounded-xl text-[11px] font-bold border transition flex items-center gap-2 bg-blue-100 text-blue-700 border-blue-400 hover:bg-blue-200 uppercase tracking-wider"><ArrowDownTrayIcon className="w-4 h-4" /> {t("workstation.session_save")}</button>
-                                    <button type="button" onClick={handleGenerateProtocol} disabled={isSystemProcessing} className={`px-4 py-2 rounded-xl text-[11px] font-bold border transition flex items-center gap-2 uppercase tracking-wider ${isSystemProcessing ? 'bg-yellow-100 text-yellow-700 border-yellow-400' : 'bg-green-100 text-green-700 border-green-400 hover:bg-green-200'}`}><PlayIcon className="w-4 h-4" /> {isSystemProcessing ? t("workstation.processing") : t("workstation.generate")}</button>
+                                    <button type="button" onClick={() => setIsPublishOpen(true)} disabled={isSystemProcessing} className={`px-4 py-2 rounded-xl text-[11px] font-bold border transition flex items-center gap-2 uppercase tracking-wider ${isSystemProcessing ? 'bg-yellow-100 text-yellow-700 border-yellow-400' : 'bg-green-100 text-green-700 border-green-400 hover:bg-green-200'}`}><PlayIcon className="w-4 h-4" /> {isSystemProcessing ? t("workstation.processing") : 'Publicar'}</button>
                                 </div>
                             </div>
-                            {!isFocusMode && (
-                                <div onClick={() => setActiveWorkSection('terminal')} className={`${panelStyle} h-[28%] flex flex-col shrink-0`}>
-                                    <div className="h-9 bg-[#0a0a0a] border-b border-white/5 flex items-center px-4 shrink-0 justify-between"><div className="flex items-center gap-3"><div className="w-2 h-2 rounded-full shadow-[0_0_8px_currentColor] bg-emerald-500 text-emerald-500" /><span className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest">SYSTEM ONLINE</span></div><span className="text-[8px] text-white/20 font-mono tracking-[0.2em] uppercase">Zaeon Neural Node v2.0.26</span></div>
-                                    <div ref={terminalRef} className="flex-1 p-4 font-mono text-xs text-green-500/80 bg-black/60 overflow-y-auto custom-scrollbar rounded-b-[24px]">{terminalLogs.map((log, idx) => (<div key={idx} className="mb-1">{log}</div>))}<p>zaeon@root:~$ <span className="animate-pulse">_</span></p></div>
-                                </div>
-                            )}
                         </div>
                     </div>
                 </div>
@@ -724,6 +727,35 @@ export default function HomeworkPage() {
                                     <button type="button" onClick={() => setIsBoosterOpen(false)} className="w-full py-2 text-white/30 text-[10px] uppercase font-bold tracking-widest hover:text-white transition-colors">Back to Station</button>
                                 </div>
                             </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* PUBLISH FORMAT MODAL */}
+            <AnimatePresence>
+                {isPublishOpen && (
+                    <div className="fixed inset-0 z-[300] flex items-center justify-center p-6">
+                        <motion.div key="pb" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => { setIsPublishOpen(false); setPublishFormat(null); }} className="absolute inset-0 bg-[#030014]/90 backdrop-blur-md cursor-pointer" />
+                        <motion.div key="pm" initial={{ opacity: 0, scale: 0.9, y: 40 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 40 }} className="relative w-full max-w-md bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-cyan-500/20 rounded-[32px] overflow-hidden shadow-2xl p-10 flex flex-col gap-6">
+                            <button type="button" onClick={() => { setIsPublishOpen(false); setPublishFormat(null); }} className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors"><XMarkIcon className="w-5 h-5" /></button>
+                            <h3 className="text-xl font-bold text-slate-900 dark:text-white">Publicar Trabalho</h3>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">Escolha o formato de publicação:</p>
+                            <div className="flex flex-col gap-3">
+                                {(["pdf", "docx"] as const).map(fmt => (
+                                    <button key={fmt} onClick={() => setPublishFormat(fmt)} className={`w-full py-3 px-5 rounded-2xl text-sm font-semibold border transition-all flex items-center justify-between uppercase tracking-wider ${
+                                        publishFormat === fmt
+                                            ? 'bg-cyan-500/10 border-cyan-400/50 text-cyan-600 dark:text-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.15)]'
+                                            : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-white/70 hover:border-cyan-400/30'
+                                    }`}>
+                                        <span>{fmt === 'pdf' ? 'PDF' : 'DOCX (Word)'}</span>
+                                        {publishFormat === fmt && <span className="text-cyan-500">✓</span>}
+                                    </button>
+                                ))}
+                            </div>
+                            <button type="button" onClick={handlePublish} disabled={!publishFormat || isSystemProcessing} className="w-full bg-cyan-500 hover:bg-cyan-400 text-black font-bold py-3 rounded-2xl transition-all uppercase tracking-widest text-xs disabled:opacity-50 flex items-center justify-center gap-2">
+                                {isSystemProcessing ? <div className="animate-spin border-t-black border-2 w-4 h-4 rounded-full" /> : <><ArrowDownTrayIcon className="w-4 h-4" /> Publicar</>}
+                            </button>
                         </motion.div>
                     </div>
                 )}

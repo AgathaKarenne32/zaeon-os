@@ -320,7 +320,7 @@ export default function WorkAreaContent() {
                 <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-cyan-500" /></div>
             ) : myStudents.map(student => (
                 <motion.div key={student.id} className="flex items-center gap-4 p-4 bg-white/60 dark:bg-black/30 border border-black/5 dark:border-white/10 rounded-2xl">
-                    <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-black overflow-hidden relative border border-slate-300 dark:border-white/20">
+                    <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-black overflow-hidden relative border border-slate-300 dark:border-white/20 shrink-0 aspect-square">
                         {student.image ? <Image src={student.image} alt="" fill className="object-cover" /> : <Users className="w-full h-full p-2 text-slate-400" />}
                     </div>
                     <div className="flex-1">

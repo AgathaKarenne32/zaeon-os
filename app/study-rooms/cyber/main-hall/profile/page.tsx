@@ -434,7 +434,7 @@ export default function ProfileModule() {
                     </div>
 
                     {/* Foto de Perfil (Face Circle) */}
-                    <div {...getProfileProps()} className="absolute top-[15%] right-[10%] xl:right-[20%] z-30 w-32 h-32 md:w-40 md:h-40 rounded-full border-[4px] border-blue-400 bg-blue-50/80 dark:bg-blue-900/50 backdrop-blur-md flex flex-col items-center justify-center text-center p-2 shadow-2xl group/circle cursor-pointer overflow-visible">
+                    <div {...getProfileProps()} className="absolute top-[15%] right-[10%] xl:right-[20%] z-30 w-32 h-32 md:w-40 md:h-40 rounded-full border-[4px] border-blue-400 bg-blue-50/80 dark:bg-blue-900/50 backdrop-blur-md flex flex-col items-center justify-center text-center p-2 shadow-2xl group/circle cursor-pointer overflow-hidden shrink-0 aspect-square">
                         <input {...getProfileInput()} />
                         {profileImage ? (
                             <Image src={profileImage} alt="Profile" fill className="object-cover rounded-full" />

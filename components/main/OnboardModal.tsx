@@ -508,17 +508,17 @@ const ZaeonAuthModal = ({ isOpen, onClose, role }: ZaeonAuthModalProps) => {
                                 </div>
                             )}
                             <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80 pointer-events-none" />
-                            <div {...getProfileProps()} className="absolute top-[15%] right-[28%] z-30 w-32 h-32 rounded-full border-2 border-blue-400 bg-blue-50/80 dark:bg-blue-900/50 backdrop-blur-md flex flex-col items-center justify-center text-center p-2 shadow-2xl group/circle cursor-pointer overflow-visible hover:scale-105 transition-transform">
+                            <div {...getProfileProps()} className="absolute top-[15%] right-[28%] z-30 w-32 h-32 rounded-full border-2 border-blue-400 bg-blue-50/80 dark:bg-blue-900/50 backdrop-blur-md flex flex-col items-center justify-center text-center p-2 shadow-2xl group/circle cursor-pointer overflow-hidden hover:scale-105 transition-transform shrink-0 aspect-square">
                                 <input {...getProfileInput()} />
                                 {profileImage ? (
-                                    <Image src={profileImage} alt="Profile" fill className="object-cover rounded-full" />
+                                    <Image src={profileImage} alt="Profile" fill className="object-cover" />
                                 ) : (
                                     <div className="flex flex-col items-center pointer-events-none">
                                         <Upload size={20} className="text-blue-500 mb-1" />
                                         <span className="text-[9px] font-bold text-blue-600 dark:text-blue-300 uppercase">Upload Face</span>
                                     </div>
                                 )}
-                                <div className="absolute -bottom-3 bg-blue-600 p-1.5 rounded-full shadow-lg border-2 border-white/20 pointer-events-none"><Upload size={14} className="text-white" /></div>
+                                <div className="absolute -bottom-3 bg-blue-600 p-1.5 rounded-full shadow-lg border-2 border-white/20 pointer-events-none shrink-0"><Upload size={14} className="text-white" /></div>
                             </div>
                             <div className="absolute bottom-10 left-8 right-8 text-white z-10 pointer-events-none">
                                 <div className="inline-block px-2 py-1 bg-green-500/20 border border-green-500/30 rounded text-[10px] text-green-400 font-mono mb-2 backdrop-blur-md">
@@ -534,7 +534,7 @@ const ZaeonAuthModal = ({ isOpen, onClose, role }: ZaeonAuthModalProps) => {
                 {isMinimized && (
                     <motion.div initial={{ y: 100 }} animate={{ y: 0 }} className="fixed bottom-6 right-6 z-[10000] pointer-events-auto">
                         <div onClick={() => setIsMinimized(false)} className="flex items-center gap-3 bg-gray-900/90 backdrop-blur-xl border border-white/10 p-3 pr-5 rounded-full shadow-2xl cursor-pointer hover:bg-gray-800 transition-colors border-l-4 border-l-green-500">
-                            <div className="relative w-10 h-10 rounded-full overflow-hidden bg-white/5 border border-white/10">
+                            <div className="relative w-10 h-10 rounded-full overflow-hidden bg-white/5 border border-white/10 shrink-0 aspect-square">
                                 {profileImage ? <Image src={profileImage} alt="U" fill className="object-cover" /> : <User size={16} className="text-white/50" />}
                             </div>
                             <div className="flex flex-col">
