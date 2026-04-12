@@ -3,13 +3,13 @@
 import Image, { type StaticImageData } from "next/image";
 import { useEffect, useRef, useState } from "react";
 
-const LOGO_DEFAULT = "/assets/zaeon-brain.png";
+const LOGO_DEFAULT = "/assets/zaeon-tree.png";
 
 // Substitua pelos caminhos reais dos PNGs do seu personagem para a animação
-const IMG_25_SRC = "/assets/zaeon-brain.png";
-const IMG_50_SRC = "/assets/zaeon-brain.png";
-const IMG_75_SRC = "/assets/zaeon-brain.png";
-const IMG_100_SRC = "/assets/zaeon-brain.png";
+const IMG_25_SRC = "/assets/zaeon-tree.png";
+const IMG_50_SRC = "/assets/zaeon-tree.png";
+const IMG_75_SRC = "/assets/zaeon-tree.png";
+const IMG_100_SRC = "/assets/zaeon-tree.png";
 
 const TIMELINE = {
     AUDIO_SRC: "/assets/sounds/boot-track.mp3",
@@ -185,8 +185,8 @@ export default function MacSplash({ show = true, onDone, logoSrc = LOGO_DEFAULT 
                         <Image
                             src={currentCharacterImg}
                             alt="Zaeon Character Animation"
-                            width={100}
-                            height={100}
+                            width={200}
+                            height={200}
                             priority
                             className="mb-4 object-contain transition-transform duration-300"
                         />

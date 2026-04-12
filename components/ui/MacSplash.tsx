@@ -4,7 +4,7 @@ import Image, { type StaticImageData } from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 // Definimos o caminho da imagem como uma constante
-const LOGO_DEFAULT = "@/assets/zaeon-brain.png";
+const LOGO_DEFAULT = "/assets/zaeon-tree.png";
 
 type Props = {
     show?: boolean;
@@ -44,7 +44,7 @@ export default function MacSplash({
         if (!show) return;
         setVisible(true);
         const openT = setTimeout(() => setOpacity(1), 10);
-        
+
         if (typeof window !== "undefined") {
             window.history.scrollRestoration = "manual";
             window.scrollTo(0, 0);
@@ -125,7 +125,7 @@ export default function MacSplash({
     // Função disparada no clique da logo
     const handleInitiate = () => {
         if (hasStarted) return;
-        
+
         // 1. Toca o som de boot/música (substitua o caminho pelo seu arquivo)
         const audio = new Audio("/assets/boot-music.mp3");
         audio.play().catch(err => console.error("Erro ao reproduzir áudio:", err));
@@ -160,13 +160,12 @@ export default function MacSplash({
                 }}
             >
                 {/* Logo transformado em botão de ignição antes de iniciar */}
-                <button 
+                <button
                     onClick={handleInitiate}
-                    className={`flex flex-col items-center justify-center transition-all duration-300 ${
-                        !hasStarted 
-                            ? "cursor-pointer hover:scale-105 hover:opacity-100 opacity-80" 
+                    className={`flex flex-col items-center justify-center transition-all duration-300 ${!hasStarted
+                            ? "cursor-pointer hover:scale-105 hover:opacity-100 opacity-80"
                             : "cursor-default opacity-95"
-                    }`}
+                        }`}
                     disabled={hasStarted}
                 >
                     <Image
@@ -177,7 +176,7 @@ export default function MacSplash({
                         priority
                         className="mb-4"
                     />
-                    
+
                     {!hasStarted && (
                         <span className="text-white/80 tracking-[0.2em] text-xs font-medium animate-pulse">
                             INITIATE ZAEON
