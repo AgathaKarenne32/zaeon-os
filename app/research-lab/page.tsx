@@ -7,8 +7,6 @@ import { useSession } from "next-auth/react";
 import Image from "next/image";
 import "@/src/i18n";
 
-
-
 // --- IMPORTS ---
 import { Navbar } from "@/components/main/navbar";
 
@@ -21,7 +19,9 @@ import {
     ArrowDownTrayIcon, PlayIcon,
     RocketLaunchIcon, XMarkIcon, ArrowsRightLeftIcon,
     BookOpenIcon, DocumentTextIcon, PlayCircleIcon,
-    EyeIcon, PowerIcon, BeakerIcon, ChatBubbleLeftRightIcon, ClipboardDocumentIcon
+    EyeIcon, PowerIcon, BeakerIcon, ChatBubbleLeftRightIcon, ClipboardDocumentIcon,
+    DocumentChartBarIcon, CheckBadgeIcon,
+    LanguageIcon
 } from "@heroicons/react/24/outline";
 
 // --- COMPONENTS ---
@@ -30,6 +30,7 @@ import ResearchCardPDF from "@/components/ui/ResearchCardPDF";
 // --- TYPES ---
 interface StudyDoc { id: string; title: string; url: string; file?: File; }
 interface VideoItem { id: string; youtubeId: string; }
+interface CitationNote { id: string; text: string; }
 
 // --- UTILS ---
 const generateSafeId = () => {
@@ -46,134 +47,135 @@ const IosLoader = ({ status }: { status: string }) => (
             {[...Array(8)].map((_, i) => (
                 <motion.div
                     key={i}
-                    className="absolute w-[2px] h-[8px] bg-slate-400 rounded-full"
+                    className="absolute w-[2px] h-[8px] bg-black dark:bg-white rounded-full"
                     style={{ left: "50%", top: "30%", transformOrigin: "50% 180%", rotate: i * 45 }}
                     animate={{ opacity: [0.1, 1, 0.1] }}
                     transition={{ repeat: Infinity, duration: 0.8, delay: i * 0.1 }}
                 />
             ))}
         </div>
-        <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] animate-pulse">{status}</span>
+        <span className="text-[10px] font-black text-black dark:text-white uppercase tracking-[0.2em] animate-pulse">{status}</span>
     </div>
 );
 
-const ActionButton = ({ icon: Icon, label, onClick, colorClass = "hover:text-cyan-500" }: any) => (
+const ActionButton = ({ icon: Icon, label, onClick, colorClass = "text-black dark:text-white hover:text-cyan-500" }: any) => (
     <div className="group relative flex flex-col items-center z-[50]">
         <button
             type="button"
             onClick={(e) => { e.stopPropagation(); onClick(e); }}
-            className={`p-2 bg-white/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-full transition-all ${colorClass}`}
+            className={`p-2 bg-slate-100 dark:bg-white/10 border border-slate-300 dark:border-white/20 rounded-full transition-all ${colorClass}`}
         >
             <Icon className="w-4 h-4" />
         </button>
-        <span className="absolute -top-8 scale-0 group-hover:scale-100 transition-all bg-slate-800 text-white text-[9px] px-2 py-1 rounded font-bold uppercase whitespace-nowrap z-[100] shadow-xl pointer-events-none">
+        <span className="absolute -top-8 scale-0 group-hover:scale-100 transition-all bg-black dark:bg-white text-white dark:text-black text-[9px] px-2 py-1 rounded font-bold uppercase whitespace-nowrap z-[100] shadow-xl pointer-events-none">
             {label}
         </span>
     </div>
 );
 
-const WorkstationMenuButton = ({ icon: Icon, label, isActive, onClick }: any) => (
-    <button
-        type="button"
-        onClick={onClick}
-        className={`group relative flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-300 ${isActive ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/50 shadow-[0_0_15px_rgba(34,211,238,0.3)]' : 'text-slate-400 hover:text-white hover:bg-white/10'}`}
-    >
-        <Icon className="w-5 h-5" />
-        <span className="absolute left-full ml-4 px-3 py-1.5 bg-[#0a0a0a] border border-white/20 rounded-lg text-[10px] uppercase font-bold text-white opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 shadow-xl backdrop-blur-md">
-            {label}
-        </span>
-    </button>
-);
+const ChatBubble = ({ role, text, agentName, agentImg, userImg }: { role: string, text: string, agentName: string, agentImg: string, userImg?: string | null }) => {
+    const isUser = role === 'user';
+    return (
+        <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} gap-3 mb-6`}>
+            {!isUser && (
+                <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-slate-300 dark:border-white/20 shadow-sm flex items-center justify-center bg-white dark:bg-black">
+                    <img src={agentImg} alt={agentName} className="w-full h-full object-cover" onError={(e) => (e.currentTarget.src = `https://ui-avatars.com/api/?name=${agentName}&background=random`)} />
+                </div>
+            )}
+            <div className={`p-4 rounded-2xl max-w-[80%] text-[14px] leading-relaxed shadow-sm w-fit font-medium ${isUser ? 'bg-cyan-600 text-white rounded-tr-sm' : 'bg-slate-100 dark:bg-white/10 text-black dark:text-white rounded-tl-sm border border-slate-300 dark:border-white/20'}`}>
+                {text}
+            </div>
+            {isUser && (
+                <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-slate-300 dark:border-white/20 shadow-sm flex items-center justify-center bg-white dark:bg-black">
+                    {userImg ? <img src={userImg} alt="User" className="w-full h-full object-cover" /> : <UserCircleIcon className="w-5 h-5 text-black dark:text-white" />}
+                </div>
+            )}
+        </div>
+    );
+};
 
 export default function HomeworkPage() {
     const { t } = useTranslation();
     const { data: session, status } = useSession();
 
+    // --- CORE STATES ---
     const [mounted, setMounted] = useState(false);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isChatLeft, setIsChatLeft] = useState(false);
-    
-    // --- FOCUS MODE STATE ---
     const [isFocusMode, setIsFocusMode] = useState(false);
+    const [activeSection, setActiveSection] = useState<"pdf" | "scribe" | "examiner" | "videos" | "doc" | null>(null);
 
-    // --- VIEW MODE ---
-    const [viewMode, setViewMode] = useState<"study" | "work">("study");
-    const [isTransitioning, setIsTransitioning] = useState(false);
+    // --- FORMATTING STATES ---
+    const [isBold, setIsBold] = useState(false);
+    const [isSerif, setIsSerif] = useState(true);
+
+    // --- WORK STATES ---
+    const [workType, setWorkType] = useState<"Artigo" | "Relatório" | "TCC" | null>(null);
+    const [isWorkTypeMenuOpen, setIsWorkTypeMenuOpen] = useState(false);
+    const [docTitle, setDocTitle] = useState("minha_pesquisa.pdf");
+    const [docContent, setDocContent] = useState("");
+    const [activeProject, setActiveProject] = useState<any>(null);
 
     // --- DATA STATES ---
     const [studyFiles, setStudyFiles] = useState<StudyDoc[]>([]);
     const [videos, setVideos] = useState<VideoItem[]>([]);
-    const [activeSection, setActiveSection] = useState<string | null>(null);
-    const [citationContent, setCitationContent] = useState<string | null>(null);
-    
-    // --- MEMORY STATE (Active Project) ---
-    const [activeProject, setActiveProject] = useState<any>(null);
+    const [activeFileContext, setActiveFileContext] = useState<string | null>(null);
+    const [processingFileId, setProcessingFileId] = useState<string | null>(null);
+    const [activePdfTab, setActivePdfTab] = useState<"chat" | "citations">("chat");
 
-    // --- CHAT STATES (SPLIT) ---
-    const [studyChatHistory, setStudyChatHistory] = useState<{role: 'ai' | 'user', text: string}[]>([]);
-    const [workChatHistory, setWorkChatHistory] = useState<{role: 'ai' | 'user', text: string}[]>([]);
-    
+    const [savedCitations, setSavedCitations] = useState<CitationNote[]>([]);
+    const [citationContent, setCitationContent] = useState<string | null>(null);
+    const [activeCitationText, setActiveCitationText] = useState<string | null>(null);
+
+    const [pdfChatHistory, setPdfChatHistory] = useState<{ role: 'ai' | 'user', text: string }[]>([]);
+    const [pdfPrompt, setPdfPrompt] = useState("");
+
     const [specialistChatHistory, setSpecialistChatHistory] = useState<{
-        scribe: {role: 'ai' | 'user', text: string}[],
-        examiner: {role: 'ai' | 'user', text: string}[]
+        scribe: { role: 'ai' | 'user', text: string }[],
+        examiner: { role: 'ai' | 'user', text: string }[]
     }>({ scribe: [], examiner: [] });
 
     // --- LOADING STATES ---
-    const [isTyping, setIsTyping] = useState(false); 
-    const [isMainProcessing, setIsMainProcessing] = useState(false); 
-    const [isAuxProcessing, setIsAuxProcessing] = useState(false); 
-
-    const [prompt, setPrompt] = useState("");
-    const [activeFileContext, setActiveFileContext] = useState<string | null>(null);
-    const [processingFileId, setProcessingFileId] = useState<string | null>(null);
-
-    // --- WORKSTATION STATES ---
-    const [activeWorkSection, setActiveWorkSection] = useState<"doc" | "chat" | "terminal" | null>(null);
-    const [activeWorkTool, setActiveWorkTool] = useState<"chat" | "citations">("chat");
-    const [docTitle, setDocTitle] = useState("Untitled_Research.txt");
-    const [docContent, setDocContent] = useState("");
-    const [terminalLogs, setTerminalLogs] = useState<string[]>([]);
-    const [isImageLoading, setIsImageLoading] = useState(false);
-    const [isBoosterOpen, setIsBoosterOpen] = useState(false);
+    const [isPdfTyping, setIsPdfTyping] = useState(false);
+    const [isScribeTyping, setIsScribeTyping] = useState(false);
+    const [isExaminerTyping, setIsExaminerTyping] = useState(false);
+    const [isCitationTyping, setIsCitationTyping] = useState(false);
     const [isSystemProcessing, setIsSystemProcessing] = useState(false);
+
+    // --- MODALS ---
+    const [isBoosterOpen, setIsBoosterOpen] = useState(false);
     const [isPublishOpen, setIsPublishOpen] = useState(false);
     const [publishFormat, setPublishFormat] = useState<"pdf" | "docx" | null>(null);
 
-    // --- REFS ---
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const mainScrollRef = useRef<HTMLDivElement>(null);
-    const citationsRef = useRef<HTMLElement>(null);
-    const chatContainerRef = useRef<HTMLDivElement>(null);
-    const workChatRef = useRef<HTMLDivElement>(null);
+    const pdfChatRef = useRef<HTMLDivElement>(null);
+    const scribeChatRef = useRef<HTMLDivElement>(null);
+    const examinerChatRef = useRef<HTMLDivElement>(null);
 
-    // Initial Load & Project Recall
-    useEffect(() => { 
-        setMounted(true); 
+    useEffect(() => {
+        setMounted(true);
         if (typeof window !== 'undefined') {
             const savedProject = localStorage.getItem('zaeon_active_project');
             if (savedProject) {
                 try {
                     const parsed = JSON.parse(savedProject);
                     setActiveProject(parsed);
-                    setDocTitle(`Protocol_${parsed.title.replace(/\s+/g, '_')}.txt`);
-                    addLog(`Recall System: Active Project "${parsed.title}" Loaded.`);
-                } catch (e) {
-                    console.error("Failed to load project memory", e);
-                }
+                } catch (e) { console.error(e); }
             }
         }
     }, []);
 
-    useEffect(() => {
-        if (chatContainerRef.current) chatContainerRef.current.scrollTo({ top: chatContainerRef.current.scrollHeight, behavior: 'smooth' });
-        if (workChatRef.current) workChatRef.current.scrollTo({ top: workChatRef.current.scrollHeight, behavior: 'smooth' });
-    }, [studyChatHistory, workChatHistory, isTyping, isMainProcessing, viewMode, activeWorkTool]);
+    useEffect(() => { if (pdfChatRef.current) pdfChatRef.current.scrollTo({ top: pdfChatRef.current.scrollHeight, behavior: 'smooth' }); }, [pdfChatHistory, isPdfTyping, activePdfTab]);
+    useEffect(() => { if (scribeChatRef.current) scribeChatRef.current.scrollTo({ top: scribeChatRef.current.scrollHeight, behavior: 'smooth' }); }, [specialistChatHistory.scribe, isScribeTyping]);
+    useEffect(() => { if (examinerChatRef.current) examinerChatRef.current.scrollTo({ top: examinerChatRef.current.scrollHeight, behavior: 'smooth' }); }, [specialistChatHistory.examiner, isExaminerTyping]);
 
-    const handleToggleMode = () => {
-        setIsTransitioning(true);
-        setTimeout(() => {
-            setViewMode(prev => prev === "study" ? "work" : "study");
-            setIsTransitioning(false);
-        }, 1500);
+    const handleFiles = (files: FileList | null) => {
+        if (!files) return;
+        const newFiles = Array.from(files).filter(f => f.type === 'application/pdf').map(file => ({
+            id: generateSafeId(), title: file.name, url: URL.createObjectURL(file), file: file
+        }));
+        setStudyFiles(prev => [...prev, ...newFiles]);
+        if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
     const fileToBase64 = (file: File): Promise<string> => {
@@ -185,189 +187,81 @@ export default function HomeworkPage() {
         });
     };
 
-    const addLog = (msg: string) => setTerminalLogs(prev => [...prev, `zaeon@root:~$ ${msg}`]);
-
-    const handleFiles = (files: FileList | null) => {
-        if (!files) return;
-        const newFiles = Array.from(files).filter(f => f.type === 'application/pdf').map(file => ({
-            id: generateSafeId(), title: file.name, url: URL.createObjectURL(file), file: file
-        }));
-        setStudyFiles(prev => [...prev, ...newFiles]);
-        if (fileInputRef.current) fileInputRef.current.value = '';
+    const buildSystemContext = () => {
+        let ctx = "";
+        if (activeProject) ctx += `[ACTIVE PROJECT]: ${JSON.stringify(activeProject)}\n`;
+        if (workType) ctx += `[TARGET WORK TYPE]: User is writing a ${workType.toUpperCase()}.\n`;
+        return ctx;
     };
 
     const handlePlayDocument = async (doc: StudyDoc) => {
-        if (!doc.file || isMainProcessing || processingFileId) return;
-        if (doc.file.size > 15 * 1024 * 1024) { alert("Arquivo muito grande. Limite de 15MB."); return; }
+        if (!doc.file || isPdfTyping || processingFileId) return;
         setProcessingFileId(doc.id);
-        setIsMainProcessing(true);
-        setActiveSection(null);
+        setIsPdfTyping(true);
+        setActiveSection('pdf');
         try {
             const base64Data = await fileToBase64(doc.file);
             setActiveFileContext(base64Data);
-            const response = await fetch('/api/chat', { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify({ prompt: `Analise o documento "${doc.title}" e me dê um resumo conciso.`, agent: "aura", fileData: base64Data }) 
+            const response = await fetch('/api/chat', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: `Analise o documento "${doc.title}" e gere um resumo.`, agent: "aura", fileData: base64Data, systemContext: buildSystemContext() })
             });
-            if (!response.ok) throw new Error("Falha na API");
             const data = await response.json();
-            setStudyChatHistory(prev => [...prev, { role: 'ai', text: `[Contexto Definido: ${doc.title}]\n\n${data.text}` }]);
-        } catch (e) { console.error("Erro:", e); alert("Não foi possível processar o documento. Tente novamente."); } finally { setIsMainProcessing(false); setProcessingFileId(null); }
+            setPdfChatHistory([{ role: 'ai', text: data.text }]);
+        } catch (e) { alert("Erro ao processar."); } finally { setIsPdfTyping(false); setProcessingFileId(null); }
     };
 
-    // --- GENERIC AGENT CALLER (Auxiliary) ---
-    const handleAgentAction = async (agent: string, actionPrompt: string, useFile = false) => {
-        setIsAuxProcessing(true); 
+    const handlePdfQuestion = async () => {
+        if (!pdfPrompt.trim() || !activeFileContext) return;
+        const currentPrompt = pdfPrompt;
+        setPdfPrompt("");
+        setPdfChatHistory(prev => [...prev, { role: 'user', text: currentPrompt }]);
+        setIsPdfTyping(true);
         try {
-            const body = { 
-                prompt: actionPrompt, 
-                agent: agent, 
-                fileData: useFile ? activeFileContext : null,
-                systemContext: activeProject ? `[ACTIVE PROJECT]: ${JSON.stringify(activeProject)}` : null
-            };
-            const response = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+            const response = await fetch('/api/chat', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: currentPrompt, agent: "aura", fileData: activeFileContext, systemContext: buildSystemContext() })
+            });
             const data = await response.json();
-            return data.text;
-        } catch (e) { 
-            console.error(e);
-            return "Connection Error.";
-        } finally {
-            setIsAuxProcessing(false); 
-        }
+            setPdfChatHistory(prev => [...prev, { role: 'ai', text: data.text }]);
+        } catch (e) { console.error(e); } finally { setIsPdfTyping(false); }
     };
 
-    // --- SPECIALIZED ACTIONS ---
     const handleGenerateCitations = async () => {
-        if (!activeFileContext) { alert("Please load a PDF document first (drag PDF -> click Play)."); return; }
-        addLog("✨ Scholar Agent: Extracting ABNT Citations...");
-        
-        // MODIFICAÇÃO: Ajuste rigoroso para formato ABNT sem incluir a APA.
-        const citationPrompt = `
-            Com base no documento fornecido em contexto, extraia 3 trechos verbatim (parágrafos inteiros) que sejam extremamente cruciais e relevantes para fundamentar uma pesquisa acadêmica.
-            Para cada trecho extraído, gere a referência bibliográfica correspondente estritamente nas regras da **ABNT (Associação Brasileira de Normas Técnicas)**.
-            
-            Formato de saída esperado para cada item:
-            1. "Texto exato do trecho extraído do documento..."
-            - Referência ABNT: SOBRENOME, Nome. Título do artigo/livro. Local, Ano.
-        `;
-
-        const result = await handleAgentAction('scholar', citationPrompt, true);
-        setCitationContent(result);
-        addLog("✅ Citações ABNT geradas com sucesso.");
+        if (!activeFileContext) return;
+        setIsCitationTyping(true);
+        try {
+            const response = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: "Gere 3 citações ABNT", agent: 'scholar', fileData: activeFileContext }) });
+            const data = await response.json();
+            setCitationContent(data.text);
+        } catch (e) { console.error(e); } finally { setIsCitationTyping(false); }
     };
 
-    const handleSaveCitation = async () => {
-        if(!citationContent) return;
-        setIsSystemProcessing(true);
-        addLog("💾 Salvando Citações na Base de Dados (UserSpaceData)...");
-        try {
-            // MODIFICAÇÃO: Integrando a persistência com o modelo UserSpaceData via rota /api/workspace
-            const response = await fetch('/api/workspace', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    userId: session?.user?.email || "anonymous_user",
-                    citations: citationContent // Adicionando as citações ao Payload para atualizar o Json no Prisma
-                })
-            });
-            if (response.ok) {
-                addLog("✅ Citações persistidas no Banco de Dados.");
-                alert("Citações salvas com sucesso!");
-            } else { throw new Error("Database Sync Failed"); }
-        } catch (e) { addLog("❌ Erro ao salvar citações."); console.error(e); } finally { setIsSystemProcessing(false); }
+    const handleSaveCitation = () => {
+        if (!citationContent) return;
+        const newCit: CitationNote = { id: generateSafeId(), text: citationContent };
+        setSavedCitations(prev => [...prev, newCit]);
+        setCitationContent(null);
+        setActiveCitationText(citationContent);
     };
 
     const handleSpecialistQuery = async (specialistType: 'scribe' | 'examiner', inputVal: string) => {
         if (!inputVal.trim()) return;
-        setSpecialistChatHistory(prev => ({
-            ...prev,
-            [specialistType]: [...prev[specialistType], { role: 'user', text: inputVal }]
-        }));
-        
-        const usePdf = specialistType === 'examiner';
-        const result = await handleAgentAction(specialistType, inputVal, usePdf);
-        
-        setSpecialistChatHistory(prev => ({
-            ...prev,
-            [specialistType]: [...prev[specialistType], { role: 'ai', text: result }]
-        }));
+        const isScribe = specialistType === 'scribe';
+        if (isScribe) setIsScribeTyping(true); else setIsExaminerTyping(true);
+        setSpecialistChatHistory(prev => ({ ...prev, [specialistType]: [...prev[specialistType], { role: 'user', text: inputVal }] }));
+        try {
+            const response = await fetch('/api/chat', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: inputVal, agent: specialistType, fileData: specialistType === 'examiner' ? activeFileContext : null, systemContext: buildSystemContext() })
+            });
+            const data = await response.json();
+            setSpecialistChatHistory(prev => ({ ...prev, [specialistType]: [...prev[specialistType], { role: 'ai', text: data.text }] }));
+        } catch (e) { console.error(e); } finally { if (isScribe) setIsScribeTyping(false); else setIsExaminerTyping(false); }
     };
 
     const copyToClipboard = async (text: string) => {
-        try {
-            await navigator.clipboard.writeText(text);
-            addLog("📋 Text copied to clipboard.");
-        } catch (err) {
-            console.error("Failed to copy", err);
-        }
-    };
-
-    // --- MAIN CHAT LOGIC ---
-    const handleUserQuestion = async () => {
-        if (!prompt.trim()) return;
-        
-        const currentPrompt = prompt;
-        setPrompt("");
-        
-        if (viewMode === 'study') {
-            if (!activeFileContext) {
-                setStudyChatHistory(prev => [...prev, { role: 'ai', text: "⚠️ Please load and play a PDF document first." }]);
-                return;
-            }
-            setStudyChatHistory(prev => [...prev, { role: 'user', text: currentPrompt }]);
-        } else {
-            setWorkChatHistory(prev => [...prev, { role: 'user', text: currentPrompt }]);
-        }
-        
-        setIsTyping(true); 
-        setIsMainProcessing(true);
-        
-        try {
-            let targetAgent = "aura"; 
-            let fileData = null;
-            let systemContext = null;
-
-            if (viewMode === 'work') {
-                targetAgent = "scribe"; 
-                systemContext = activeProject 
-                    ? `[ACTIVE PROJECT]: ${JSON.stringify(activeProject)}\n[MODE]: Academic Discussion. Help the user articulate thoughts into formal prose.` 
-                    : null;
-            } else {
-                fileData = activeFileContext;
-                
-                // MODIFICAÇÃO: Concatena o histórico de conversa (memória contínua) ao systemContext
-                // para que o Agente saiba exatamente o que foi perguntado e respondido antes no modo Study.
-                const historyContext = studyChatHistory.map(msg => `${msg.role === 'ai' ? 'Agente' : 'Usuário'}: ${msg.text}`).join('\n');
-                systemContext = `[HISTÓRICO DA CONVERSA PARA CONTEXTO]:\n${historyContext}\nResponda sempre com base no histórico e no documento carregado.`;
-            }
-
-            const response = await fetch('/api/chat', { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify({ 
-                    prompt: currentPrompt, 
-                    agent: targetAgent, 
-                    fileData: fileData, // O PDF em base64 continua sendo enviado para manter a referência forte
-                    systemContext 
-                }) 
-            });
-            const data = await response.json();
-
-            if (viewMode === 'study') {
-                setStudyChatHistory(prev => [...prev, { role: 'ai', text: data.text }]);
-            } else {
-                setWorkChatHistory(prev => [...prev, { role: 'ai', text: data.text }]);
-            }
-
-        } catch (e) { 
-            const errorMsg = "Erro de conexão.";
-            if (viewMode === 'study') setStudyChatHistory(prev => [...prev, { role: 'ai', text: errorMsg }]);
-            else setWorkChatHistory(prev => [...prev, { role: 'ai', text: errorMsg }]);
-        } finally { 
-            setIsTyping(false); 
-            setIsMainProcessing(false); 
-        }
+        try { await navigator.clipboard.writeText(text); alert("Copiado!"); } catch (err) { console.error(err); }
     };
 
     const handlePasteVideo = async () => {
@@ -376,52 +270,13 @@ export default function HomeworkPage() {
             const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
             const match = text.match(regex);
             if (match && match[1]) setVideos(prev => [{ id: generateSafeId(), youtubeId: match[1] }, ...prev]);
-        } catch (err) { console.error("Clipboard error"); }
-    };
-
-    const handleSpecialistChat = (specialistId: number) => { window.open('https://chat.google.com', '_blank'); };
-
-    const handleBoostAndSave = async () => {
-        setIsSystemProcessing(true);
-        try {
-            const userId = session?.user?.email || "anonymous_user";
-            
-            const res = await fetch('/api/workspace', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    userId, 
-                    workTitle: docTitle,
-                    workContent: docContent
-                })
-            });
-
-            if (res.ok) {
-                setIsBoosterOpen(false);
-                alert("Pesquisa salva com sucesso!");
-            } else {
-                throw new Error("Failed to save to database");
-            }
-        } catch (error: any) {
-            alert(`Erro ao salvar: ${error.message || "Save Failed"}`);
-        } finally {
-            setIsSystemProcessing(false);
-        }
+        } catch (err) { console.error(err); }
     };
 
     const handlePublish = async () => {
         if (!publishFormat) return;
         setIsSystemProcessing(true);
         try {
-            // Salva antes de publicar
-            const userId = session?.user?.email || "anonymous_user";
-            await fetch('/api/workspace', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId, workTitle: docTitle, workContent: docContent })
-            });
-
-            // Cria blob para download
             const blob = new Blob([docContent], { type: publishFormat === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -429,332 +284,237 @@ export default function HomeworkPage() {
             a.download = `${docTitle.replace(/\s+/g, '_')}.${publishFormat === 'pdf' ? 'pdf' : 'docx'}`;
             a.click();
             URL.revokeObjectURL(url);
-
             setIsPublishOpen(false);
             setPublishFormat(null);
-        } catch (e) {
-            alert("Erro ao publicar.");
-        } finally {
-            setIsSystemProcessing(false);
-        }
+        } catch (e) { console.error(e); } finally { setIsSystemProcessing(false); }
     };
 
-    if (!mounted || status === "loading") {
-        return ( <div className="w-full h-full flex items-center justify-center z-[999] bg-transparent"> <IosLoader status="LOADING ZAEON OS..." /> </div> );
-    }
+    const getCardStyle = (sectionName: string) => {
+        const isActive = activeSection === sectionName;
+        return `transition-all duration-300 border-2 ${isActive ? 'border-cyan-500 ring-4 ring-cyan-500/10' : 'border-slate-300 dark:border-white/10'} bg-white dark:bg-[#0f172a] shadow-xl`;
+    };
 
-    const panelStyle = "relative overflow-hidden backdrop-blur-2xl border border-slate-200 dark:border-white/10 shadow-[0_0_30px_rgba(0,0,0,0.15)] dark:shadow-[0_0_40px_rgba(34,211,238,0.12)] bg-slate-100/95 dark:bg-[#0f172a]/90 rounded-[40px] transition-all duration-300";
+    if (!mounted || status === "loading") return <div className="w-full h-full flex items-center justify-center bg-slate-100"><IosLoader status="INICIANDO..." /></div>;
 
     return (
-        <div
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => { e.preventDefault(); if(viewMode === 'study') handleFiles(e.dataTransfer.files); }}
-            className={`relative w-full h-full transition-all duration-500 overflow-hidden flex flex-row z-[200] bg-[#f0f4f8] dark:bg-[#030014]`}
-        >
-            <AnimatePresence>
-                {!isFocusMode && (
-                    <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="absolute top-0 w-full z-50">
-                        <Navbar />
-                    </motion.div>
-                )}
-            </AnimatePresence>
+        <div className={`relative transition-all duration-500 overflow-hidden flex font-sans w-full h-screen bg-slate-100 dark:bg-[#030014] ${isFocusMode ? 'pt-4' : 'pt-[100px]'}`}>
 
-            <div className="fixed top-4 right-4 z-[250]">
-                <button 
-                    type="button"
-                    onClick={() => setIsChatLeft(!isChatLeft)} 
-                    className="w-10 h-10 flex items-center justify-center rounded-full bg-white/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 backdrop-blur-md hover:scale-105 transition-all shadow-lg group"
-                >
-                    <ArrowsRightLeftIcon className="w-5 h-5 text-slate-600 dark:text-white group-hover:text-cyan-500 transition-colors" />
-                </button>
-            </div>
-
-            <div className="fixed top-4 right-16 z-[250] flex flex-col items-center">
-                <div onClick={() => setIsFocusMode(!isFocusMode)} className={`w-8 h-14 rounded-full border transition-all cursor-pointer backdrop-blur-xl flex flex-col items-center p-1 ${isFocusMode ? "bg-cyan-900/80 border-cyan-500/50 shadow-lg" : "bg-white/80 border-slate-300 dark:bg-white/10"}`}>
-                    <motion.div className={`w-5 h-5 rounded-full flex items-center justify-center ${isFocusMode ? "bg-cyan-400 text-black" : "bg-slate-400 text-white"}`} animate={{ y: isFocusMode ? 0 : 26 }}>
-                        {isFocusMode ? <EyeIcon className="w-3 h-3" /> : <PowerIcon className="w-3 h-3" />}
-                    </motion.div>
+            {/* Lógica do Modo Foco: Oculta a Navbar completamente */}
+            {!isFocusMode && (
+                <div className="absolute top-0 left-0 w-full z-50">
+                    <Navbar />
                 </div>
-            </div>
+            )}
 
-            <AnimatePresence>
-                {isTransitioning && (
-                    <motion.div key="transition-loader" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[999] bg-black/90 flex items-center justify-center">
-                        <IosLoader status={t("homework.switching")} />
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            {/* SIDEBAR ULTRA-FINA */}
+            <motion.nav
+                onMouseEnter={() => setIsSidebarOpen(true)}
+                onMouseLeave={() => setIsSidebarOpen(false)}
+                animate={{ width: isSidebarOpen ? 180 : 54 }}
+                className={`fixed left-4 z-[550] flex flex-col py-6 rounded-[24px] border shadow-2xl bg-white dark:bg-[#0a0a0a] border-slate-300 dark:border-white/10 overflow-hidden transition-all duration-500 ${isFocusMode ? 'top-4 h-[calc(100vh-32px)]' : 'top-[100px] h-[calc(100vh-140px)]'}`}
+            >
+                <div className="flex flex-col gap-4 px-2.5">
+                    <button onClick={() => setIsChatLeft(!isChatLeft)} className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 text-black dark:text-white group">
+                        <ArrowsRightLeftIcon className="w-5 h-5 shrink-0 group-hover:text-cyan-500" />
+                        {isSidebarOpen && <span className="text-[10px] font-black uppercase whitespace-nowrap">Layout</span>}
+                    </button>
+                    <button onClick={() => setIsFocusMode(!isFocusMode)} className={`flex items-center gap-3 p-2 rounded-xl ${isFocusMode ? 'bg-cyan-500 text-white shadow-md' : 'text-black dark:text-white hover:bg-slate-100'}`}>
+                        {isFocusMode ? <EyeIcon className="w-5 h-5" /> : <PowerIcon className="w-5 h-5" />}
+                        {isSidebarOpen && <span className="text-[10px] font-black uppercase">Foco</span>}
+                    </button>
+                </div>
+            </motion.nav>
 
-            {/* --- STUDY MODE --- */}
-            {viewMode === "study" && (
-                <>
-                    <AnimatePresence>
-                        {(activeSection || isMainProcessing) && (
-                            <motion.div key="overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[15] bg-black/20 backdrop-blur-[1px] pointer-events-none" />
-                        )}
-                    </AnimatePresence>
+            <main className="flex-1 flex gap-8 p-6 pl-[80px] h-full overflow-hidden">
 
+                {/* COLUNA 1: ESTUDO (PDF + SCRIBE + QUIZ) */}
+                <div className={`w-1/2 h-full flex flex-col gap-8 overflow-y-auto custom-scrollbar pb-32 pr-2 ${isChatLeft ? 'order-first' : 'order-last'}`}>
                     <input type="file" ref={fileInputRef} className="hidden" accept="application/pdf" multiple onChange={(e) => handleFiles(e.target.files)} />
 
-                    <main ref={mainScrollRef} onClick={() => setActiveSection(null)} className={`relative z-20 flex-1 h-full overflow-y-auto pb-40 custom-scrollbar space-y-12 transition-all duration-700 ${isFocusMode ? 'pt-10' : 'pt-[120px]'} ${isMainProcessing ? 'blur-[4px] opacity-40' : ''} ${isChatLeft ? 'pl-[460px] pr-8' : 'pr-[460px] pl-8'}`}>
-                        
-                        <section onClick={(e) => { e.stopPropagation(); setActiveSection('study'); }} className={`relative rounded-[41px] p-[1px] transition-all ${activeSection === 'study' ? 'z-[30]' : 'z-[10]'}`}>
-                            <div className={`relative p-6 rounded-[40px] border transition-all ${activeSection === 'study' ? 'border-cyan-500 shadow-2xl bg-white' : 'border-slate-200 bg-slate-100/95 dark:bg-[#0f172a]/90'}`}>
-                                <div className="flex items-center gap-4 mb-6">
-                                    <button type="button" onClick={handleToggleMode} className="bg-cyan-500 hover:bg-cyan-400 text-white text-[10px] font-black px-4 py-1.5 rounded-lg uppercase tracking-widest shadow-lg flex items-center gap-2 transition-all hover:scale-105 active:scale-95">
-                                        <ArrowPathIcon className="w-3 h-3" />
-                                        {t("homework.study_title")}
-                                    </button>
-                                    <span className="text-[10px] text-slate-400 uppercase tracking-widest">{t("homework.switch_hint", { mode: t("homework.mode_work") })}</span>
-                                    <div className="ml-auto">
-                                        <ActionButton icon={PlusIcon} label={t("homework.add_files")} onClick={() => fileInputRef.current?.click()} colorClass={`hover:text-cyan-500 ${activeSection === 'study' ? 'dark:text-black' : ''}`} />
-                                    </div>
-                                </div>
-                                <div className="flex flex-row gap-6 overflow-x-auto pb-8 pt-2 px-2 min-h-[340px]">
-                                    {studyFiles.map(doc => (
-                                        <ResearchCardPDF key={doc.id} title={doc.title} fileUrl={doc.url} isProcessing={processingFileId === doc.id} onDelete={() => setStudyFiles(prev => prev.filter(f => f.id !== doc.id))} onPlay={() => handlePlayDocument(doc)} />
-                                    ))}
-                                </div>
-                            </div>
-                        </section>
+                    {/* CHAT COM PDF & CITAÇÕES */}
+                    <section onClick={() => setActiveSection('pdf')} className={`p-6 rounded-[32px] shrink-0 ${getCardStyle('pdf')}`}>
+                        <div className="flex items-center gap-4 mb-6">
+                            <span className="bg-black dark:bg-white text-white dark:text-black text-[11px] font-black px-5 py-2 rounded-full uppercase tracking-widest flex items-center gap-2 shadow-md">
+                                <BookOpenIcon className="w-4 h-4" /> Biblioteca
+                            </span>
+                            {/* Botão reposicionado para o lado do título */}
+                            <ActionButton icon={PlusIcon} label="Adicionar PDF" onClick={() => fileInputRef.current?.click()} colorClass="text-black dark:text-white hover:text-cyan-500" />
+                        </div>
 
-                        {/* CITATIONS SECTION (Scholar Agent) */}
-                        <section ref={citationsRef} onClick={(e) => { e.stopPropagation(); setActiveSection('citations'); }} className={`relative rounded-[40px] p-6 border transition-all ${activeSection === 'citations' ? 'border-cyan-500 shadow-2xl z-[30] bg-white' : 'border-slate-200 bg-slate-100/95 dark:bg-[#0f172a]/90'}`}>
-                            <div className="flex items-center gap-4 mb-6">
-                                <span className="text-slate-500 dark:text-cyan-400/60 text-[10px] font-black uppercase tracking-widest block">{t("homework.citations_title")}</span>
-                                <div className="flex items-center gap-2">
-                                    <ActionButton icon={BookmarkIcon} label="Save DB" onClick={handleSaveCitation} />
-                                    <ActionButton icon={SparklesIcon} label="Generate" onClick={handleGenerateCitations} colorClass="text-purple-500 hover:text-purple-600" />
-                                </div>
-                            </div>
-                            <div className="h-[100px] bg-slate-50/50 dark:bg-black/20 rounded-2xl flex items-center justify-center italic text-slate-400 text-xs overflow-y-auto p-4">
-                                {isAuxProcessing ? <span className="animate-pulse">Analyzing...</span> : 
-                                (citationContent ? <span className="text-left whitespace-pre-wrap">{citationContent}</span> : (activeFileContext ? t("homework.citations_ready") : t("homework.citations_empty")))}
-                            </div>
-                        </section>
-
-                        {/* SPECIALISTS (Scribe & Examiner) */}
-                        <section className="grid grid-cols-2 gap-6">
-                            {/* Specialist 1: Scribe */}
-                            <div onClick={(e) => { e.stopPropagation(); setActiveSection(`specialist-1`); }} className={`relative rounded-[40px] border shadow-sm h-[600px] flex flex-col overflow-hidden transition-all duration-500 ${activeSection === 'specialist-1' ? 'z-[30] border-cyan-500 shadow-2xl scale-[1.01] bg-white dark:bg-[#0f172a]' : 'z-[10] border-slate-200 dark:border-white/10 bg-white dark:bg-[#0f172a] hover:shadow-xl'}`}>
-                                <div className="p-6 border-b border-slate-100 dark:border-white/5 flex items-center justify-between bg-slate-50/50 dark:bg-white/5">
-                                    <div>
-                                        <span className="bg-purple-200 dark:bg-purple-900/30 text-purple-600 dark:text-purple-300 text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest">Academic Writer</span>
-                                        <h3 className="text-sm font-bold text-slate-800 dark:text-white mt-2">The Scribe</h3>
-                                    </div>
-                                    <UserCircleIcon className="w-8 h-8 text-purple-300" />
-                                </div>
-                                <div className="flex-1 bg-slate-50/30 dark:bg-black/20 p-6 overflow-y-auto custom-scrollbar">
-                                    {specialistChatHistory.scribe.length === 0 ? (
-                                        <div className="h-full flex items-center justify-center">
-                                            <div className="text-center space-y-2 opacity-40">
-                                                <PaperAirplaneIcon className="w-8 h-8 mx-auto text-slate-400" />
-                                                <p className="text-xs text-slate-500">Drafting & Refinement</p>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-4">
-                                            {specialistChatHistory.scribe.map((msg, i) => (
-                                                <div key={i} className={`text-xs p-3 rounded-xl ${msg.role === 'user' ? 'bg-purple-500/10 text-right ml-4' : 'bg-white/5 text-left mr-4'}`}>
-                                                    {msg.text}
-                                                </div>
-                                            ))}
-                                            {isAuxProcessing && <div className="text-xs text-purple-400 animate-pulse text-left">Scribe is writing...</div>}
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="p-4 bg-white dark:bg-[#0f172a] border-t border-slate-100 dark:border-white/5">
-                                    <input type="text" placeholder="Ask Scribe to rewrite..." onKeyDown={(e) => { if(e.key === 'Enter') { const val = (e.target as HTMLInputElement).value; handleSpecialistQuery('scribe', val); (e.target as HTMLInputElement).value = ''; } }} className="w-full bg-slate-100 dark:bg-white/5 rounded-full py-3 px-5 text-xs focus:outline-none focus:ring-1 focus:ring-slate-300 text-slate-700 dark:text-white" />
-                                </div>
-                            </div>
-
-                            {/* Specialist 2: Examiner */}
-                            <div onClick={(e) => { e.stopPropagation(); setActiveSection(`specialist-2`); }} className={`relative rounded-[40px] border shadow-sm h-[600px] flex flex-col overflow-hidden transition-all duration-500 ${activeSection === 'specialist-2' ? 'z-[30] border-cyan-500 shadow-2xl scale-[1.01] bg-white dark:bg-[#0f172a]' : 'z-[10] border-slate-200 dark:border-white/10 bg-white dark:bg-[#0f172a] hover:shadow-xl'}`}>
-                                <div className="p-6 border-b border-slate-100 dark:border-white/5 flex items-center justify-between bg-slate-50/50 dark:bg-white/5">
-                                    <div>
-                                        <span className="bg-orange-200 dark:bg-orange-900/30 text-orange-600 dark:text-orange-300 text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest">Knowledge Tester</span>
-                                        <h3 className="text-sm font-bold text-slate-800 dark:text-white mt-2">The Examiner</h3>
-                                    </div>
-                                    <UserCircleIcon className="w-8 h-8 text-orange-300" />
-                                </div>
-                                <div className="flex-1 bg-slate-50/30 dark:bg-black/20 p-6 overflow-y-auto custom-scrollbar">
-                                    {specialistChatHistory.examiner.length === 0 ? (
-                                        <div className="h-full flex items-center justify-center">
-                                            <div className="text-center space-y-2 opacity-40">
-                                                <PaperAirplaneIcon className="w-8 h-8 mx-auto text-slate-400" />
-                                                <p className="text-xs text-slate-500">Quizzes & Assessment</p>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-4">
-                                            {specialistChatHistory.examiner.map((msg, i) => (
-                                                <div key={i} className={`text-xs p-3 rounded-xl ${msg.role === 'user' ? 'bg-orange-500/10 text-right ml-4' : 'bg-white/5 text-left mr-4'}`}>
-                                                    {msg.text}
-                                                </div>
-                                            ))}
-                                            {isAuxProcessing && <div className="text-xs text-orange-400 animate-pulse text-left">Examiner is evaluating...</div>}
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="p-4 bg-white dark:bg-[#0f172a] border-t border-slate-100 dark:border-white/5">
-                                    <input type="text" placeholder="Start a quiz on..." onKeyDown={(e) => { if(e.key === 'Enter') { const val = (e.target as HTMLInputElement).value; handleSpecialistQuery('examiner', val); (e.target as HTMLInputElement).value = ''; } }} className="w-full bg-slate-100 dark:bg-white/5 rounded-full py-3 px-5 text-xs focus:outline-none focus:ring-1 focus:ring-slate-300 text-slate-700 dark:text-white" />
-                                </div>
-                            </div>
-                        </section>
-
-                        {/* VIDEOS (Simplified) */}
-                        <section onClick={(e) => { e.stopPropagation(); setActiveSection('videos'); }} className={`relative rounded-[40px] p-6 border transition-all ${activeSection === 'videos' ? 'border-cyan-400 shadow-2xl z-[30] bg-white' : 'border-slate-200 bg-slate-100/95 dark:bg-[#0f172a]/90'}`}>
-                            <div className="flex items-center gap-4 mb-6">
-                                <span className="text-slate-500 dark:text-cyan-400/60 text-[10px] font-black uppercase tracking-widest flex items-center gap-2"><VideoCameraIcon className="w-5 h-5" /> {t("homework.videos_title")}</span>
-                                <div className="flex items-center gap-2">
-                                    <ActionButton icon={ClipboardIcon} label={t("homework.paste_link")} onClick={handlePasteVideo} />
-                                </div>
-                            </div>
-                            <div className="flex flex-row gap-8 overflow-x-auto pb-4 min-h-[300px]">
-                                {videos.map(vid => (
-                                    <div key={vid.id} className="flex-shrink-0 w-[480px] h-[270px] bg-black rounded-[32px] overflow-hidden shadow-2xl relative group/vid border border-white/5">
-                                        <iframe width="100%" height="100%" src={`https://www.youtube.com/embed/${vid.youtubeId}`} frameBorder="0" allowFullScreen />
-                                        <button type="button" onClick={() => setVideos(prev => prev.filter(v => v.id !== vid.id))} className="absolute top-4 right-4 p-2 bg-black/60 text-white rounded-full opacity-0 group-hover/vid:opacity-100 transition-opacity"><TrashIcon className="w-4 h-4" /></button>
+                        <div className="bg-slate-100 dark:bg-white/5 rounded-2xl p-4 mb-6 border border-slate-300 dark:border-white/10">
+                            <div className="flex gap-4 overflow-x-auto pb-2 custom-scrollbar items-center min-h-[150px]">
+                                {studyFiles.length === 0 && <span className="text-xs text-black dark:text-white font-medium italic">Arraste PDFs ou adicione-os no botão +.</span>}
+                                {studyFiles.map(doc => (
+                                    <div key={doc.id} className="w-[180px] shrink-0 transition-transform hover:-translate-y-1">
+                                        <ResearchCardPDF title={doc.title} fileUrl={doc.url} isProcessing={processingFileId === doc.id} onDelete={() => setStudyFiles(prev => prev.filter(f => f.id !== doc.id))} onPlay={() => handlePlayDocument(doc)} />
                                     </div>
                                 ))}
                             </div>
-                        </section>
-
-                    </main>
-
-                    {/* CHAT ASIDE */}
-                    <aside className={`fixed z-[60] w-[420px] bg-slate-50 shadow-2xl rounded-[40px] flex flex-col border border-slate-200 transition-all duration-700 ${isChatLeft ? 'left-6' : 'right-6'} ${isFocusMode ? 'top-6 h-[calc(100vh-48px)]' : 'top-[123px] h-[calc(100vh-155px)]'}`}>
-                        <div className="p-8 border-b border-slate-200 flex items-center gap-2 justify-between">
-                            <div className="flex items-center gap-2">
-                                <div className={`w-2 h-2 rounded-full ${isMainProcessing || isTyping ? 'bg-cyan-500 animate-pulse' : 'bg-slate-300'}`} />
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t("homework.chat_header")}</span>
-                            </div>
-                            {activeFileContext && <span className="text-[8px] bg-cyan-100 text-cyan-700 px-2 py-0.5 rounded border border-cyan-200">{t("homework.chat_context_active")}</span>}
                         </div>
-                        <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-10 space-y-6 text-slate-800 text-[14px] leading-relaxed custom-scrollbar">
-                            {studyChatHistory.length === 0 && !isMainProcessing && <div className="text-center text-slate-400 text-xs italic mt-20">{t("homework.chat_empty")}</div>}
-                            {studyChatHistory.map((msg, i) => (
-                                <div key={i} className={`p-5 rounded-2xl ${msg.role === 'user' ? 'bg-cyan-50 ml-4 text-right' : 'bg-white mr-4 shadow-sm text-left'}`}>{msg.text}</div>
-                            ))}
-                            {(isMainProcessing || isTyping) && <div className="flex justify-center p-4"><IosLoader status={isMainProcessing ? t("homework.status_digesting") : t("homework.status_typing")} /></div>}
-                        </div>
-                        <div className="p-8 border-t border-slate-100 bg-white rounded-b-[40px]">
-                            <div className="relative">
-                                <input type="text" value={prompt} onChange={(e) => setPrompt(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleUserQuestion()} placeholder={activeFileContext ? t("homework.chat_placeholder") : t("homework.chat_empty")} disabled={isMainProcessing} className="w-full bg-white border border-slate-300 rounded-2xl py-4 px-6 text-[14px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-cyan-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" />
-                                <button type="button" onClick={handleUserQuestion} disabled={isTyping || isMainProcessing || !prompt.trim()} className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-black rounded-xl text-white hover:bg-slate-800 transition-colors disabled:opacity-50"><ChevronRightIcon className="w-4 h-4" /></button>
-                            </div>
-                        </div>
-                    </aside>
-                </>
-            )}
 
-            {/* --- WORK MODE --- */}
-            {viewMode === "work" && (
-                <div className={`z-20 w-full max-w-[1700px] h-[95vh] flex px-4 gap-6 ${isFocusMode ? 'pt-6' : 'pt-28'}`}> 
-                    <div className="relative w-16 flex flex-col items-center gap-6 py-6 rounded-[28px] bg-white/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 backdrop-blur-xl shrink-0 h-full z-[100] shadow-sm">
-                        <WorkstationMenuButton icon={ChatBubbleLeftRightIcon} label="Chat" isActive={activeWorkTool === 'chat'} onClick={() => setActiveWorkTool('chat')} />
-                        <WorkstationMenuButton icon={DocumentTextIcon} label="Citations" isActive={activeWorkTool === 'citations'} onClick={() => setActiveWorkTool('citations')} />
-                    </div>
-                    
-                    <div className="flex-1 grid grid-cols-12 gap-6 h-full">
-                        {/* LEFT/CENTER PANEL: CHAT or CITATIONS */}
-                        <div className={`col-span-7 ${panelStyle} flex flex-col relative h-full ${isChatLeft ? 'order-first' : 'order-last'}`}>
-                            <div className="absolute top-4 left-4 z-40 flex gap-3">
-                                <button type="button" onClick={handleToggleMode} className="flex items-center gap-2 bg-white/5 border border-white/20 px-4 py-2 rounded-2xl hover:bg-white/10 transition-all backdrop-blur-md"><ArrowPathIcon className="w-4 h-4 text-white" /><span className="text-[10px] text-white font-bold uppercase">{t("homework.mode_study")}</span></button>
-                                {activeProject && <div className="flex items-center gap-2 bg-cyan-900/30 border border-cyan-500/30 px-4 py-2 rounded-2xl backdrop-blur-md"><BeakerIcon className="w-4 h-4 text-cyan-400" /><span className="text-[10px] text-cyan-100 font-bold uppercase truncate max-w-[150px]">{activeProject.title}</span></div>}
-                            </div>
-
-                            {activeWorkTool === 'citations' ? (
-                                // --- CITATIONS VIEWER (WORK MODE) ---
-                                <div className="flex-1 p-8 pt-20 overflow-y-auto custom-scrollbar">
-                                    <div className="flex items-center justify-between mb-6">
-                                        <h3 className="text-xl font-bold text-white flex items-center gap-2"><DocumentTextIcon className="w-6 h-6 text-cyan-400"/> Saved Citations</h3>
-                                        {citationContent && (
-                                            <button onClick={() => copyToClipboard(citationContent)} className="text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-white transition-colors flex items-center gap-2">
-                                                <ClipboardDocumentIcon className="w-4 h-4" /> Copy All
-                                            </button>
-                                        )}
-                                    </div>
-                                    <div className="bg-[#0a0a0a]/50 p-6 rounded-2xl border border-white/10 text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">
-                                        {citationContent ? citationContent : <span className="italic opacity-50">No citations loaded from Study Mode yet. Go back and generate some!</span>}
-                                    </div>
+                        {activeFileContext && (
+                            <div className="border-t border-slate-300 dark:border-white/20 pt-6">
+                                <div className="flex p-1.5 bg-slate-200 dark:bg-white/10 rounded-xl w-fit mb-6 border border-slate-300 dark:border-white/20 shadow-inner">
+                                    <button onClick={() => setActivePdfTab('chat')} className={`px-6 py-2.5 rounded-lg text-[11px] font-black uppercase transition-all ${activePdfTab === 'chat' ? 'bg-white text-cyan-600 shadow-md' : 'text-black dark:text-white hover:bg-white/50'}`}>Chat</button>
+                                    <button onClick={() => setActivePdfTab('citations')} className={`px-6 py-2.5 rounded-lg text-[11px] font-black uppercase transition-all ${activePdfTab === 'citations' ? 'bg-white text-purple-600 shadow-md' : 'text-black dark:text-white hover:bg-white/50'}`}>Citações</button>
                                 </div>
-                            ) : (
-                                // --- CHAT VIEW (WORK MODE) ---
-                                <>
-                                    <div ref={workChatRef} className="flex-1 relative p-6 overflow-y-auto custom-scrollbar flex flex-col z-0 pt-16">
-                                        <div className="flex-1" />
-                                        <div className="space-y-6 pb-2">
-                                            {workChatHistory.map((msg, i) => (<div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}><div className={`max-w-[85%] rounded-2xl px-5 py-3 text-sm font-light shadow-lg relative ${msg.role === 'user' ? 'bg-cyan-900/40 text-cyan-50 border border-cyan-500/30' : 'bg-[#0a0a0a]/80 text-white/90 border border-white/10'}`}>{msg.text}</div></div>))}
-                                            {isTyping && <div className="flex justify-start"><div className="bg-[#0a0a0a]/60 border border-white/5 px-4 py-2 rounded-xl flex gap-1"><span className="w-1.5 h-1.5 bg-white/40 rounded-full animate-bounce" /><span className="w-1.5 h-1.5 bg-white/40 rounded-full animate-bounce [animation-delay:0.1s]" /><span className="w-1.5 h-1.5 bg-white/40 rounded-full animate-bounce [animation-delay:0.2s]" /></div></div>}
+
+                                {activePdfTab === 'chat' ? (
+                                    <div className="flex flex-col gap-4">
+                                        <div ref={pdfChatRef} className="h-[250px] overflow-y-auto bg-slate-50 dark:bg-black p-5 rounded-2xl border border-slate-300 dark:border-white/10 shadow-inner">
+                                            {pdfChatHistory.length === 0 && <span className="text-black dark:text-white text-xs font-medium italic">Nenhum resumo gerado.</span>}
+                                            {pdfChatHistory.map((msg, i) => <ChatBubble key={i} role={msg.role} text={msg.text} agentName="Aura" agentImg="/agents/aura.png" userImg={session?.user?.image} />)}
+                                            {isPdfTyping && <div className="text-[10px] font-bold animate-pulse text-cyan-600 ml-12">Analisando o PDF...</div>}
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <input value={pdfPrompt} onChange={(e) => setPdfPrompt(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handlePdfQuestion()} className="flex-1 bg-white dark:bg-black border border-slate-300 dark:border-white/20 rounded-full px-5 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-cyan-500/30" placeholder="Pergunte ao PDF..." />
+                                            <button onClick={handlePdfQuestion} disabled={isPdfTyping || !pdfPrompt.trim()} className="bg-cyan-600 text-white px-6 rounded-full font-black uppercase text-[11px]">Enviar</button>
                                         </div>
                                     </div>
-                                    <div className="p-5 bg-black/60 border-t border-white/10 flex flex-col gap-3 shrink-0 backdrop-blur-xl z-20 relative rounded-b-[24px]">
-                                        <div className="flex gap-3 items-center"><input type="text" value={prompt} onChange={(e) => setPrompt(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleUserQuestion()} placeholder="Ask the system..." className="flex-1 bg-black/50 border border-white/10 rounded-xl py-3 px-4 text-white placeholder:text-white/40 focus:outline-none font-mono text-sm" /><button type="button" onClick={handleUserQuestion} className="bg-cyan-500 text-black px-6 rounded-xl font-bold text-xs uppercase hover:bg-cyan-400 active:scale-95 transition-all h-11">SUBMIT</button></div>
+                                ) : (
+                                    <div className="flex flex-col gap-4">
+                                        <div className="flex items-center gap-4 mb-2">
+                                            <span className="text-black dark:text-white text-[12px] font-black uppercase">Base de Citações</span>
+                                            <button onClick={handleGenerateCitations} className="px-5 py-2.5 bg-black dark:bg-white text-white dark:text-black rounded-full text-[10px] font-black uppercase shadow-md flex items-center gap-2"><SparklesIcon className="w-3.5 h-3.5" /> Extrair do PDF</button>
+                                            {citationContent && <button onClick={handleSaveCitation} className="p-3 bg-emerald-100 rounded-full shadow-md"><BookmarkIcon className="w-4 h-4 text-emerald-600" /></button>}
+                                        </div>
+                                        <div className="flex gap-3 overflow-x-auto p-4 bg-slate-50 dark:bg-black rounded-2xl shadow-inner border border-slate-300 dark:border-white/10 min-h-[90px]">
+                                            {savedCitations.length === 0 && <span className="text-xs text-black dark:text-white font-medium italic m-auto">Nenhuma citação salva.</span>}
+                                            {savedCitations.map(cit => <div key={cit.id} onClick={() => setActiveCitationText(cit.text)} className="w-12 h-12 bg-yellow-200 rounded-xl flex items-center justify-center cursor-pointer shadow-md border border-yellow-400 hover:-translate-y-1 transition-transform"><DocumentTextIcon className="w-5 h-5 text-yellow-800" /></div>)}
+                                        </div>
+                                        <div className="p-6 bg-slate-100 dark:bg-white/5 rounded-2xl border border-slate-300 dark:border-white/20 min-h-[160px] relative">
+                                            {isCitationTyping ? <div className="absolute inset-0 flex items-center justify-center"><IosLoader status="Extraindo Citações..." /></div> : <p className="text-[14px] leading-relaxed font-medium text-black dark:text-white whitespace-pre-wrap">{activeCitationText || citationContent || "Visualize citações aqui..."}</p>}
+                                            {(activeCitationText || citationContent) && !isCitationTyping && <button onClick={() => copyToClipboard(activeCitationText || citationContent || "")} className="absolute top-4 right-4 p-3 bg-white dark:bg-black border border-slate-300 rounded-lg shadow-md"><ClipboardDocumentIcon className="w-4 h-4 text-black dark:text-white" /></button>}
+                                        </div>
                                     </div>
-                                </>
-                            )}
-                        </div>
-
-                        {/* RIGHT PANEL: DOC (A4-like, full height) */}
-                        <div className="col-span-5 flex flex-col h-full">
-                            <div onClick={() => setActiveWorkSection('doc')} className={`${panelStyle} flex-1 flex flex-col ${activeWorkSection === 'doc' ? 'ring-1 ring-cyan-400/50' : ''}`}>
-                                <div className="h-14 bg-slate-50 dark:bg-black/40 border-b border-slate-200 dark:border-white/10 flex items-center px-6 rounded-t-[40px]"><input value={docTitle} onChange={(e) => setDocTitle(e.target.value)} className="bg-transparent text-slate-800 dark:text-white/90 text-sm font-mono focus:outline-none w-full" /></div>
-                                <textarea value={docContent} onChange={(e) => setDocContent(e.target.value)} className="flex-1 p-8 font-mono text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-[#0f172a]/80 outline-none resize-none leading-relaxed" style={{ minHeight: '60vh' }} />
-                                <div className="p-4 bg-slate-50 dark:bg-[#0f172a]/60 flex justify-end gap-3 rounded-b-[40px] border-t border-slate-200 dark:border-white/5">
-                                    <button type="button" onClick={() => setIsBoosterOpen(true)} className="px-4 py-2 rounded-xl text-[11px] font-bold border transition flex items-center gap-2 bg-blue-100 text-blue-700 border-blue-400 hover:bg-blue-200 uppercase tracking-wider"><ArrowDownTrayIcon className="w-4 h-4" /> {t("workstation.session_save")}</button>
-                                    <button type="button" onClick={() => setIsPublishOpen(true)} disabled={isSystemProcessing} className={`px-4 py-2 rounded-xl text-[11px] font-bold border transition flex items-center gap-2 uppercase tracking-wider ${isSystemProcessing ? 'bg-yellow-100 text-yellow-700 border-yellow-400' : 'bg-green-100 text-green-700 border-green-400 hover:bg-green-200'}`}><PlayIcon className="w-4 h-4" /> {isSystemProcessing ? t("workstation.processing") : 'Publicar'}</button>
-                                </div>
+                                )}
                             </div>
+                        )}
+                    </section>
+
+                    {/* SCRIBE CHAT */}
+                    <section onClick={() => setActiveSection('scribe')} className={`flex flex-col h-[450px] shrink-0 rounded-[32px] overflow-hidden ${getCardStyle('scribe')}`}>
+                        <div className="p-5 border-b border-slate-300 dark:border-white/10 bg-slate-50 dark:bg-white/5 flex items-center justify-between">
+                            <span className="text-[10px] font-black uppercase text-purple-700 dark:text-purple-400 tracking-widest border border-purple-300 px-4 py-1.5 rounded-full bg-purple-100 dark:bg-purple-900/30">Escritor Acadêmico</span>
+                            <div className="w-10 h-10 rounded-full border border-slate-300 shadow-sm overflow-hidden"><img src="/agents/scribe.png" className="w-full h-full object-cover" /></div>
+                        </div>
+                        <div ref={scribeChatRef} className="flex-1 p-6 overflow-y-auto space-y-4 custom-scrollbar bg-white dark:bg-[#0f172a]">
+                            {specialistChatHistory.scribe.length === 0 && <span className="text-sm text-black dark:text-white font-medium italic flex items-center justify-center h-full text-center px-4">Peça ao Scribe para reescrever e refinar seus textos.</span>}
+                            {specialistChatHistory.scribe.map((msg, i) => <ChatBubble key={i} role={msg.role} text={msg.text} agentName="Scribe" agentImg="/agents/scribe.png" userImg={session?.user?.image} />)}
+                            {isScribeTyping && <div className="text-[11px] text-purple-600 font-black uppercase tracking-widest animate-pulse ml-12">Scribe está redigindo...</div>}
+                        </div>
+                        <div className="p-5 bg-slate-50 dark:bg-black border-t border-slate-300 dark:border-white/10">
+                            <input placeholder="Refine seu texto..." onKeyDown={(e) => { if (e.key === 'Enter') { handleSpecialistQuery('scribe', (e.target as HTMLInputElement).value); (e.target as HTMLInputElement).value = ''; } }} disabled={isScribeTyping} className="w-full bg-white dark:bg-white/10 border border-slate-300 dark:border-white/20 rounded-full py-4 px-6 text-[14px] font-medium focus:outline-none focus:ring-2 focus:ring-purple-500/30 placeholder:text-slate-400" />
+                        </div>
+                    </section>
+
+                    {/* QUIZ CHAT */}
+                    <section onClick={() => setActiveSection('examiner')} className={`flex flex-col h-[450px] shrink-0 rounded-[32px] overflow-hidden ${getCardStyle('examiner')}`}>
+                        <div className="p-5 border-b border-slate-300 dark:border-white/10 bg-slate-50 dark:bg-white/5 flex items-center justify-between">
+                            <span className="text-[10px] font-black uppercase text-orange-700 dark:text-orange-400 tracking-widest border border-orange-300 px-4 py-1.5 rounded-full bg-orange-100 dark:bg-orange-900/30">Testador de Conhecimento</span>
+                            <div className="w-10 h-10 rounded-full border border-slate-300 shadow-sm overflow-hidden"><img src="/agents/examiner.png" className="w-full h-full object-cover" /></div>
+                        </div>
+                        <div ref={examinerChatRef} className="flex-1 p-6 overflow-y-auto space-y-4 custom-scrollbar bg-white dark:bg-[#0f172a]">
+                            {specialistChatHistory.examiner.length === 0 && <span className="text-sm text-black dark:text-white font-medium italic flex items-center justify-center h-full text-center px-4">Peça ao Examiner para testar seu conhecimento sobre o PDF.</span>}
+                            {specialistChatHistory.examiner.map((msg, i) => <ChatBubble key={i} role={msg.role} text={msg.text} agentName="Examiner" agentImg="/agents/examiner.png" userImg={session?.user?.image} />)}
+                            {isExaminerTyping && <div className="text-[11px] text-orange-600 font-black uppercase tracking-widest animate-pulse ml-12">Examiner está avaliando...</div>}
+                        </div>
+                        <div className="p-5 bg-slate-50 dark:bg-black border-t border-slate-300 dark:border-white/10">
+                            <input placeholder="Inicie um quiz..." onKeyDown={(e) => { if (e.key === 'Enter') { handleSpecialistQuery('examiner', (e.target as HTMLInputElement).value); (e.target as HTMLInputElement).value = ''; } }} disabled={isExaminerTyping} className="w-full bg-white dark:bg-white/10 border border-slate-300 dark:border-white/20 rounded-full py-4 px-6 text-[14px] font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/30 placeholder:text-slate-400" />
+                        </div>
+                    </section>
+
+                    {/* VIDEOS */}
+                    <section onClick={() => setActiveSection('videos')} className={`p-6 rounded-[32px] shrink-0 ${getCardStyle('videos')}`}>
+                        <div className="flex items-center gap-4 mb-6">
+                            <span className="bg-black dark:bg-white text-white dark:text-black text-[11px] font-bold px-5 py-2 rounded-full uppercase tracking-widest flex items-center gap-2 shadow-md">
+                                <VideoCameraIcon className="w-4 h-4" /> Apoio Audiovisual
+                            </span>
+                            <div className="ml-auto">
+                                <ActionButton icon={ClipboardIcon} label="Colar Link" onClick={handlePasteVideo} />
+                            </div>
+                        </div>
+                        <div className="flex flex-row gap-6 overflow-x-auto pb-4 pt-2 min-h-[220px] custom-scrollbar">
+                            {videos.length === 0 && <span className="text-sm text-black dark:text-white font-medium italic m-auto">Cole links do YouTube para referências.</span>}
+                            {videos.map(vid => (
+                                <div key={vid.id} className="flex-shrink-0 w-[360px] h-[200px] bg-slate-200 dark:bg-black rounded-[24px] overflow-hidden shadow-md relative group/vid border border-slate-300 dark:border-white/10">
+                                    <iframe width="100%" height="100%" src={`https://www.youtube.com/embed/${vid.youtubeId}`} frameBorder="0" allowFullScreen />
+                                    <button onClick={(e) => { e.stopPropagation(); setVideos(prev => prev.filter(v => v.id !== vid.id)); }} className="absolute top-3 right-3 p-3 bg-black dark:bg-white text-white dark:text-black rounded-xl opacity-0 group-hover/vid:opacity-100 transition-opacity hover:scale-105 shadow-xl"><TrashIcon className="w-5 h-5" /></button>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+                </div>
+
+                {/* COLUNA 2: FOLHA A4 (MÓDULO INTEIRO É A FOLHA) */}
+                {/* Lógica isChatLeft garante que isso fique à esquerda se for false, e na direita se for true */}
+                <div onClick={() => setActiveSection('doc')} className={`w-1/2 flex flex-col h-[calc(100vh-140px)] rounded-[32px] shadow-2xl transition-all border-4 ${activeSection === 'doc' ? 'border-cyan-500 ring-8 ring-cyan-500/10' : 'border-white dark:border-[#0f172a]'} ${!isChatLeft ? 'order-first' : 'order-last'} bg-white dark:bg-[#0f172a] overflow-hidden`}>
+
+                    {/* CABEÇALHO DA FOLHA (TÍTULO MENOR E DISCRETO) */}
+                    <div className="h-20 flex items-center px-10 shrink-0 border-b border-slate-100 dark:border-white/5 bg-transparent">
+                        <DocumentTextIcon className="w-6 h-6 text-black dark:text-white mr-4" />
+                        <input value={docTitle} onChange={(e) => setDocTitle(e.target.value)} className="bg-transparent text-black dark:text-white text-2xl font-black focus:outline-none w-full placeholder:text-slate-300" />
+                    </div>
+
+                    {/* ÁREA DE TEXTO DA FOLHA */}
+                    <div className="flex-1 p-12 md:p-16 overflow-y-auto custom-scrollbar">
+                        <textarea
+                            value={docContent} onChange={(e) => setDocContent(e.target.value)}
+                            className="w-full h-full resize-none outline-none bg-transparent text-[17px] leading-loose text-black dark:text-white placeholder:text-slate-400 font-serif"
+                            placeholder="Sua pesquisa começa aqui..."
+                        />
+                    </div>
+
+                    {/* RODAPÉ DA FOLHA (AÇÕES) */}
+                    <div className="p-6 flex justify-between items-center px-10 bg-slate-50/50 dark:bg-black/20 border-t border-slate-100 dark:border-white/5">
+                        <div className="relative">
+                            <button onClick={(e) => { e.stopPropagation(); setIsWorkTypeMenuOpen(!isWorkTypeMenuOpen); }} className="px-6 py-2.5 rounded-full text-[11px] font-black transition-all flex items-center gap-2 border-2 border-blue-500 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30">
+                                <SparklesIcon className="w-4 h-4" /> {workType || 'Definir Trabalho'}
+                            </button>
+                            <AnimatePresence>{isWorkTypeMenuOpen && (
+                                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="absolute bottom-full mb-4 left-0 bg-white dark:bg-black border-2 border-slate-200 dark:border-white/20 rounded-2xl shadow-2xl w-44 overflow-hidden z-[200]">
+                                    {["Artigo", "Relatório", "TCC"].map(type => <div key={type} onClick={(e) => { e.stopPropagation(); setWorkType(type as any); setIsWorkTypeMenuOpen(false); }} className="px-5 py-4 text-[11px] font-black uppercase text-black dark:text-white hover:bg-slate-50 dark:hover:bg-white/10 cursor-pointer">{type}</div>)}
+                                </motion.div>
+                            )}</AnimatePresence>
+                        </div>
+                        <div className="flex gap-3">
+                            <button onClick={(e) => { e.stopPropagation(); setIsBoosterOpen(true); }} className="px-6 py-2.5 rounded-full text-[11px] font-black flex items-center gap-2 border-2 border-black dark:border-white text-black dark:text-white hover:bg-slate-100 dark:hover:bg-white/10 uppercase tracking-widest transition-colors">Salvar</button>
+                            <button onClick={(e) => { e.stopPropagation(); setIsPublishOpen(true); }} className="px-8 py-2.5 rounded-full text-[11px] font-black flex items-center gap-2 bg-black dark:bg-white text-white dark:text-black hover:scale-105 transition-all uppercase tracking-widest shadow-xl">Publicar</button>
                         </div>
                     </div>
                 </div>
-            )}
+            </main>
 
+            {/* MODALS */}
             <AnimatePresence>
                 {isBoosterOpen && (
-                    <div className="fixed inset-0 z-[300] flex items-center justify-center p-6">
-                        <motion.div key="backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsBoosterOpen(false)} className="absolute inset-0 bg-[#030014]/90 backdrop-blur-md cursor-pointer" />
-                        <motion.div key="modal" initial={{ opacity: 0, scale: 0.9, y: 40 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 40 }} className="relative w-full max-w-5xl bg-[#0a0a0a] border border-cyan-500/20 rounded-[40px] overflow-hidden shadow-[0_0_100px_rgba(34,211,238,0.2)] flex flex-col md:flex-row min-h-[500px]">
-                            <button type="button" onClick={() => setIsBoosterOpen(false)} className="absolute top-6 right-6 z-50 text-white/30 hover:text-white transition-colors"><XMarkIcon className="w-6 h-6" /></button>
-                            <div className="w-full md:w-1/2 relative min-h-[400px] bg-black flex items-center justify-center"><span className="text-white/20 text-xs tracking-widest uppercase">System Core</span></div>
-                            <div className="w-full md:w-1/2 p-12 flex flex-col justify-center">
-                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-[10px] font-bold uppercase tracking-[0.2em] mb-6"><RocketLaunchIcon className="w-3 h-3" /> System Uplink</div>
-                                <h2 className="text-4xl font-bold text-white mb-6 leading-tight">Sync <span className="text-cyan-400">Memory Core</span></h2>
-                                <p className="text-slate-400 text-sm leading-relaxed mb-10">Securely persist your research session to the database.</p>
-                                <div className="flex flex-col gap-4">
-                                    <button type="button" onClick={handleBoostAndSave} disabled={isSystemProcessing} className="w-full bg-cyan-500 hover:bg-cyan-400 text-black font-black py-4 rounded-2xl transition-all shadow-[0_0_20px_rgba(34,211,238,0.4)] flex items-center justify-center gap-3 uppercase tracking-widest text-xs group disabled:opacity-50">{isSystemProcessing ? <div className="animate-spin border-t-black border-2 w-5 h-5 rounded-full" /> : <><RocketLaunchIcon className="w-5 h-5 group-hover:scale-110 transition-transform" /> Save Session Data</>}</button>
-                                    <button type="button" onClick={() => setIsBoosterOpen(false)} className="w-full py-2 text-white/30 text-[10px] uppercase font-bold tracking-widest hover:text-white transition-colors">Back to Station</button>
-                                </div>
-                            </div>
+                    <div className="fixed inset-0 z-[600] flex items-center justify-center p-6">
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsBoosterOpen(false)} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+                        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="relative w-full max-w-lg bg-white dark:bg-black rounded-[32px] p-10 shadow-2xl border-4 border-black dark:border-white">
+                            <h2 className="text-3xl font-black mb-4 uppercase italic text-black dark:text-white">Sincronizar</h2>
+                            <p className="text-sm font-bold mb-8 text-black dark:text-white">Deseja enviar seu progresso para o banco de dados principal?</p>
+                            <button onClick={() => setIsBoosterOpen(false)} className="w-full bg-black dark:bg-white text-white dark:text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs flex items-center justify-center gap-3">Confirmar Uplink <RocketLaunchIcon className="w-5 h-5" /></button>
                         </motion.div>
                     </div>
                 )}
             </AnimatePresence>
-
-            {/* PUBLISH FORMAT MODAL */}
             <AnimatePresence>
                 {isPublishOpen && (
-                    <div className="fixed inset-0 z-[300] flex items-center justify-center p-6">
-                        <motion.div key="pb" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => { setIsPublishOpen(false); setPublishFormat(null); }} className="absolute inset-0 bg-[#030014]/90 backdrop-blur-md cursor-pointer" />
-                        <motion.div key="pm" initial={{ opacity: 0, scale: 0.9, y: 40 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 40 }} className="relative w-full max-w-md bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-cyan-500/20 rounded-[32px] overflow-hidden shadow-2xl p-10 flex flex-col gap-6">
-                            <button type="button" onClick={() => { setIsPublishOpen(false); setPublishFormat(null); }} className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors"><XMarkIcon className="w-5 h-5" /></button>
-                            <h3 className="text-xl font-bold text-slate-900 dark:text-white">Publicar Trabalho</h3>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">Escolha o formato de publicação:</p>
-                            <div className="flex flex-col gap-3">
+                    <div className="fixed inset-0 z-[600] flex items-center justify-center p-6">
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => { setIsPublishOpen(false); setPublishFormat(null); }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+                        <motion.div initial={{ opacity: 0, scale: 0.9, y: 40 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 40 }} className="relative w-full max-w-md bg-white dark:bg-black rounded-[32px] p-10 shadow-2xl border-4 border-black dark:border-white">
+                            <h3 className="text-2xl font-black text-black dark:text-white mb-2">Publicar {workType || 'Trabalho'}</h3>
+                            <p className="text-sm font-bold text-slate-500 mb-6">Escolha o formato:</p>
+                            <div className="flex flex-col gap-3 mb-6">
                                 {(["pdf", "docx"] as const).map(fmt => (
-                                    <button key={fmt} onClick={() => setPublishFormat(fmt)} className={`w-full py-3 px-5 rounded-2xl text-sm font-semibold border transition-all flex items-center justify-between uppercase tracking-wider ${
-                                        publishFormat === fmt
-                                            ? 'bg-cyan-500/10 border-cyan-400/50 text-cyan-600 dark:text-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.15)]'
-                                            : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-white/70 hover:border-cyan-400/30'
-                                    }`}>
-                                        <span>{fmt === 'pdf' ? 'PDF' : 'DOCX (Word)'}</span>
-                                        {publishFormat === fmt && <span className="text-cyan-500">✓</span>}
+                                    <button key={fmt} onClick={() => setPublishFormat(fmt)} className={`w-full py-4 px-5 rounded-2xl text-sm font-black border-2 transition-all flex items-center justify-between uppercase tracking-wider ${publishFormat === fmt ? 'border-cyan-500 text-cyan-600 bg-cyan-50 dark:bg-cyan-900/30' : 'border-slate-200 dark:border-white/20 text-black dark:text-white hover:border-black dark:hover:border-white'}`}>
+                                        <span>{fmt === 'pdf' ? 'PDF (Adobe)' : 'DOCX (Word)'}</span>
+                                        {publishFormat === fmt && <CheckBadgeIcon className="w-6 h-6 text-cyan-600" />}
                                     </button>
                                 ))}
                             </div>
-                            <button type="button" onClick={handlePublish} disabled={!publishFormat || isSystemProcessing} className="w-full bg-cyan-500 hover:bg-cyan-400 text-black font-bold py-3 rounded-2xl transition-all uppercase tracking-widest text-xs disabled:opacity-50 flex items-center justify-center gap-2">
-                                {isSystemProcessing ? <div className="animate-spin border-t-black border-2 w-4 h-4 rounded-full" /> : <><ArrowDownTrayIcon className="w-4 h-4" /> Publicar</>}
+                            <button onClick={handlePublish} disabled={!publishFormat || isSystemProcessing} className="w-full bg-black dark:bg-white text-white dark:text-black font-black py-4 rounded-2xl transition-all uppercase tracking-widest text-sm disabled:opacity-50 flex items-center justify-center gap-2 hover:scale-[1.02]">
+                                {isSystemProcessing ? <IosLoader status="Exportando" /> : <><ArrowDownTrayIcon className="w-5 h-5" /> Iniciar Download</>}
                             </button>
                         </motion.div>
                     </div>

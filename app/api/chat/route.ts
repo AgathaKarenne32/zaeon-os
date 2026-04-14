@@ -1,18 +1,17 @@
 import { NextResponse } from 'next/server';
 import { VertexAI } from '@google-cloud/vertexai';
-import type { FunctionDeclaration } from '@google-cloud/vertexai'; // Correção 1: Import type-only
+import type { FunctionDeclaration } from '@google-cloud/vertexai';
 import Groq from 'groq-sdk';
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
-// --- 1. DEFINIÇÃO DA FERRAMENTA DE AGENDA (Function Calling - Gemini) ---
+// --- 1. SCHEDULE TOOL DEFINITION (Function Calling - Gemini) ---
 const updateScheduleTool: FunctionDeclaration = {
     name: "update_schedule",
     description: "Adiciona, remove ou atualiza uma aula na agenda acadêmica do aluno.",
     parameters: {
-        // Correção 2: Passando as strings diretamente para evitar o erro do enum 'Type'
-        type: "OBJECT" as any, 
+        type: "OBJECT" as any,
         properties: {
             action: { type: "STRING" as any, description: "Ação: 'add', 'remove', ou 'update'." },
             day: { type: "INTEGER" as any, description: "Dia da semana. 1 = Segunda, 2 = Terça, 3 = Quarta, 4 = Quinta, 5 = Sexta." },
@@ -26,13 +25,24 @@ const updateScheduleTool: FunctionDeclaration = {
     }
 };
 
-// --- 2. PERSONALIDADES DOS AGENTES ---
+// --- 2. AGENT PERSONAS ---
 const AGENT_PERSONAS: Record<string, string> = {
     zenita: `Você é a Sara, assistente acadêmica da Zaeon. Se o usuário pedir para adicionar, apagar ou editar aulas, USE A FERRAMENTA 'update_schedule'. Nunca responda com longos textos para tarefas de agenda.`,
-    aura: `Você é a Aura, especialista em insights de pesquisa. Analise os documentos fornecidos e responda de forma clara, técnica e concisa.`,
-    scholar: `Você é o Nerd, Gerador de Citações. Seu objetivo é extrair trechos vitais do documento e gerar referências estritas nas normas ABNT (Brasileira) e APA (Americana).`,
-    scribe: `Você é o Escriba, Escritor Acadêmico. Reescreva os textos do usuário com tom formal, impessoal e acadêmico. Explique rapidamente por que a sua versão é melhor.`,
-    examiner: `Você é o Curioso, Testador de Conhecimento. Crie quizzes desafiadores baseados no documento fornecido. Gere as perguntas, espere a resposta, e depois avalie.`,
+
+    // UPDATED: Aura is now the Global Orchestrator and PDF Analyst
+    aura: `Você é a Aura, a IA Principal e Orquestradora de Pesquisa. Seu papel varia conforme o contexto:
+1. Se o usuário estiver perguntando sobre um PDF recém-carregado, responda de forma técnica, clara e direta baseada ESTRITAMENTE no documento.
+2. Se você receber um [CONTEXTO GLOBAL DA PESQUISA] nas instruções, atue como uma orientadora. Leia o que foi produzido por outros agentes (Scribe, Examiner, Citações) e use isso para dialogar de forma inteligente. NÃO repita os logs como um robô ("Notei que o Scribe disse..."), mas aja como se você já soubesse de tudo e ofereça novas pautas, conexões de ideias e pontos cegos que o usuário precisa cobrir. Seja propositiva e estratégica.`,
+
+    // UPDATED: Strict ABNT focus, removed APA
+    scholar: `Você é o Agente Scholar, Especialista em Citações Acadêmicas. Seu único objetivo é extrair trechos vitais (parágrafos inteiros verbatim) do documento fornecido e gerar as referências ESTRITAMENTE nas normas da ABNT (Associação Brasileira de Normas Técnicas). Formate as saídas exatamente como solicitado pelo usuário, sem introduções longas ou conversas paralelas. Mantenha um tom acadêmico e robótico.`,
+
+    // UPDATED: Better context alignment for Scribe
+    scribe: `Você é o Scribe, um Escritor e Revisor Acadêmico Sênior. Sua função é receber os rascunhos ou ideias do usuário e reescrevê-los com precisão, vocabulário formal, tom impessoal e estrutura acadêmica impecável (padrão de artigo científico ou TCC). Se houver um [ACTIVE PROJECT] no contexto, alinhe a escrita aos objetivos desse projeto. Entregue sempre o texto pronto para uso.`,
+
+    // UPDATED: Examiner focused strictly on PDF context
+    examiner: `Você é o Examiner, o Inquisidor Acadêmico. Seu papel é testar o conhecimento do usuário. Com base no documento PDF fornecido no contexto, crie perguntas desafiadoras (múltipla escolha ou discursivas curtas). Faça uma pergunta por vez. Quando o usuário responder, avalie criticamente, corrija se necessário e ofereça a próxima pergunta. Seja rigoroso, porém construtivo.`,
+
     zaeon: `Você é a Zenita, Especialista em criação de documentos. Auxilie na leitura de PDFs e estruture informações para o Fabricator.`
 };
 
@@ -43,12 +53,16 @@ export async function POST(req: Request) {
         const persona = AGENT_PERSONAS[agentKey] || AGENT_PERSONAS.aura;
 
         // =================================================================
-        // ROTA GROQ (OCULTA / DESLIGADA)
+        // GROQ ROUTE (HIDDEN / BYPASSED)
         // =================================================================
         if (agentKey === "groq_bypassed") {
             const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+            // Ensures context is passed to Groq as well if it's ever activated
+            const groqSystemMessage = persona + (systemContext ? `\n\n[SYSTEM CONTEXT]:\n${systemContext}` : "");
+
             const completion = await groq.chat.completions.create({
-                messages: [{ role: "system", content: persona }, { role: "user", content: prompt }],
+                messages: [{ role: "system", content: groqSystemMessage }, { role: "user", content: prompt }],
                 model: "llama-3.3-70b-versatile",
                 temperature: 0.6,
             });
@@ -56,7 +70,7 @@ export async function POST(req: Request) {
         }
 
         // =================================================================
-        // ROTA GEMINI (VERTEX AI) - ATIVA E MULTIMODAL
+        // GEMINI ROUTE (VERTEX AI) - ACTIVE AND MULTIMODAL
         // =================================================================
         const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS || "{}");
         const vertexAI = new VertexAI({
@@ -65,7 +79,7 @@ export async function POST(req: Request) {
             googleAuthOptions: { credentials: { client_email: credentials.client_email, private_key: credentials.private_key } }
         });
 
-        // Configurações do Modelo
+        // Model Configurations
         const tools = agentKey === "zenita" ? [{ functionDeclarations: [updateScheduleTool] }] : undefined;
         const generativeModel = vertexAI.getGenerativeModel({
             model: 'gemini-2.0-flash-001',
@@ -73,7 +87,7 @@ export async function POST(req: Request) {
             tools: tools
         });
 
-        // Montando o conteúdo (Texto + Base64 do PDF se existir)
+        // Assembling content (Text + Base64 PDF if exists)
         const parts: any[] = [];
         if (fileData) {
             parts.push({
@@ -82,9 +96,11 @@ export async function POST(req: Request) {
         }
         parts.push({ text: prompt });
 
-        // Instruções de Sistema
+        // System Instructions (Persona + Global Context)
         let finalSystemInstruction = persona;
-        if (systemContext) finalSystemInstruction += `\n[CONTEXTO DE SISTEMA]: ${systemContext}`;
+        if (systemContext) {
+            finalSystemInstruction += `\n\n=== CONTEXTO ADICIONAL FORNECIDO PELO SISTEMA ===\n${systemContext}`;
+        }
 
         const chat = generativeModel.startChat({
             systemInstruction: { role: 'system', parts: [{ text: finalSystemInstruction }] }
@@ -93,7 +109,7 @@ export async function POST(req: Request) {
         const result = await chat.sendMessage(parts);
         const response = result.response;
 
-        // Verifica se o Gemini acionou a ferramenta de Agenda (Zenita)
+        // Check if Gemini triggered the Schedule tool (Zenita)
         const functionCall = response.candidates?.[0]?.content?.parts?.[0]?.functionCall;
         if (functionCall) {
             return NextResponse.json({
@@ -102,7 +118,7 @@ export async function POST(req: Request) {
             });
         }
 
-        // Retorna a resposta normal de texto
+        // Return standard text response
         const textResponse = response.candidates?.[0]?.content?.parts?.[0]?.text || "Sem resposta do núcleo.";
         return NextResponse.json({ text: textResponse });
 
