@@ -105,9 +105,9 @@ export default function HomeworkPage() {
     const [isFocusMode, setIsFocusMode] = useState(false);
     const [activeSection, setActiveSection] = useState<"pdf" | "scribe" | "examiner" | "videos" | "doc" | null>(null);
 
-    // --- FORMATTING STATES ---
-    const [isBold, setIsBold] = useState(false);
-    const [isSerif, setIsSerif] = useState(true);
+    // --- NOTIFICATION STATE ---
+    const [toastMessage, setToastMessage] = useState<string | null>(null);
+    const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     // --- WORK STATES ---
     const [workType, setWorkType] = useState<"Artigo" | "Relatório" | "TCC" | null>(null);
@@ -118,6 +118,7 @@ export default function HomeworkPage() {
 
     // --- DATA STATES ---
     const [studyFiles, setStudyFiles] = useState<StudyDoc[]>([]);
+    const [pendingUpload, setPendingUpload] = useState<File | null>(null);
     const [videos, setVideos] = useState<VideoItem[]>([]);
     const [activeFileContext, setActiveFileContext] = useState<string | null>(null);
     const [processingFileId, setProcessingFileId] = useState<string | null>(null);
@@ -135,15 +136,15 @@ export default function HomeworkPage() {
         examiner: { role: 'ai' | 'user', text: string }[]
     }>({ scribe: [], examiner: [] });
 
-    // --- LOADING STATES ---
+    // --- LOADING & ACTION STATES ---
     const [isPdfTyping, setIsPdfTyping] = useState(false);
     const [isScribeTyping, setIsScribeTyping] = useState(false);
     const [isExaminerTyping, setIsExaminerTyping] = useState(false);
     const [isCitationTyping, setIsCitationTyping] = useState(false);
     const [isSystemProcessing, setIsSystemProcessing] = useState(false);
+    const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle"); // Estado Minimalista de Save
 
     // --- MODALS ---
-    const [isBoosterOpen, setIsBoosterOpen] = useState(false);
     const [isPublishOpen, setIsPublishOpen] = useState(false);
     const [publishFormat, setPublishFormat] = useState<"pdf" | "docx" | null>(null);
 
@@ -169,13 +170,37 @@ export default function HomeworkPage() {
     useEffect(() => { if (scribeChatRef.current) scribeChatRef.current.scrollTo({ top: scribeChatRef.current.scrollHeight, behavior: 'smooth' }); }, [specialistChatHistory.scribe, isScribeTyping]);
     useEffect(() => { if (examinerChatRef.current) examinerChatRef.current.scrollTo({ top: examinerChatRef.current.scrollHeight, behavior: 'smooth' }); }, [specialistChatHistory.examiner, isExaminerTyping]);
 
+    const toggleFocusMode = () => {
+        const newMode = !isFocusMode;
+        setIsFocusMode(newMode);
+        if (typeof window !== 'undefined') {
+            const event = new CustomEvent('zaeon-focus-mode', { detail: newMode });
+            window.dispatchEvent(event);
+        }
+    };
+
+    const showToast = (msg: string) => {
+        setToastMessage(msg);
+        if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+        toastTimerRef.current = setTimeout(() => setToastMessage(null), 3000);
+    };
+
     const handleFiles = (files: FileList | null) => {
-        if (!files) return;
-        const newFiles = Array.from(files).filter(f => f.type === 'application/pdf').map(file => ({
-            id: generateSafeId(), title: file.name, url: URL.createObjectURL(file), file: file
-        }));
-        setStudyFiles(prev => [...prev, ...newFiles]);
+        if (!files || files.length === 0) return;
+        const pdfFiles = Array.from(files).filter(f => f.type === 'application/pdf');
+        if (pdfFiles.length > 0) {
+            setPendingUpload(pdfFiles[0]);
+        }
         if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    const confirmUpload = () => {
+        if (!pendingUpload) return;
+        const newFile = {
+            id: generateSafeId(), title: pendingUpload.name, url: URL.createObjectURL(pendingUpload), file: pendingUpload
+        };
+        setStudyFiles(prev => [...prev, newFile]);
+        setPendingUpload(null);
     };
 
     const fileToBase64 = (file: File): Promise<string> => {
@@ -208,7 +233,7 @@ export default function HomeworkPage() {
             });
             const data = await response.json();
             setPdfChatHistory([{ role: 'ai', text: data.text }]);
-        } catch (e) { alert("Erro ao processar."); } finally { setIsPdfTyping(false); setProcessingFileId(null); }
+        } catch (e) { showToast("Erro ao processar o PDF."); } finally { setIsPdfTyping(false); setProcessingFileId(null); }
     };
 
     const handlePdfQuestion = async () => {
@@ -218,9 +243,12 @@ export default function HomeworkPage() {
         setPdfChatHistory(prev => [...prev, { role: 'user', text: currentPrompt }]);
         setIsPdfTyping(true);
         try {
+            const historyContext = pdfChatHistory.map(msg => `${msg.role === 'ai' ? 'Agent' : 'User'}: ${msg.text}`).join('\n');
+            const systemContext = `[PDF CHAT HISTORY]:\n${historyContext}\nRespond strictly based on the loaded document.\n${buildSystemContext()}`;
+
             const response = await fetch('/api/chat', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: currentPrompt, agent: "aura", fileData: activeFileContext, systemContext: buildSystemContext() })
+                body: JSON.stringify({ prompt: currentPrompt, agent: "aura", fileData: activeFileContext, systemContext })
             });
             const data = await response.json();
             setPdfChatHistory(prev => [...prev, { role: 'ai', text: data.text }]);
@@ -243,6 +271,7 @@ export default function HomeworkPage() {
         setSavedCitations(prev => [...prev, newCit]);
         setCitationContent(null);
         setActiveCitationText(citationContent);
+        showToast("Citação salva na base de dados.");
     };
 
     const handleSpecialistQuery = async (specialistType: 'scribe' | 'examiner', inputVal: string) => {
@@ -261,7 +290,10 @@ export default function HomeworkPage() {
     };
 
     const copyToClipboard = async (text: string) => {
-        try { await navigator.clipboard.writeText(text); alert("Copiado!"); } catch (err) { console.error(err); }
+        try {
+            await navigator.clipboard.writeText(text);
+            showToast("Copiado para a área de transferência!");
+        } catch (err) { console.error(err); }
     };
 
     const handlePasteVideo = async () => {
@@ -271,6 +303,36 @@ export default function HomeworkPage() {
             const match = text.match(regex);
             if (match && match[1]) setVideos(prev => [{ id: generateSafeId(), youtubeId: match[1] }, ...prev]);
         } catch (err) { console.error(err); }
+    };
+
+    // --- NOVA LÓGICA DE SAVE MINIMALISTA ---
+    const handleSaveWorkspace = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (saveState === "saving") return;
+
+        setSaveState("saving");
+        try {
+            const payload = {
+                userId: session?.user?.email || "anonymous_user",
+                workTitle: docTitle,
+                workContent: docContent,
+                workType: workType,
+                citations: JSON.stringify(savedCitations)
+            };
+
+            await fetch('/api/workspace', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            setSaveState("saved");
+            setTimeout(() => setSaveState("idle"), 2500);
+        } catch (error) {
+            console.error(error);
+            setSaveState("idle");
+            showToast("Erro ao salvar progresso.");
+        }
     };
 
     const handlePublish = async () => {
@@ -286,6 +348,7 @@ export default function HomeworkPage() {
             URL.revokeObjectURL(url);
             setIsPublishOpen(false);
             setPublishFormat(null);
+            showToast("Documento publicado com sucesso.");
         } catch (e) { console.error(e); } finally { setIsSystemProcessing(false); }
     };
 
@@ -299,12 +362,28 @@ export default function HomeworkPage() {
     return (
         <div className={`relative transition-all duration-500 overflow-hidden flex font-sans w-full h-screen bg-slate-100 dark:bg-[#030014] ${isFocusMode ? 'pt-4' : 'pt-[100px]'}`}>
 
-            {/* Lógica do Modo Foco: Oculta a Navbar completamente */}
-            {!isFocusMode && (
-                <div className="absolute top-0 left-0 w-full z-50">
-                    <Navbar />
-                </div>
-            )}
+            {/* NOTIFICAÇÃO FLUTUANTE (TOAST) */}
+            <AnimatePresence>
+                {toastMessage && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 50, scale: 0.9 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 20, scale: 0.9 }}
+                        className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[9999] bg-black dark:bg-white text-white dark:text-black px-6 py-3 rounded-full shadow-2xl text-[11px] font-bold tracking-widest flex items-center gap-3 border border-slate-800 dark:border-slate-200"
+                    >
+                        <CheckBadgeIcon className="w-4 h-4 text-emerald-400 dark:text-emerald-600" />
+                        {toastMessage}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {!isFocusMode && (
+                    <motion.div initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -100 }} className="absolute top-0 left-0 w-full z-50">
+                        <Navbar />
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* SIDEBAR ULTRA-FINA */}
             <motion.nav
@@ -318,7 +397,7 @@ export default function HomeworkPage() {
                         <ArrowsRightLeftIcon className="w-5 h-5 shrink-0 group-hover:text-cyan-500" />
                         {isSidebarOpen && <span className="text-[10px] font-black uppercase whitespace-nowrap">Layout</span>}
                     </button>
-                    <button onClick={() => setIsFocusMode(!isFocusMode)} className={`flex items-center gap-3 p-2 rounded-xl ${isFocusMode ? 'bg-cyan-500 text-white shadow-md' : 'text-black dark:text-white hover:bg-slate-100'}`}>
+                    <button onClick={toggleFocusMode} className={`flex items-center gap-3 p-2 rounded-xl ${isFocusMode ? 'bg-cyan-500 text-white shadow-md' : 'text-black dark:text-white hover:bg-slate-100'}`}>
                         {isFocusMode ? <EyeIcon className="w-5 h-5" /> : <PowerIcon className="w-5 h-5" />}
                         {isSidebarOpen && <span className="text-[10px] font-black uppercase">Foco</span>}
                     </button>
@@ -337,8 +416,9 @@ export default function HomeworkPage() {
                             <span className="bg-black dark:bg-white text-white dark:text-black text-[11px] font-black px-5 py-2 rounded-full uppercase tracking-widest flex items-center gap-2 shadow-md">
                                 <BookOpenIcon className="w-4 h-4" /> Biblioteca
                             </span>
-                            {/* Botão reposicionado para o lado do título */}
-                            <ActionButton icon={PlusIcon} label="Adicionar PDF" onClick={() => fileInputRef.current?.click()} colorClass="text-black dark:text-white hover:text-cyan-500" />
+                            <div className="ml-auto">
+                                <ActionButton icon={PlusIcon} label="Adicionar PDF" onClick={() => fileInputRef.current?.click()} colorClass="text-black dark:text-white hover:text-cyan-500" />
+                            </div>
                         </div>
 
                         <div className="bg-slate-100 dark:bg-white/5 rounded-2xl p-4 mb-6 border border-slate-300 dark:border-white/10">
@@ -382,9 +462,9 @@ export default function HomeworkPage() {
                                             {savedCitations.length === 0 && <span className="text-xs text-black dark:text-white font-medium italic m-auto">Nenhuma citação salva.</span>}
                                             {savedCitations.map(cit => <div key={cit.id} onClick={() => setActiveCitationText(cit.text)} className="w-12 h-12 bg-yellow-200 rounded-xl flex items-center justify-center cursor-pointer shadow-md border border-yellow-400 hover:-translate-y-1 transition-transform"><DocumentTextIcon className="w-5 h-5 text-yellow-800" /></div>)}
                                         </div>
-                                        <div className="p-6 bg-slate-100 dark:bg-white/5 rounded-2xl border border-slate-300 dark:border-white/20 min-h-[160px] relative">
-                                            {isCitationTyping ? <div className="absolute inset-0 flex items-center justify-center"><IosLoader status="Extraindo Citações..." /></div> : <p className="text-[14px] leading-relaxed font-medium text-black dark:text-white whitespace-pre-wrap">{activeCitationText || citationContent || "Visualize citações aqui..."}</p>}
-                                            {(activeCitationText || citationContent) && !isCitationTyping && <button onClick={() => copyToClipboard(activeCitationText || citationContent || "")} className="absolute top-4 right-4 p-3 bg-white dark:bg-black border border-slate-300 rounded-lg shadow-md"><ClipboardDocumentIcon className="w-4 h-4 text-black dark:text-white" /></button>}
+                                        <div className="p-5 bg-slate-100 dark:bg-white/5 rounded-2xl border border-slate-300 dark:border-white/20 min-h-[120px] relative">
+                                            <p className="text-sm font-medium text-black dark:text-white whitespace-pre-wrap">{activeCitationText || citationContent || "Visualize citações aqui..."}</p>
+                                            {(activeCitationText || citationContent) && <button onClick={() => copyToClipboard(activeCitationText || citationContent || "")} className="absolute top-3 right-3 p-2 bg-white dark:bg-black border border-slate-300 rounded-lg shadow-md"><ClipboardDocumentIcon className="w-4 h-4 text-black dark:text-white" /></button>}
                                         </div>
                                     </div>
                                 )}
@@ -417,7 +497,7 @@ export default function HomeworkPage() {
                         <div ref={examinerChatRef} className="flex-1 p-6 overflow-y-auto space-y-4 custom-scrollbar bg-white dark:bg-[#0f172a]">
                             {specialistChatHistory.examiner.length === 0 && <span className="text-sm text-black dark:text-white font-medium italic flex items-center justify-center h-full text-center px-4">Peça ao Examiner para testar seu conhecimento sobre o PDF.</span>}
                             {specialistChatHistory.examiner.map((msg, i) => <ChatBubble key={i} role={msg.role} text={msg.text} agentName="Examiner" agentImg="/agents/examiner.png" userImg={session?.user?.image} />)}
-                            {isExaminerTyping && <div className="text-[11px] text-orange-600 font-black uppercase tracking-widest animate-pulse ml-12">Examiner está avaliando...</div>}
+                            {isExaminerTyping && <div className="text-[11px] text-orange-600 font-black uppercase tracking-widest animate-pulse ml-12">Examiner avaliando...</div>}
                         </div>
                         <div className="p-5 bg-slate-50 dark:bg-black border-t border-slate-300 dark:border-white/10">
                             <input placeholder="Inicie um quiz..." onKeyDown={(e) => { if (e.key === 'Enter') { handleSpecialistQuery('examiner', (e.target as HTMLInputElement).value); (e.target as HTMLInputElement).value = ''; } }} disabled={isExaminerTyping} className="w-full bg-white dark:bg-white/10 border border-slate-300 dark:border-white/20 rounded-full py-4 px-6 text-[14px] font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/30 placeholder:text-slate-400" />
@@ -435,7 +515,7 @@ export default function HomeworkPage() {
                             </div>
                         </div>
                         <div className="flex flex-row gap-6 overflow-x-auto pb-4 pt-2 min-h-[220px] custom-scrollbar">
-                            {videos.length === 0 && <span className="text-sm text-black dark:text-white font-medium italic m-auto">Cole links do YouTube para referências.</span>}
+                            {videos.length === 0 && <span className="text-sm text-black dark:text-white font-medium italic m-auto">Cole links do YouTube para referências visuais.</span>}
                             {videos.map(vid => (
                                 <div key={vid.id} className="flex-shrink-0 w-[360px] h-[200px] bg-slate-200 dark:bg-black rounded-[24px] overflow-hidden shadow-md relative group/vid border border-slate-300 dark:border-white/10">
                                     <iframe width="100%" height="100%" src={`https://www.youtube.com/embed/${vid.youtubeId}`} frameBorder="0" allowFullScreen />
@@ -447,10 +527,9 @@ export default function HomeworkPage() {
                 </div>
 
                 {/* COLUNA 2: FOLHA A4 (MÓDULO INTEIRO É A FOLHA) */}
-                {/* Lógica isChatLeft garante que isso fique à esquerda se for false, e na direita se for true */}
                 <div onClick={() => setActiveSection('doc')} className={`w-1/2 flex flex-col h-[calc(100vh-140px)] rounded-[32px] shadow-2xl transition-all border-4 ${activeSection === 'doc' ? 'border-cyan-500 ring-8 ring-cyan-500/10' : 'border-white dark:border-[#0f172a]'} ${!isChatLeft ? 'order-first' : 'order-last'} bg-white dark:bg-[#0f172a] overflow-hidden`}>
 
-                    {/* CABEÇALHO DA FOLHA (TÍTULO MENOR E DISCRETO) */}
+                    {/* CABEÇALHO DA FOLHA */}
                     <div className="h-20 flex items-center px-10 shrink-0 border-b border-slate-100 dark:border-white/5 bg-transparent">
                         <DocumentTextIcon className="w-6 h-6 text-black dark:text-white mr-4" />
                         <input value={docTitle} onChange={(e) => setDocTitle(e.target.value)} className="bg-transparent text-black dark:text-white text-2xl font-black focus:outline-none w-full placeholder:text-slate-300" />
@@ -477,27 +556,50 @@ export default function HomeworkPage() {
                                 </motion.div>
                             )}</AnimatePresence>
                         </div>
+
                         <div className="flex gap-3">
-                            <button onClick={(e) => { e.stopPropagation(); setIsBoosterOpen(true); }} className="px-6 py-2.5 rounded-full text-[11px] font-black flex items-center gap-2 border-2 border-black dark:border-white text-black dark:text-white hover:bg-slate-100 dark:hover:bg-white/10 uppercase tracking-widest transition-colors">Salvar</button>
+                            {/* BOTÃO SALVAR MINIMALISTA SEM MODAL */}
+                            <button onClick={handleSaveWorkspace} disabled={saveState === "saving"} className="px-6 py-2.5 rounded-full text-[11px] font-black flex items-center gap-2 border-2 border-black dark:border-white text-black dark:text-white hover:bg-slate-100 dark:hover:bg-white/10 uppercase tracking-widest transition-colors w-[120px] justify-center">
+                                {saveState === "saving" ? (
+                                    <><ArrowPathIcon className="w-4 h-4 animate-spin" /> ...</>
+                                ) : saveState === "saved" ? (
+                                    <><CheckBadgeIcon className="w-4 h-4 text-emerald-500" /> Salvo</>
+                                ) : (
+                                    <><ArrowDownTrayIcon className="w-4 h-4" /> Salvar</>
+                                )}
+                            </button>
                             <button onClick={(e) => { e.stopPropagation(); setIsPublishOpen(true); }} className="px-8 py-2.5 rounded-full text-[11px] font-black flex items-center gap-2 bg-black dark:bg-white text-white dark:text-black hover:scale-105 transition-all uppercase tracking-widest shadow-xl">Publicar</button>
                         </div>
                     </div>
                 </div>
             </main>
 
-            {/* MODALS */}
+            {/* MODALS - CONFIRMAR PREVIEW PDF */}
             <AnimatePresence>
-                {isBoosterOpen && (
-                    <div className="fixed inset-0 z-[600] flex items-center justify-center p-6">
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsBoosterOpen(false)} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-                        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="relative w-full max-w-lg bg-white dark:bg-black rounded-[32px] p-10 shadow-2xl border-4 border-black dark:border-white">
-                            <h2 className="text-3xl font-black mb-4 uppercase italic text-black dark:text-white">Sincronizar</h2>
-                            <p className="text-sm font-bold mb-8 text-black dark:text-white">Deseja enviar seu progresso para o banco de dados principal?</p>
-                            <button onClick={() => setIsBoosterOpen(false)} className="w-full bg-black dark:bg-white text-white dark:text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs flex items-center justify-center gap-3">Confirmar Uplink <RocketLaunchIcon className="w-5 h-5" /></button>
+                {pendingUpload && (
+                    <div className="fixed inset-0 z-[700] flex items-center justify-center p-6">
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setPendingUpload(null)} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+                        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="relative w-full max-w-4xl bg-white dark:bg-[#0a0a0a] rounded-[32px] overflow-hidden shadow-2xl border border-slate-200 dark:border-white/10 flex flex-col h-[80vh]">
+                            <div className="p-6 border-b border-slate-100 dark:border-white/5 flex justify-between items-center bg-slate-50 dark:bg-white/5">
+                                <div>
+                                    <h3 className="text-lg font-black text-black dark:text-white">Previsão do Documento</h3>
+                                    <p className="text-xs font-medium text-slate-500">{pendingUpload.name}</p>
+                                </div>
+                                <button onClick={() => setPendingUpload(null)} className="p-2 bg-slate-200 dark:bg-white/10 rounded-full hover:bg-slate-300 dark:hover:bg-white/20 transition-colors"><XMarkIcon className="w-5 h-5 text-black dark:text-white" /></button>
+                            </div>
+                            <div className="flex-1 bg-slate-200 dark:bg-black/50 p-4 overflow-hidden">
+                                <iframe src={URL.createObjectURL(pendingUpload)} className="w-full h-full rounded-xl border border-slate-300 dark:border-white/10" />
+                            </div>
+                            <div className="p-6 bg-white dark:bg-[#0a0a0a] border-t border-slate-100 dark:border-white/5 flex justify-end gap-4">
+                                <button onClick={() => setPendingUpload(null)} className="px-6 py-3 rounded-full text-xs font-black border-2 border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 uppercase tracking-widest transition-colors">Cancelar</button>
+                                <button onClick={confirmUpload} className="px-8 py-3 rounded-full text-xs font-black bg-black dark:bg-white text-white dark:text-black hover:scale-105 uppercase tracking-widest shadow-xl transition-all">Confirmar Upload</button>
+                            </div>
                         </motion.div>
                     </div>
                 )}
             </AnimatePresence>
+
+            {/* MODALS - PUBLICAR */}
             <AnimatePresence>
                 {isPublishOpen && (
                     <div className="fixed inset-0 z-[600] flex items-center justify-center p-6">
