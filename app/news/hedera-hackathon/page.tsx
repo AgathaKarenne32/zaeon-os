@@ -125,7 +125,7 @@ export default function InstitucionalReportPage() {
 
                     <div className="space-y-6 text-lg font-serif leading-relaxed text-slate-700 dark:text-slate-300 relative z-10">
                         <p>
-                            A burocracia exige previsibilidade, mas a inovação de fronteira é caótica. Quando a DoraHacks e a Hedera anunciaram a prorrogação do evento — estendendo o prazo de Julho para o final de Outubro —, o nível técnico da competição disparou. Estávamos agora concorrendo contra mais de <strong>1.000 projetos de ponta</strong>, desenvolvidos por startups do Vale do Silício e da Europa, disputando mais de 1 milhão de dólares em prêmios.
+                            A burocracia exige previsibilidade, mas a inovação de fronteira é caótica. Quando a DoraHacks e a Hedera anunciaram a prorrogação do evento — estendendo o prazo de Julho para o final de Outubro — seguido de dezembro, janeiro, fevereiro e março no pós evento, para implementar as soluções vencedoras na blockchain Hedera, o nível técnico da competição disparou. Estávamos agora concorrendo contra mais de <strong>1.000 projetos de ponta</strong>, desenvolvidos por startups do Vale do Silício e da Europa, disputando mais de 1 milhão de dólares em prêmios.
                         </p>
                         <blockquote className="border-l-4 border-indigo-500 pl-6 py-2 my-8 italic text-xl font-medium text-slate-900 dark:text-slate-100 bg-white/40 dark:bg-black/20 rounded-r-xl">
                             "A escolha era binária: paralisar o suporte técnico de 50 equipes para preencher formulários institucionais, ou garantir que o Nordeste e a África entregassem códigos invioláveis e produtos de nível internacional."

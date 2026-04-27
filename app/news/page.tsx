@@ -127,9 +127,27 @@ export default function LoungeNewsFeed() {
                     <h1 className="text-3xl font-black uppercase tracking-tighter text-slate-900 dark:text-white flex items-center gap-2">
                         The Lounge <SparklesIcon className="w-6 h-6 text-cyan-500" />
                     </h1>
-                    <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mt-2">
+                    <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mt-2 mb-2">
                         {new Date().toLocaleDateString('pt-BR', { dateStyle: 'full' })}
                     </p>
+
+                    {/* --- BOTÃO INSTITUCIONAL: FUNCAP / SUDENE --- */}
+                    <Link href="/news/hedera-hackathon" className="inline-block mt-4">
+                        <div className="group flex items-center gap-3 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white/50 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 transition-all cursor-pointer shadow-sm">
+                            <div className="relative flex h-2.5 w-2.5 flex-shrink-0">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-200 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                                    Aviso FUNCAP / SUDENE
+                                </span>
+                                <span className="text-[8px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-0.5">
+                                    Acessar Justificativa Oficial
+                                </span>
+                            </div>
+                        </div>
+                    </Link>
                 </div>
 
                 {/* --- NOVO: DESTAQUE HEDERA HACKATHON --- */}
