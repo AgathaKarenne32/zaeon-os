@@ -3,13 +3,35 @@ const nextConfig = {
     // 1. Autorização de domínios externos
     images: {
         remotePatterns: [
+            // --- NOVOS DOMÍNIOS ADICIONADOS ---
             {
                 protocol: 'https',
-                hostname: 'media.licdn.com', // <-- NOVO: LinkedIn Images
+                hostname: 'lugaresdememoria.com.br',
             },
             {
                 protocol: 'https',
-                hostname: 'miro.medium.com', // Medium
+                hostname: 'www.shutterstock.com',
+            },
+            {
+                protocol: 'https',
+                hostname: 'lukozo.com',
+            },
+            {
+                protocol: 'https',
+                hostname: 'www.criptofacil.com',
+            },
+            // -----------------------------------
+            {
+                protocol: 'https',
+                hostname: '**', // Curinga mantido por precaução
+            },
+            {
+                protocol: 'https',
+                hostname: 'media.licdn.com',
+            },
+            {
+                protocol: 'https',
+                hostname: 'miro.medium.com',
             },
             {
                 protocol: 'https',
