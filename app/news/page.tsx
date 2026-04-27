@@ -133,7 +133,7 @@ export default function LoungeNewsFeed() {
                 </div>
 
                 {/* --- NOVO: DESTAQUE HEDERA HACKATHON --- */}
-                <Link href="/news/hedera-hackathon">
+                <Link href="/news/hedera-hackathon-2025">
                     <div className="mb-6 group cursor-pointer relative overflow-hidden rounded-2xl border border-indigo-500/30 bg-gradient-to-br from-indigo-50 to-indigo-100/50 dark:from-indigo-900/20 dark:to-purple-900/20 p-4 shadow-lg transition-all duration-300 hover:border-indigo-500/60 hover:shadow-indigo-500/20">
                         {/* Brilho de fundo animado (hover) */}
                         <div className="absolute inset-0 bg-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
