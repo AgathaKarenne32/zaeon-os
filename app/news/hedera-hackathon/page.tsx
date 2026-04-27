@@ -376,7 +376,7 @@ export default function HederaHackathonFeature() {
                 <div className="mt-24 p-12 md:p-16 rounded-[3rem] backdrop-blur-[40px] bg-indigo-500/5 dark:bg-white/5 border border-indigo-500/10 dark:border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.05)] text-center relative overflow-hidden">
                     <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-1 bg-gradient-to-r from-transparent via-indigo-500 to-transparent" />
                     <p className="text-xl md:text-3xl font-serif italic text-slate-900 dark:text-slate-100 leading-relaxed font-medium">
-                        "O Hedera Hackathon Africa de 2025 não foi vencido apenas pelos que levaram o prêmio em dinheiro. Ele foi conquistado por 468 almas que, entre traduções do Wolof para o Português e madrugadas à base de café, provaram ao mundo que a inovação não requer um CEP do Vale do Silício — apenas vontade inquebrável."
+                        "O Hedera Hackathon Africa de 2025 ainda durou mais 120 dias e veio acabar oficialmente apenas em março de 2026, após exaustiva implementação dos projetos vencedores na prática. Infelizmente a Zaeon atrasou a prestação de contas com a FUNCAP, nossa equipe foi de apenas 3 pessoas e tivemos que conciliar muitas coisas. Mas conseguimos graças a Deus."
                     </p>
                 </div>
 
@@ -387,8 +387,8 @@ export default function HederaHackathonFeature() {
                             ZN
                         </div>
                         <div>
-                            <div className="text-base font-semibold tracking-tight text-slate-900 dark:text-white">Zaeon Newsroom</div>
-                            <div className="text-xs font-medium text-slate-500 uppercase tracking-widest">Série Especial Documental • 2026</div>
+                            <div className="text-base font-semibold tracking-tight text-slate-900 dark:text-white"></div>
+                            <div className="text-xs font-medium text-slate-500 uppercase tracking-widest">Zaeon • 2026</div>
                         </div>
                     </div>
                     <a
@@ -397,7 +397,7 @@ export default function HederaHackathonFeature() {
                         rel="noreferrer"
                         className="group flex items-center gap-2 px-6 py-3 rounded-full backdrop-blur-xl bg-indigo-500/10 dark:bg-white/5 border border-indigo-500/20 dark:border-white/10 text-xs font-bold uppercase tracking-widest text-indigo-600 dark:text-slate-300 hover:bg-indigo-500 hover:text-white dark:hover:bg-white/10 transition-all"
                     >
-                        Ver Repositório Oficial
+                        Conferir submissões do hackathon
                         <ArrowLeftIcon className="w-4 h-4 group-hover:-rotate-45 rotate-135 transition-transform" />
                     </a>
                 </div>
