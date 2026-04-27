@@ -189,6 +189,7 @@ export const Navbar = () => {
           <Link href="/research-lab" className={getLinkClassName("/research-lab")}>Pesquisa</Link>
           <Link href="/workstation" className={getLinkClassName("/workstation")}>Workstation</Link>
           <Link href="/plugin-store" className={getLinkClassName("/plugin-store")}>Plugin Store</Link>
+          <Link href="/news" className={getLinkClassName("/news")}>Notícias</Link>
         </nav>
 
         <div className="flex items-center gap-6">

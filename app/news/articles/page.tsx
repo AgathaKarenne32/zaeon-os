@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { ArrowLeftIcon, CalendarDaysIcon } from "@heroicons/react/24/outline";
 import NextImage from "next/image";
 
-export default function ArticlePage() {
+// 1. Movemos toda a lógica que usa o `useSearchParams` para este sub-componente
+function ArticleContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const id = searchParams.get("id");
@@ -18,7 +19,6 @@ export default function ArticlePage() {
         
         const fetchArticle = async () => {
             try {
-                // Aqui você pode criar um endpoint /api/news/[id] ou filtrar no front
                 const res = await fetch('/api/news');
                 const data = await res.json();
                 const found = data.find((post: any) => post.id === id);
@@ -74,12 +74,24 @@ export default function ArticlePage() {
                     
                     <div className="w-full h-px bg-slate-200 dark:bg-white/10 mb-12" />
                     
-                    {/* Renderização do texto. Para renderizar quebras de linha corretamente, usamos whitespace-pre-wrap */}
                     <div className="prose prose-slate dark:prose-invert max-w-none text-lg leading-loose font-serif text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
                         {article.content}
                     </div>
                 </div>
             </div>
         </div>
+    );
+}
+
+// 2. O export principal agora apenas envelopa o componente acima com o Suspense
+export default function ArticlePage() {
+    return (
+        <Suspense fallback={
+            <div className="h-screen flex items-center justify-center dark:text-white text-slate-800 tracking-widest uppercase text-xs">
+                Establishing Secure Link...
+            </div>
+        }>
+            <ArticleContent />
+        </Suspense>
     );
 }

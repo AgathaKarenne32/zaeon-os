@@ -26,7 +26,6 @@ const ProjectsModule = dynamic(() => import('./main-hall/projects/page').then(mo
 const ResearchModule = dynamic(() => import('./main-hall/researches/page').then(mod => mod.default), { loading: LoadingModule });
 const CommunityModule = dynamic(() => import('./main-hall/community/page').then(mod => mod.default), { loading: LoadingModule });
 const ProfileModule = dynamic(() => import('./main-hall/profile/page').then(mod => mod.default), { loading: LoadingModule });
-const NewsModule = dynamic(() => import('./main-hall/news/page').then(mod => mod.default), { loading: LoadingModule });
 
 const COURSE_KEYS = [
     "Computer Science", "Software Eng.", "InfoSec", "Cloud Computing",
@@ -391,7 +390,6 @@ export default function ZaeonComputerScienceRoom() {
                                                 transition={{ duration: 0.2 }}
                                                 className="h-full"
                                             >
-                                                {activeTab === 'news' && <NewsModule />} 
                                                 {activeTab === 'classes' && <ClassesModule />}
                                                 {activeTab === 'exams' && <ExamsModule />}
                                                 {activeTab === 'projects' && <ProjectsModule />}
