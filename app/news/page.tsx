@@ -9,7 +9,8 @@ import {
     CalendarDaysIcon,
     SparklesIcon,
     BookOpenIcon,
-    ArrowTopRightOnSquareIcon
+    ArrowTopRightOnSquareIcon,
+    RocketLaunchIcon
 } from "@heroicons/react/24/outline";
 
 // --- TYPES ---
@@ -130,6 +131,37 @@ export default function LoungeNewsFeed() {
                         {new Date().toLocaleDateString('pt-BR', { dateStyle: 'full' })}
                     </p>
                 </div>
+
+                {/* --- NOVO: DESTAQUE HEDERA HACKATHON --- */}
+                <Link href="/news/hedera-hackathon">
+                    <div className="mb-6 group cursor-pointer relative overflow-hidden rounded-2xl border border-indigo-500/30 bg-gradient-to-br from-indigo-50 to-indigo-100/50 dark:from-indigo-900/20 dark:to-purple-900/20 p-4 shadow-lg transition-all duration-300 hover:border-indigo-500/60 hover:shadow-indigo-500/20">
+                        {/* Brilho de fundo animado (hover) */}
+                        <div className="absolute inset-0 bg-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+                        <div className="flex gap-4 items-center relative z-10">
+                            {/* ESPAÇO DA IMAGEM PEQUENA (CAPA DO DESTAQUE) */}
+                            <div className="relative w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 border border-indigo-500/20 bg-indigo-900/50">
+                                {/* 👇 SUBSTITUA O LINK ABAIXO PELA SUA IMAGEM 👇 */}
+                                <NextImage
+                                    src="https://images.unsplash.com/photo-1639762681485-074b7f4ec651?q=80&w=200&auto=format&fit=crop" // <-- COLOQUE_O_LINK_DA_SUA_IMAGEM_AQUI
+                                    alt="Hedera Hackathon"
+                                    fill
+                                    className="object-cover group-hover:scale-110 transition-transform duration-500"
+                                />
+                            </div>
+
+                            <div className="flex flex-col">
+                                <span className="text-[9px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 mb-1 flex items-center gap-1">
+                                    <RocketLaunchIcon className="w-3 h-3" /> Special Feature
+                                </span>
+                                <h3 className="text-sm font-bold text-slate-900 dark:text-white leading-tight group-hover:text-indigo-500 transition-colors">
+                                    Hedera Hackathon Cobertura Exclusiva
+                                </h3>
+                            </div>
+                        </div>
+                    </div>
+                </Link>
+                {/* ------------------------------------------- */}
 
                 {/* Lista com Scroll Oculto */}
                 <div className="flex-1 overflow-y-auto pr-2 space-y-3 custom-scrollbar">
