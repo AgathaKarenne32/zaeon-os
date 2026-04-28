@@ -21,14 +21,15 @@ import {
     ChevronDownIcon,
     ServerStackIcon,
     LockClosedIcon,
-    CpuChipIcon as CpuChipIconOutline
+    CpuChipIcon as CpuChipIconOutline,
+    CalendarDaysIcon
 } from "@heroicons/react/24/outline";
 
 // IMPORT DO FUNDO ESTELAR/PARTÍCULAS
 import StarsCanvas from "@/components/main/star-background";
 
 // ============================================================================
-// DADOS DE PESQUISA (TRADUZIDOS)
+// DADOS DE PESQUISA
 // ============================================================================
 interface Participants {
     grads: number;
@@ -87,7 +88,6 @@ const getProgressLabel = (p: number): string => {
     return "Concluído";
 };
 
-// Geração dos dados de pesquisa
 const RESEARCH_DATA: ResearchItem[] = Array.from({ length: 35 }).map((_, i) => {
     let progress;
     if (i === 0) progress = 75;
@@ -138,7 +138,7 @@ const RESEARCH_DATA: ResearchItem[] = Array.from({ length: 35 }).map((_, i) => {
 });
 
 // ============================================================================
-// DADOS DO MANIFESTO E BLOCKCHAIN (ATUALIZADOS E TRADUZIDOS)
+// DADOS DO MANIFESTO E BLOCKCHAIN 
 // ============================================================================
 const MANIFESTO_PAGES = [
     {
@@ -177,27 +177,31 @@ const BLOCKCHAIN_DATA = [
     {
         id: "v1",
         title: "PILAR I: IDENTIDADE",
-        tag: "Sistema RBAC",
+        year: "2026",
+        isCurrent: true,
         desc: "A identidade acadêmica é verificada via Controle de Acesso Baseado em Funções (RBAC). O algoritmo Keccak256 previne a manipulação de dados e prepara o sistema para o Hash de Modelos.",
         code: "function isAuthorized(address _acc) external view returns (bool) { ... }"
     },
     {
         id: "v2",
         title: "PILAR II: PORTAL X402",
-        tag: "Camada de Intenção",
+        year: "2027",
+        isCurrent: false,
         desc: "O aperto de mão obrigatório. Nenhum evento econômico ou de registro acadêmico ocorre sem essa verificação de intenção criptográfica.",
         formula: "E = f(Identidade) ∧ f(Intenção)"
     },
     {
         id: "v3",
         title: "PILAR III: LIVRO-RAZÃO DE ATIVOS",
-        tag: "Propriedade Intelectual (RWA)",
+        year: "2028",
+        isCurrent: false,
         desc: "A pesquisa é tratada como um Ativo do Mundo Real (RWA) envelopado em ERC-721, utilizando Vetores de Impacto para quantificar o valor multidimensional do trabalho."
     },
     {
         id: "v4",
         title: "PILAR IV: ECONOMIA",
-        tag: "Escalonamento de Liquidez",
+        year: "2029",
+        isCurrent: false,
         desc: "A Tesouraria Algorítmica garante a sobrevivência do protocolo. As recompensas para os pesquisadores encolhem ou se expandem com base nos pools globais de liquidez.",
         formula: "R = 10,000 / (L_total * P)"
     }
@@ -208,13 +212,13 @@ const BLOCKCHAIN_DATA = [
 // ============================================================================
 
 const BackButton = () => (
-    <Link href="/" className="fixed top-6 left-6 z-[100] group">
+    <Link href="/" className="fixed top-28 left-8 z-[100] group">
         <motion.div
             whileHover={{ scale: 1.1, x: -5 }}
             whileTap={{ scale: 0.95 }}
-            className="w-12 h-12 rounded-full bg-white/80 dark:bg-black/60 backdrop-blur-xl border border-black/10 dark:border-white/10 flex items-center justify-center text-slate-800 dark:text-white group-hover:border-cyan-500 group-hover:text-cyan-500 transition-colors shadow-xl"
+            className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/80 dark:bg-black/60 backdrop-blur-xl border border-black/10 dark:border-white/10 flex items-center justify-center text-slate-800 dark:text-white group-hover:border-cyan-500 group-hover:text-cyan-500 transition-colors shadow-xl"
         >
-            <ArrowLeftIcon className="w-6 h-6" />
+            <ArrowLeftIcon className="w-5 h-5 md:w-6 md:h-6" />
         </motion.div>
     </Link>
 );
@@ -232,59 +236,14 @@ const SectionSeparator = () => (
 );
 
 const BackgroundInterdimensional = () => {
-    const [imgIndex, setImgIndex] = useState(0);
-
-    const IMAGES = [
-        { src: "/about/angel1.png", isVertical: false },
-        { src: "/about/angel2.png", isVertical: true },
-        { src: "/about/angel3.png", isVertical: false }
-    ];
-
-    useEffect(() => {
-        let intervalTime = imgIndex === 1 ? 8000 : 5000;
-        const interval = setInterval(() => {
-            setImgIndex((prev) => (prev + 1) % IMAGES.length);
-        }, intervalTime);
-        return () => clearInterval(interval);
-    }, [imgIndex]);
-
-    const transitionVariants = {
-        enter: { opacity: 0, filter: "brightness(2) blur(10px)", scale: 1.05 },
-        center: {
-            opacity: 1, filter: "brightness(1) blur(0px)", scale: 1,
-            transition: { duration: 1.2, ease: "easeOut" }
-        },
-        exit: {
-            opacity: 0, filter: "brightness(0.5) blur(5px)", scale: 0.95,
-            transition: { duration: 0.8, ease: "easeIn" }
-        }
-    };
-
     return (
         <div className="absolute inset-0 z-0 overflow-hidden bg-transparent">
-            <AnimatePresence mode="wait">
-                <motion.div
-                    key={imgIndex} initial="enter" animate="center" exit="exit" variants={transitionVariants}
-                    className="absolute inset-0 flex items-center justify-center"
-                >
-                    {!IMAGES[imgIndex].isVertical ? (
-                        <div className="relative w-full h-full p-10 md:p-20">
-                            <Image src={IMAGES[imgIndex].src} alt={`Angel ${imgIndex + 1}`} fill className="object-contain" priority />
-                        </div>
-                    ) : (
-                        <div className="relative w-full h-full z-10 flex items-center justify-end pr-10 md:pr-24">
-                            <motion.div
-                                animate={{ y: ["-15px", "15px", "-15px"] }}
-                                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                                className="relative w-auto h-[85%]"
-                            >
-                                <Image src={IMAGES[imgIndex].src} alt="Angel 2 Floating" width={1024} height={1536} className="w-auto h-full object-contain drop-shadow-[0_0_50px_rgba(0,0,0,0.2)] dark:drop-shadow-[0_0_50px_rgba(0,0,0,0.9)]" />
-                            </motion.div>
-                        </div>
-                    )}
-                </motion.div>
-            </AnimatePresence>
-            <div className="absolute inset-0 bg-gradient-to-r from-white/50 dark:from-[#030014] via-transparent to-transparent z-20 w-full transition-colors duration-500" />
+            <motion.div
+                animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.5, 0.3] }}
+                transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] md:w-[800px] md:h-[800px] bg-cyan-500/10 dark:bg-cyan-500/5 rounded-full blur-[100px]"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-white/80 dark:from-[#030014]/90 via-transparent to-transparent z-20 w-full transition-colors duration-500" />
         </div>
     );
 };
@@ -304,7 +263,7 @@ const DimensionalCodex = ({ pages }: { pages: typeof MANIFESTO_PAGES }) => {
     const iconColorDisabled = isCodexDark ? "text-gray-700" : "text-gray-300";
 
     return (
-        <div className="relative group perspective-2000 w-full flex justify-start z-30">
+        <div className="relative group perspective-2000 w-full flex justify-center z-30">
             <motion.div
                 initial={{ opacity: 0, rotateY: -15 }} animate={{ opacity: 1, rotateY: 0 }}
                 className={`relative w-full max-w-2xl h-[480px] rounded-[2.5rem] p-3 shadow-2xl flex flex-col overflow-visible transition-colors duration-500
@@ -387,7 +346,6 @@ const DimensionalCodex = ({ pages }: { pages: typeof MANIFESTO_PAGES }) => {
     );
 };
 
-// --- COMPONENTE: CARD DA PESQUISA ---
 function ResearchCard({ item }: { item: ResearchItem }) {
     const [isExpanded, setIsExpanded] = useState<boolean>(false);
 
@@ -404,7 +362,6 @@ function ResearchCard({ item }: { item: ResearchItem }) {
                     : "bg-white/40 dark:bg-white/[0.03] border-slate-200 dark:border-white/5 hover:border-cyan-500/30 dark:hover:border-cyan-500/20"
                 }`}
         >
-            {/* Header */}
             <div className="flex justify-between items-start mb-3">
                 <div className="flex items-center gap-3">
                     <div className={`p-2 rounded-lg transition-colors ${isExpanded ? "bg-cyan-600 text-white" : "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400"}`}>
@@ -428,7 +385,6 @@ function ResearchCard({ item }: { item: ResearchItem }) {
                 </div>
             </div>
 
-            {/* Participants */}
             <div className="flex gap-4 mb-4 pl-11 text-left">
                 {item.participants.phds > 0 && (
                     <div className="text-[9px] text-slate-500 dark:text-slate-400"><b className="text-slate-800 dark:text-white">{item.participants.phds}</b> PhDs</div>
@@ -439,7 +395,6 @@ function ResearchCard({ item }: { item: ResearchItem }) {
                 <div className="text-[9px] text-slate-500 dark:text-slate-400"><b className="text-slate-800 dark:text-white">{item.participants.grads}</b> Graduandos</div>
             </div>
 
-            {/* Progress */}
             <div className="pl-11">
                 <div className="flex justify-between text-[9px] font-bold mb-1 text-slate-800 dark:text-white">
                     <span className="uppercase tracking-wide">{getProgressLabel(item.progress)}</span>
@@ -453,7 +408,6 @@ function ResearchCard({ item }: { item: ResearchItem }) {
                 </div>
             </div>
 
-            {/* Expanded */}
             <AnimatePresence>
                 {isExpanded && (
                     <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
@@ -505,14 +459,14 @@ function ResearchCard({ item }: { item: ResearchItem }) {
     );
 }
 
-// --- AGENT SECTION: REFORMULADA COM PESQUISAS EXPANSÍVEIS ---
+// --- AGENT SECTION ---
 const AgentSection = () => {
-    // ESTADO PARA CONTROLAR A EXPANSÃO DO MÓDULO
     const [showResearch, setShowResearch] = useState(false);
 
     return (
         <section className="relative min-h-screen w-full flex flex-col items-center justify-center p-6 md:p-12 overflow-hidden z-10 transition-colors duration-500">
-            <div className="relative z-10 w-full max-w-6xl flex flex-col gap-12 items-center text-center">
+            <div className="relative z-10 w-full max-w-6xl flex flex-col gap-8 md:gap-12 items-center text-center">
+
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
@@ -522,14 +476,28 @@ const AgentSection = () => {
                         CAMADA DE AGENTES
                     </h2>
                     <p className="text-sm md:text-base text-slate-600 dark:text-cyan-50/70 font-light leading-relaxed max-w-2xl mx-auto">
-                        Agentes de Inteligência Artificial otimizados para auxiliar professores na criação de instrumentos, fomentar inovação e acelerar a produção científica. Monitorando a progressão de dezenas de pesquisas reais acontecendo agora em tempo real, com o apoio do <strong>Google for Startups</strong>.
+                        Agentes de Inteligência Artificial otimizados para auxiliar professores na criação de instrumentos, fomentar inovação e acelerar a produção científica. Monitorando a progressão de dezenas de pesquisas reais acontecendo agora em tempo real.
                     </p>
+
+                    {/* --- NOVO: ESPAÇO DA LOGO GOOGLE FOR STARTUPS --- */}
+                    <div className="mt-8 flex flex-col items-center justify-center">
+                        <span className="text-[8px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 mb-3">
+                            Apoiado Oficialmente Por
+                        </span>
+                        {/* Wrapper com fundo sutil para garantir visibilidade no modo claro e escuro */}
+                        <div className="relative px-6 py-2 rounded-xl bg-white/40 dark:bg-slate-800/80 backdrop-blur-md border border-slate-200 dark:border-white/10 opacity-70 hover:opacity-100 transition-all duration-300 filter grayscale hover:grayscale-0 shadow-sm cursor-default">
+                            {/* ⚠️ Você pode trocar este src pela imagem local usando next/image no futuro */}
+                            <img
+                                src="https://upload.wikimedia.org/wikipedia/commons/0/0e/Google_for_Startups_logo.svg"
+                                alt="Google for Startups"
+                                className="h-5 md:h-6 w-auto object-contain"
+                            />
+                        </div>
+                    </div>
                 </motion.div>
 
-                {/* CONTAINER DO CARD CENTRAL E COLUNAS LATERAIS */}
                 <div className="w-full flex items-center justify-center gap-4 md:gap-8">
 
-                    {/* COLUNA ESQUERDA (ESTÉTICA) */}
                     <motion.div
                         initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.6, delay: 0.2 }}
                         className="hidden lg:flex w-16 h-[600px] rounded-full bg-white/60 dark:bg-black/40 backdrop-blur-2xl border border-blue-200/50 dark:border-cyan-500/30 shadow-[0_20px_50px_rgba(0,0,0,0.05)] dark:shadow-xl flex-col items-center justify-between py-8 transition-all duration-500"
@@ -543,7 +511,6 @@ const AgentSection = () => {
                         <div className="w-1.5 h-20 rounded-full bg-cyan-400/50 dark:bg-cyan-500/50" />
                     </motion.div>
 
-                    {/* CARD CENTRAL (MÓDULO DE PESQUISA ANIMADO) */}
                     <motion.div
                         layout
                         initial={{ opacity: 0, scale: 0.95 }}
@@ -552,7 +519,6 @@ const AgentSection = () => {
                         whileHover={{ boxShadow: "0 0 40px rgba(34, 211, 238, 0.15)" }}
                         className={`flex-1 w-full max-w-4xl rounded-[2.5rem] bg-white/60 dark:bg-[#030014]/60 backdrop-blur-2xl border border-blue-200/50 dark:border-cyan-500/30 p-6 md:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.05)] dark:shadow-[0_0_30px_rgba(0,0,0,0.6)] flex flex-col transition-all duration-500 overflow-hidden ${showResearch ? 'h-[700px]' : 'h-auto'}`}
                     >
-                        {/* Hub de Agentes (Header da Pesquisa) */}
                         <div className="w-full p-6 rounded-3xl bg-slate-900 dark:bg-[#0f172a] border border-white/10 shadow-xl overflow-hidden relative group shrink-0 text-left">
                             <div className="absolute top-0 right-0 p-4 opacity-10 dark:opacity-20">
                                 <CpuChipIconOutline className="w-24 h-24 text-cyan-500/50" />
@@ -572,7 +538,6 @@ const AgentSection = () => {
                                     </div>
                                 </div>
 
-                                {/* BOTÃO DE EXPANSÃO (Substituindo a antiga caixa vermelha de credenciais) */}
                                 <button
                                     onClick={() => setShowResearch(!showResearch)}
                                     className="w-full h-16 flex items-center justify-center border border-cyan-500/30 bg-cyan-500/5 hover:bg-cyan-500/10 rounded-lg transition-colors cursor-pointer group"
@@ -588,7 +553,6 @@ const AgentSection = () => {
                             </div>
                         </div>
 
-                        {/* Lista de Pesquisas (Condicionalmente Renderizada) */}
                         <AnimatePresence>
                             {showResearch && (
                                 <motion.div
@@ -605,7 +569,6 @@ const AgentSection = () => {
                         </AnimatePresence>
                     </motion.div>
 
-                    {/* COLUNA DIREITA (ESTÉTICA) */}
                     <motion.div
                         initial={{ opacity: 0, x: 30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.6, delay: 0.3 }}
                         className="hidden lg:flex w-16 h-[600px] rounded-full bg-white/60 dark:bg-black/40 backdrop-blur-2xl border border-blue-200/50 dark:border-cyan-500/30 shadow-[0_20px_50px_rgba(0,0,0,0.05)] dark:shadow-xl flex-col items-center justify-between py-8 transition-all duration-500"
@@ -630,7 +593,11 @@ const BlockchainSection = () => {
     return (
         <section className="relative z-30 min-h-screen w-full flex flex-col items-center justify-center p-12 lg:p-32 overflow-hidden transition-colors duration-500">
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[1px] bg-gradient-to-r from-transparent via-cyan-500/20 to-transparent" />
+
             <div className="mb-20 text-center relative z-10">
+                <h4 className="text-[10px] md:text-xs font-black uppercase tracking-[0.3em] text-cyan-600 dark:text-cyan-400 mb-4 opacity-90">
+                    Códice do Sistema
+                </h4>
                 <h2 className="text-5xl md:text-7xl font-black text-slate-900 dark:text-white tracking-tighter mb-4 transition-colors">
                     VERDADE IMUTÁVEL
                 </h2>
@@ -638,19 +605,48 @@ const BlockchainSection = () => {
                     <CubeIcon className="w-4 h-4" /> Especificações do Protocolo <CubeIcon className="w-4 h-4" />
                 </div>
             </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full max-w-7xl relative z-10">
                 {BLOCKCHAIN_DATA.map((data, idx) => (
                     <motion.div
-                        key={data.id} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: idx * 0.1 }} whileHover={{ y: -10 }}
-                        className="p-8 rounded-[2rem] bg-white/80 dark:bg-white/5 border border-blue-200/50 dark:border-white/10 backdrop-blur-xl flex flex-col hover:bg-white transition-all duration-500 group shadow-lg dark:shadow-none"
+                        key={data.id}
+                        initial={{ opacity: 0, y: 30 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: idx * 0.1 }}
+                        whileHover={{ y: -5 }}
+                        className={`p-8 rounded-[2rem] flex flex-col transition-all duration-500 group relative
+                            ${data.isCurrent
+                                ? 'bg-cyan-50/80 dark:bg-cyan-900/10 border-2 border-cyan-500/50 dark:border-cyan-500/50 shadow-[0_0_40px_rgba(34,211,238,0.2)] dark:shadow-[0_0_40px_rgba(34,211,238,0.1)] scale-[1.02] z-10'
+                                : 'bg-white/80 dark:bg-white/5 border border-blue-200/50 dark:border-white/10 backdrop-blur-xl hover:bg-white/90 dark:hover:bg-white/10 shadow-lg dark:shadow-none hover:border-cyan-500/30'
+                            }
+                        `}
                     >
-                        <CommandLineIcon className="w-6 h-6 text-cyan-600 dark:text-cyan-400 mb-6" />
-                        <span className="text-cyan-600 dark:text-cyan-500 font-mono text-[9px] uppercase tracking-widest mb-2">{data.tag}</span>
-                        <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-4 tracking-tight transition-colors">{data.title}</h3>
-                        <p className="text-sm text-slate-500 dark:text-white/50 leading-relaxed font-light mb-6 flex-1 transition-colors">{data.desc}</p>
+                        <div className="flex items-center justify-between mb-6">
+                            <div className={`flex items-center gap-3 px-3 py-1.5 rounded-full border ${data.isCurrent ? 'bg-cyan-500 text-white border-cyan-500 shadow-lg shadow-cyan-500/30' : 'bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-white/10'}`}>
+                                <CalendarDaysIcon className="w-4 h-4" />
+                                <span className="text-xs font-black tracking-widest">
+                                    {data.year}
+                                </span>
+                            </div>
+
+                            {data.isCurrent && (
+                                <span className="flex h-2.5 w-2.5 relative">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-500"></span>
+                                </span>
+                            )}
+                        </div>
+
+                        <h3 className={`text-xl font-bold mb-4 tracking-tight transition-colors ${data.isCurrent ? 'text-slate-900 dark:text-cyan-50' : 'text-slate-800 dark:text-white'}`}>
+                            {data.title}
+                        </h3>
+                        <p className={`text-sm leading-relaxed font-light mb-6 flex-1 transition-colors ${data.isCurrent ? 'text-slate-700 dark:text-cyan-100/70' : 'text-slate-500 dark:text-white/50'}`}>
+                            {data.desc}
+                        </p>
 
                         {data.formula && (
-                            <div className="mt-auto p-4 rounded-xl bg-blue-50 dark:bg-black/40 border border-blue-100 dark:border-white/5 font-serif italic text-cyan-700 dark:text-cyan-300/80 text-center transition-colors">
+                            <div className={`mt-auto p-4 rounded-xl font-serif italic text-center transition-colors ${data.isCurrent ? 'bg-cyan-500/10 border border-cyan-500/20 text-cyan-800 dark:text-cyan-300' : 'bg-blue-50 dark:bg-black/40 border border-blue-100 dark:border-white/5 text-cyan-700 dark:text-cyan-300/80'}`}>
                                 {data.formula}
                             </div>
                         )}
@@ -670,15 +666,14 @@ export default function TechnicalAboutPage() {
     return (
         <div className="relative w-full font-sans overflow-x-hidden selection:bg-cyan-500 selection:text-white">
 
-            {/* FUNDO ANIMADO GLOBAL FIXO */}
             <StarsCanvas />
 
             <BackButton />
 
             {/* SEÇÃO 1: MANIFESTO & CODEX */}
-            <div className="relative min-h-screen w-full overflow-hidden flex flex-col justify-center z-20 p-6 md:p-12 lg:py-24 lg:pr-24 lg:pl-6 xl:pl-10 transition-colors duration-500">
+            <div className="relative min-h-screen w-full overflow-hidden flex flex-col justify-center z-20 p-6 md:p-12 lg:py-24 transition-colors duration-500">
                 <BackgroundInterdimensional />
-                <div className="relative z-30 w-full flex items-center justify-start">
+                <div className="relative z-30 w-full flex items-center justify-center">
                     <DimensionalCodex pages={MANIFESTO_PAGES} />
                 </div>
             </div>
