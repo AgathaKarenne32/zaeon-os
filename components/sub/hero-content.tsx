@@ -71,7 +71,7 @@ export default function HeroPage() {
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.3 }}
                   >
-                    a nova era da educação
+                    ZAEON OS
                   </motion.span>
 
                   {/* Mensagem principal com glitch */}
@@ -84,9 +84,9 @@ export default function HeroPage() {
                     <h1
                       className="highlight-glitch text-[22px] sm:text-2xl md:text-[28px] font-light text-slate-800 dark:text-white/90 leading-[1.5] tracking-tight"
                       style={{ fontFamily: 'var(--font-outfit), system-ui, -apple-system, sans-serif' }}
-                      data-text="Feito para você tirar nota 10: Os melhores assistentes de IA para seus estudos estão aqui."
+                      data-text="O Sistema Operacional de Quem Ensina, Aprende, Pesquisa e Entrega."
                     >
-                      Feito para você tirar nota 10: Os melhores assistentes de IA para seus estudos estão aqui.
+                      O Sistema Operacional de Quem Ensina, Aprende, Pesquisa e Entrega.
                     </h1>
                   </motion.div>
 
