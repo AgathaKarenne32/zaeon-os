@@ -27,28 +27,26 @@ const updateScheduleTool: FunctionDeclaration = {
 
 // --- 2. AGENT PERSONAS ---
 const AGENT_PERSONAS: Record<string, string> = {
-    zenita: `Você é a Sara, assistente acadêmica da Zaeon. Se o usuário pedir para adicionar, apagar ou editar aulas, USE A FERRAMENTA 'update_schedule'. Nunca responda com longos textos para tarefas de agenda.`,
+    zenita: `Você é a Zenita, assistente acadêmica da Zaeon. Se o usuário pedir para adicionar, apagar ou editar aulas, USE A FERRAMENTA 'update_schedule'. Nunca responda com longos textos para tarefas de agenda.`,
 
-    // UPDATED: Aura is now the Global Orchestrator and PDF Analyst
     aura: `Você é a Aura, a IA Principal e Orquestradora de Pesquisa. Seu papel varia conforme o contexto:
 1. Se o usuário estiver perguntando sobre um PDF recém-carregado, responda de forma técnica, clara e direta baseada ESTRITAMENTE no documento.
 2. Se você receber um [CONTEXTO GLOBAL DA PESQUISA] nas instruções, atue como uma orientadora. Leia o que foi produzido por outros agentes (Scribe, Examiner, Citações) e use isso para dialogar de forma inteligente. NÃO repita os logs como um robô ("Notei que o Scribe disse..."), mas aja como se você já soubesse de tudo e ofereça novas pautas, conexões de ideias e pontos cegos que o usuário precisa cobrir. Seja propositiva e estratégica.`,
 
-    // UPDATED: Strict ABNT focus, removed APA
     scholar: `Você é o Agente Scholar, Especialista em Citações Acadêmicas. Seu único objetivo é extrair trechos vitais (parágrafos inteiros verbatim) do documento fornecido e gerar as referências ESTRITAMENTE nas normas da ABNT (Associação Brasileira de Normas Técnicas). Formate as saídas exatamente como solicitado pelo usuário, sem introduções longas ou conversas paralelas. Mantenha um tom acadêmico e robótico.`,
 
-    // UPDATED: Better context alignment for Scribe
     scribe: `Você é o Scribe, um Escritor e Revisor Acadêmico Sênior. Sua função é receber os rascunhos ou ideias do usuário e reescrevê-los com precisão, vocabulário formal, tom impessoal e estrutura acadêmica impecável (padrão de artigo científico ou TCC). Se houver um [ACTIVE PROJECT] no contexto, alinhe a escrita aos objetivos desse projeto. Entregue sempre o texto pronto para uso.`,
 
-    // UPDATED: Examiner focused strictly on PDF context
     examiner: `Você é o Examiner, o Inquisidor Acadêmico. Seu papel é testar o conhecimento do usuário. Com base no documento PDF fornecido no contexto, crie perguntas desafiadoras (múltipla escolha ou discursivas curtas). Faça uma pergunta por vez. Quando o usuário responder, avalie criticamente, corrija se necessário e ofereça a próxima pergunta. Seja rigoroso, porém construtivo.`,
 
-    zaeon: `Você é a Zenita, Especialista em criação de documentos. Auxilie na leitura de PDFs e estruture informações para o Fabricator.`
+    // Atualizado para a nova função de Chat Colleage
+    zaeon: `Você é a Zaeon, a Inteligência Artificial e Colega Neural oficial da Zaeon OS. Você atua como uma colega de trabalho proativa, simpática e altamente sofisticada. Ajude o usuário a navegar pela plataforma, tire dúvidas de usabilidade e bata papos construtivos.`
 };
 
 export async function POST(req: Request) {
     try {
-        const { prompt, agent, systemContext, fileData } = await req.json();
+        // 🔥 NOVO: Recebendo userData do frontend
+        const { prompt, agent, systemContext, fileData, userData } = await req.json();
         const agentKey = agent?.toLowerCase() || "aura";
         const persona = AGENT_PERSONAS[agentKey] || AGENT_PERSONAS.aura;
 
@@ -57,8 +55,6 @@ export async function POST(req: Request) {
         // =================================================================
         if (agentKey === "groq_bypassed") {
             const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-
-            // Ensures context is passed to Groq as well if it's ever activated
             const groqSystemMessage = persona + (systemContext ? `\n\n[SYSTEM CONTEXT]:\n${systemContext}` : "");
 
             const completion = await groq.chat.completions.create({
@@ -79,7 +75,6 @@ export async function POST(req: Request) {
             googleAuthOptions: { credentials: { client_email: credentials.client_email, private_key: credentials.private_key } }
         });
 
-        // Model Configurations
         const tools = agentKey === "zenita" ? [{ functionDeclarations: [updateScheduleTool] }] : undefined;
         const generativeModel = vertexAI.getGenerativeModel({
             model: 'gemini-2.0-flash-001',
@@ -87,7 +82,6 @@ export async function POST(req: Request) {
             tools: tools
         });
 
-        // Assembling content (Text + Base64 PDF if exists)
         const parts: any[] = [];
         if (fileData) {
             parts.push({
@@ -96,8 +90,22 @@ export async function POST(req: Request) {
         }
         parts.push({ text: prompt });
 
-        // System Instructions (Persona + Global Context)
+        // =================================================================
+        // SYSTEM INSTRUCTION ASSEMBLY (Persona + User Data + Context)
+        // =================================================================
         let finalSystemInstruction = persona;
+
+        // Injeta a memória persistente do usuário se ela existir
+        if (userData && Object.keys(userData).length > 0) {
+            finalSystemInstruction += `\n\n=== MEMÓRIA DA REDE: DADOS DO USUÁRIO ===\n`;
+            if (userData.name) finalSystemInstruction += `- Nome: ${userData.name}\n`;
+            if (userData.age) finalSystemInstruction += `- Idade: ${userData.age} anos\n`;
+            if (userData.studyArea) finalSystemInstruction += `- Área de Atuação/Curso: ${userData.studyArea}\n`;
+            if (userData.institution) finalSystemInstruction += `- Instituição de Ensino/Empresa: ${userData.institution}\n`;
+
+            finalSystemInstruction += `\nDiretriz: Você já conhece essas informações. Use-as para dar respostas altamente qualificadas e contextualizadas à área profissional/acadêmica do usuário, mas NUNCA liste esses dados como um robô. Mantenha a naturalidade de um colega humano.\n`;
+        }
+
         if (systemContext) {
             finalSystemInstruction += `\n\n=== CONTEXTO ADICIONAL FORNECIDO PELO SISTEMA ===\n${systemContext}`;
         }
@@ -109,7 +117,6 @@ export async function POST(req: Request) {
         const result = await chat.sendMessage(parts);
         const response = result.response;
 
-        // Check if Gemini triggered the Schedule tool (Zenita)
         const functionCall = response.candidates?.[0]?.content?.parts?.[0]?.functionCall;
         if (functionCall) {
             return NextResponse.json({
@@ -118,7 +125,6 @@ export async function POST(req: Request) {
             });
         }
 
-        // Return standard text response
         const textResponse = response.candidates?.[0]?.content?.parts?.[0]?.text || "Sem resposta do núcleo.";
         return NextResponse.json({ text: textResponse });
 

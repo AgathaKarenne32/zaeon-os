@@ -39,16 +39,16 @@ export default function MenuNavigation() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const chatScrollRef = useRef<HTMLDivElement>(null);
 
-  // Dados do Perfil Extraídos pela IA (Agora a Zaeon vai preenchendo isso aos poucos)
+  // Dados do Perfil Extraídos pela IA
   const [userData, setUserData] = useState({
     name: '',
     age: 0,
     studyArea: '',
-    institution: '', // Novo: Faculdade/Instituição
+    institution: '',
     gender: 'other'
   });
 
-  // Controle de Estado da Conversa (0 = coletando, 1 = finalizado)
+  // Controle de Estado da Conversa (0 = coletando dados, 1 = finalizado)
   const [step, setStep] = useState(0);
 
   const isLoggedIn = status === "authenticated";
@@ -87,7 +87,7 @@ export default function MenuNavigation() {
       const timer = setTimeout(() => {
         setMessages([{
           role: 'zaeon',
-          text: "Olá! Meu nome é Zaeon e eu fui criada para transformar a sua vida pra melhor. Vamos começar nos conhecendo. Qual é o seu nome completo e a sua idade?"
+          text: "Olá! O meu nome é Zaeon e fui criada para transformar a sua rotina para melhor. Vamos começar por nos conhecer. Qual é o seu nome completo e a sua idade?"
         }]);
         setIsTyping(false);
       }, 1500);
@@ -106,11 +106,9 @@ export default function MenuNavigation() {
 
     if (step === 0) {
       try {
-        // Envia o histórico atual do usuário + os dados já coletados para a API
         const res = await fetch('/api/onboarding-extract', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          // Passamos o texto atual E o estado atual, para a IA não perder o que já sabe
           body: JSON.stringify({ message: userText, currentData: userData })
         });
 
@@ -119,7 +117,6 @@ export default function MenuNavigation() {
         if (result.success && result.data) {
           const extracted = result.data;
 
-          // Atualiza o estado fundindo o que já tínhamos com o que foi extraído agora
           const updatedData = {
             name: extracted.name || userData.name,
             age: extracted.age || userData.age,
@@ -130,48 +127,43 @@ export default function MenuNavigation() {
 
           setUserData(updatedData);
 
-          // ==========================================
-          // LÓGICA DE VERIFICAÇÃO (MISSING DATA)
-          // ==========================================
           setTimeout(() => {
             let missingFields = [];
 
             if (!updatedData.name) missingFields.push("nome");
             if (!updatedData.age || updatedData.age === 0) missingFields.push("idade");
             if (!updatedData.studyArea) missingFields.push("curso ou profissão");
-            if (!updatedData.institution) missingFields.push("instituição de ensino");
+            if (!updatedData.institution) missingFields.push("instituição de ensino ou empresa");
 
             if (missingFields.length > 0) {
-              // A Zaeon pergunta o que falta
               let askMsg = "";
               if (!updatedData.name && !updatedData.age) {
-                askMsg = "Desculpe, não consegui entender seu nome e idade. Pode repetir?";
+                askMsg = "Desculpe, não consegui entender bem o seu nome e idade. Pode repetir?";
               } else if (updatedData.name && !updatedData.studyArea && !updatedData.institution) {
-                askMsg = `Entendido, ${updatedData.name.split(' ')[0]}! E qual curso ou profissão você exerce, e em qual instituição?`;
+                askMsg = `Entendido, ${updatedData.name.split(' ')[0]}! E qual é o seu curso ou profissão, e em que instituição atua?`;
               } else if (updatedData.studyArea && !updatedData.institution) {
-                askMsg = `Legal que você faz ${updatedData.studyArea}, ${updatedData.name.split(' ')[0]}! Em qual faculdade ou instituição você estuda/trabalha?`;
+                askMsg = `Fabuloso atuar em ${updatedData.studyArea}, ${updatedData.name.split(' ')[0]}! Em qual faculdade ou empresa você está focado no momento?`;
               } else if (!updatedData.studyArea && updatedData.institution) {
-                askMsg = `Na ${updatedData.institution}, certo. Mas qual é o seu curso ou área de atuação?`;
+                askMsg = `Ah, conheço a ${updatedData.institution}. Mas qual é exatamente o seu curso ou a sua área de atuação lá?`;
               } else {
-                askMsg = `Legal! Para completarmos seu perfil, ainda preciso saber: ${missingFields.join(" e ")}.`;
+                askMsg = `Quase lá! Para completarmos o seu perfil, ainda preciso de saber: ${missingFields.join(" e ")}.`;
               }
 
               setMessages(prev => [...prev, { role: 'zaeon', text: askMsg }]);
               setIsTyping(false);
 
             } else {
-              // TUDO PREENCHIDO - Pode avançar
               setMessages(prev => [...prev, {
                 role: 'zaeon',
-                text: `Muito prazer, ${updatedData.name.split(' ')[0]}! Vi que você trabalha/estuda com ${updatedData.studyArea} na ${updatedData.institution}. Seu perfil completo está pronto.`
+                text: `Excelente, ${updatedData.name.split(' ')[0]}! Muito bom saber que está envolvido com ${updatedData.studyArea} na ${updatedData.institution}. O seu ambiente neural está preparado.`
               }]);
 
               setTimeout(() => {
                 setMessages(prev => [...prev, {
                   role: 'zaeon',
-                  text: `Tudo certo! Para finalizar e acessar a plataforma, basta escolher o método de login abaixo.`
+                  text: `Para ativarmos a sua conta de forma segura, aceda com a sua conta Google (ou conta Institucional).`
                 }]);
-                setStep(1); // Libera os botões de Login
+                setStep(1);
                 setIsTyping(false);
               }, 2000);
             }
@@ -181,7 +173,7 @@ export default function MenuNavigation() {
           throw new Error("Falha na extração");
         }
       } catch (error) {
-        setMessages(prev => [...prev, { role: 'zaeon', text: "Desculpe, tive uma falha de conexão neural. Pode repetir de forma mais simples?" }]);
+        setMessages(prev => [...prev, { role: 'zaeon', text: "Desculpe, tive uma ligeira quebra de conexão neural. Pode repetir de forma mais direta?" }]);
         setIsTyping(false);
       }
     }
@@ -190,12 +182,12 @@ export default function MenuNavigation() {
   const handleLogin = async (provider: 'google' | 'guest') => {
     setIsSubmitting(true);
     const onboardingData = { ...userData, role: 'student', image: null };
+    localStorage.setItem('zaeon_onboarding', JSON.stringify(onboardingData));
 
     if (provider === 'google') {
-      localStorage.setItem('zaeon_onboarding', JSON.stringify(onboardingData));
       await signIn('google', { callbackUrl: '/workstation' });
-    } else {
-      alert("Acesso Guest será integrado em breve.");
+    } else if (provider === 'guest') {
+      alert("Acesso Convidado a ser integrado.");
       setIsSubmitting(false);
     }
   };
@@ -231,7 +223,7 @@ export default function MenuNavigation() {
               </div>
 
               {/* Chat Área */}
-              <div ref={chatScrollRef} className="flex-1 overflow-y-auto max-h-[200px] pr-2 space-y-4 custom-scrollbar mb-4">
+              <div ref={chatScrollRef} className="flex-1 overflow-y-auto max-h-[220px] pr-2 space-y-4 custom-scrollbar mb-4">
                 {messages.map((msg, idx) => (
                   <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start gap-2'}`}>
                     {msg.role === 'zaeon' && (
@@ -281,13 +273,21 @@ export default function MenuNavigation() {
                     </button>
                   </div>
                 ) : (
-                  <div className="flex flex-col gap-2 mt-1">
-                    <button onClick={() => handleLogin('google')} disabled={isSubmitting} className="w-full bg-black dark:bg-white text-white dark:text-black text-[10px] font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform shadow-lg">
+                  <div className="flex gap-2 mt-1 justify-center">
+                    <button
+                      onClick={() => handleLogin('google')}
+                      disabled={isSubmitting}
+                      className="flex-1 max-w-[200px] bg-black dark:bg-white text-white dark:text-black text-[10px] font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform shadow-lg"
+                    >
                       {isSubmitting ? <Loader2 className="animate-spin w-4 h-4" /> : <Image src="https://authjs.dev/img/providers/google.svg" alt="G" width={14} height={14} />}
-                      INICIAR COM GOOGLE
+                      GOOGLE / INT.
                     </button>
-                    <button onClick={() => handleLogin('guest')} disabled={isSubmitting} className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white text-[10px] font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors">
-                      <ShieldCheck size={14} /> ENTRAR COMO CONVIDADO
+                    <button
+                      onClick={() => handleLogin('guest')}
+                      disabled={isSubmitting}
+                      className="flex-1 max-w-[150px] bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white text-[10px] font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors"
+                    >
+                      <ShieldCheck size={14} /> CONVIDADO
                     </button>
                   </div>
                 )}
