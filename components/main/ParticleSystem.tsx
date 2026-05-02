@@ -3,25 +3,29 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useTheme } from "next-themes";
 
-const WORDS = ["幸运", "信仰", "努力", "教育", "组织", "荣誉", "社区", "胜利", "梦想"];
-const FONT_FAMILY = `"Noto Sans SC", "Microsoft YaHei", "SimHei", monospace, sans-serif`;
+const PARTICLE_COUNT = 2025;
+const GLOBE_RADIUS_RATIO = 0.32;
+const SNAKE_THICKNESS = 45;
+const SNAKE_SPEED = 0.012;
 
-const DARK_PALETTE = ["#9ecbff", "#5fb4ff", "#2b8eff", "#1a73e8", "#1572a1", "#00a7a7", "#009688", "#33cccc", "#7dd3fc"];
-const LIGHT_PALETTE = ["#0f172a", "#1e293b", "#334155", "#0369a1", "#1d4ed8", "#000000"];
+const COLORS = ["#0ea5e9", "#00f0ff", "#0066ff", "#3b82f6", "#22d3ee"];
 
-function buildStreamSource() {
-    const chunks: string[] = [];
-    for (let i = 0; i < WORDS.length; i++) {
-        chunks.push(WORDS[i]);
-        if (i % 3 === 1) chunks.push("₿");
-        if (i % 5 === 2) chunks.push("Ξ");
-        if (i % 7 === 3) chunks.push("ICP");
-    }
-    return chunks.join("");
+interface Particle {
+    x: number;
+    y: number;
+    size: number;
+    color: string;
+    theta: number;
+    phi: number;
+    angle: number;
+    distance: number;
+    dnaStrand: 1 | 2 | 0;
+    dnaY: number;
+    vx: number;
+    vy: number;
 }
-const STREAM_SOURCE = buildStreamSource();
 
-const MatrixRain: React.FC = () => {
+const StarBackground: React.FC = () => {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const { theme, resolvedTheme } = useTheme();
     const [mounted, setMounted] = useState(false);
@@ -32,14 +36,19 @@ const MatrixRain: React.FC = () => {
         if (!mounted) return;
 
         const canvas = canvasRef.current!;
-        const ctx = canvas.getContext("2d")!;
-        let width = canvas.clientWidth;
-        let height = canvas.clientHeight;
+        const ctx = canvas.getContext("2d", { alpha: false })!;
+        let width = 0, height = 0;
+
+        let particles: Particle[] = [];
+        let animationId: number;
+        let time = 0;
+
+        // Fases: 0: Globo, 1: Desintegração, 2: Serpente, 3: DNA Normal, 4: DNA Overheat, 5: Desintegração
+        let phase = 0;
+        let phaseTimer = 0;
 
         const currentTheme = theme === 'system' ? resolvedTheme : theme;
         const isDark = currentTheme === 'dark';
-        const activePalette = isDark ? DARK_PALETTE : LIGHT_PALETTE;
-        const fadeColor = isDark ? "rgba(3, 0, 20, 0.22)" : "rgba(248, 250, 252, 0.22)";
 
         const applyDPR = () => {
             const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
@@ -49,97 +58,151 @@ const MatrixRain: React.FC = () => {
             canvas.height = Math.floor(height * dpr);
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         };
-        applyDPR();
 
-        const fontSize = 13;
-        // Mantemos a densidade baixa que você pediu (divisor 0.4)
-        const colWidthBase = Math.round((fontSize * 4) / 0.4);
-        let columns = Math.max(2, Math.floor(width / colWidthBase));
+        const initParticles = () => {
+            particles = [];
+            const phiFactor = Math.PI * (3 - Math.sqrt(5));
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                const y_pos = 1 - (i / (PARTICLE_COUNT - 1)) * 2;
+                let strand: 1 | 2 | 0 = 0;
+                if (i < PARTICLE_COUNT * 0.4) strand = 1;
+                else if (i < PARTICLE_COUNT * 0.8) strand = 2;
 
-        type Col = { y: number; speed: number; color: string; offset: number };
-        let cols: Col[] = new Array(columns).fill(0).map((_, i) => ({
-            y: -Math.random() * 50,
-            speed: 0.40 + (i % 5) * (0.30 / 5),
-            color: activePalette[(i + Math.floor(Math.random() * 3)) % activePalette.length],
-            offset: Math.floor(Math.random() * STREAM_SOURCE.length),
-        }));
-
-        ctx.font = `${fontSize}px ${FONT_FAMILY}`;
-        ctx.textBaseline = "top";
-        const FADE_LENGTH_LINES = 50;
-        const BASE_ALPHA = 0.90;
-        const TOP_ALPHA = 0.00;
-
-        let animationId: number;
+                particles.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    size: Math.random() * 1.5 + 0.5,
+                    color: COLORS[i % COLORS.length],
+                    theta: phiFactor * i,
+                    phi: Math.acos(y_pos),
+                    angle: (i / PARTICLE_COUNT) * Math.PI * 25,
+                    distance: Math.sqrt(i / PARTICLE_COUNT),
+                    dnaStrand: strand,
+                    dnaY: Math.random() * 2000,
+                    vx: (Math.random() - 0.5) * 20,
+                    vy: (Math.random() - 0.5) * 20,
+                });
+            }
+        };
 
         const draw = () => {
-            ctx.globalAlpha = 1.0;
-            ctx.fillStyle = fadeColor;
+            const clearOpacity = (phase === 4 || phase === 5 || phase === 1) ? 0.6 : 0.4;
+            ctx.fillStyle = isDark
+                ? `rgba(1, 8, 22, ${clearOpacity})`
+                : `rgba(255, 255, 255, ${clearOpacity})`;
+
             ctx.fillRect(0, 0, width, height);
+            phaseTimer++;
 
-            for (let i = 0; i < columns; i++) {
-                const col = cols[i];
+            // Controle das Derações
+            if (phase === 0 && phaseTimer > 800) { phase = 1; phaseTimer = 0; }        // Globo
+            else if (phase === 1 && phaseTimer > 60) { phase = 2; phaseTimer = 0; }        // Desintegração
+            else if (phase === 2 && phaseTimer > 900) { phase = 3; phaseTimer = 0; }       // Serpente
+            else if (phase === 3 && phaseTimer > 1800) { phase = 4; phaseTimer = 0; }      // DNA (Longo)
+            else if (phase === 4 && phaseTimer > 600) { phase = 5; phaseTimer = 0; }       // DNA Overheat (Normal)
+            else if (phase === 5 && phaseTimer > 100) { phase = 0; phaseTimer = 0; }       // Desintegração final
 
-                // --- LÓGICA DE SIMETRIA ---
-                // Se i=0, x=0 (borda esquerda)
-                // Se i=último, x=largura total (borda direita)
-                const x = columns > 1
-                    ? (i * (width - fontSize)) / (columns - 1)
-                    : (width - fontSize) / 2;
+            time += SNAKE_SPEED;
 
-                const headY = col.y * fontSize;
-                ctx.fillStyle = col.color;
+            const centerX = width * 0.82;
+            const centerY = height * 0.45;
+            const globeRadius = Math.min(width, height) * GLOBE_RADIUS_RATIO;
 
-                for (let j = 0; j < FADE_LENGTH_LINES; j++) {
-                    const y = headY - j * fontSize;
-                    if (y < -fontSize) break;
-                    if (y > height + fontSize) continue;
+            particles.forEach((p, i) => {
+                let targetX = p.x;
+                let targetY = p.y;
+                let scale = 1;
+                let alpha = 0.8;
+                let followTarget = true;
 
-                    const t = j / (FADE_LENGTH_LINES - 1);
-                    const alpha = BASE_ALPHA * (1 - t) + TOP_ALPHA * t;
-                    ctx.globalAlpha = alpha;
-                    const charIndex = (col.offset + Math.floor(col.y) - j + STREAM_SOURCE.length * 100) % STREAM_SOURCE.length;
-                    const ch = STREAM_SOURCE.charAt(Math.floor(charIndex));
-                    ctx.fillText(ch, x, y);
+                // GLOBO (0)
+                if (phase === 0) {
+                    const rotation = time * 1.2;
+                    const sx = globeRadius * Math.sin(p.phi) * Math.cos(p.theta + rotation);
+                    const sy = globeRadius * Math.cos(p.phi);
+                    const sz = globeRadius * Math.sin(p.phi) * Math.sin(p.theta + rotation);
+                    targetX = centerX + sx;
+                    targetY = centerY + sy;
+                    scale = Math.max(0.2, 300 / (300 - sz));
+                }
+                // SERPENTE (2)
+                else if (phase === 2) {
+                    const t = time * 2.2 - (i * 0.004);
+                    const sx = Math.cos(t * 0.6) * (width * 0.38) + Math.sin(t * 1.1) * (width * 0.15);
+                    const sy = Math.sin(t * 0.4) * (height * 0.35) + Math.cos(t * 1.8) * (height * 0.12);
+                    targetX = (width * 0.5) + sx + Math.cos(i * 0.4) * SNAKE_THICKNESS;
+                    targetY = (height * 0.5) + sy + Math.sin(i * 0.4) * SNAKE_THICKNESS;
+                }
+                // DNA (3 e 4)
+                else if (phase === 3 || phase === 4) {
+                    p.dnaY -= 0.8;
+                    if (p.dnaY < -100) p.dnaY = height + 100;
+                    const freq = 0.005;
+                    const angle = (p.dnaY * freq) + (p.dnaStrand === 1 ? 0 : p.dnaStrand === 2 ? Math.PI : Math.PI / 2);
+                    const rad = 180;
+                    const cX = width * 0.83;
+
+                    if (p.dnaStrand !== 0) {
+                        targetX = cX + Math.cos(angle + time) * rad;
+                        targetY = p.dnaY;
+                    } else {
+                        const x1 = cX + Math.cos((p.dnaY * freq) + time) * rad;
+                        const x2 = cX + Math.cos((p.dnaY * freq) + Math.PI + time) * rad;
+                        targetX = x1 + (x2 - x1) * ((i % 10) / 10);
+                        targetY = p.dnaY;
+                    }
+
+                    if (phase === 4) { // Overheat apenas no DNA
+                        const isFlash = Math.sin(time * 40 + i) > 0;
+                        scale = isFlash ? 3 : 0.4;
+                        alpha = isFlash ? 1 : 0.2;
+                    }
+                }
+                // DESINTEGRAÇÃO (1 e 5)
+                else if (phase === 1 || phase === 5) {
+                    followTarget = false;
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    alpha = Math.max(0, 1 - phaseTimer / 100);
                 }
 
-                col.y += col.speed;
-                if (headY > height + FADE_LENGTH_LINES * fontSize) {
-                    col.y = -Math.random() * 40;
-                    col.offset = (col.offset + Math.floor(5 + Math.random() * 25)) % STREAM_SOURCE.length;
+                if (followTarget) {
+                    const speed = 0.08;
+                    p.x += (targetX - p.x) * speed;
+                    p.y += (targetY - p.y) * speed;
                 }
-            }
-            ctx.globalAlpha = 1;
+
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = isDark ? alpha : alpha * 0.7;
+
+                // Brilho do Overheat (Fase 4 apenas)
+                if (phase === 4 && i % 4 === 0) {
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = p.color;
+                } else {
+                    ctx.shadowBlur = 0;
+                }
+
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size * scale, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            });
+
             animationId = requestAnimationFrame(draw);
         };
 
-        animationId = requestAnimationFrame(draw);
+        applyDPR();
+        initParticles();
+        draw();
 
-        const onResize = () => {
-            applyDPR();
-            columns = Math.max(2, Math.floor(width / colWidthBase));
-            cols = new Array(columns).fill(0).map((_, i) => ({
-                y: -Math.random() * 50,
-                speed: 0.40 + (i % 5) * (0.30 / 5),
-                color: activePalette[(i + Math.floor(Math.random() * 3)) % activePalette.length],
-                offset: Math.floor(Math.random() * STREAM_SOURCE.length),
-            }));
-            ctx.font = `${fontSize}px ${FONT_FAMILY}`;
-        };
-
-        const ro = new ResizeObserver(onResize);
-        ro.observe(canvas);
-        return () => { cancelAnimationFrame(animationId); ro.disconnect(); };
+        const onResize = () => { applyDPR(); initParticles(); };
+        window.addEventListener("resize", onResize);
+        return () => { cancelAnimationFrame(animationId); window.removeEventListener("resize", onResize); };
     }, [theme, resolvedTheme, mounted]);
 
-    if (!mounted) return <div className="fixed inset-0 z-0 bg-[#030014]" />;
-
-    return (
-        <div className="fixed inset-0 z-0 pointer-events-none transition-colors duration-500">
-            <canvas ref={canvasRef} className="w-full h-full" style={{ imageRendering: "auto" }} />
-        </div>
-    );
+    if (!mounted) return <div className="fixed inset-0 z-0 bg-[#010816]" />;
+    return <div className="fixed inset-0 z-0 pointer-events-none transition-colors duration-500"><canvas ref={canvasRef} className="w-full h-full" /></div>;
 };
 
-export const StarsCanvas = MatrixRain;
-export default MatrixRain;
+export default StarBackground;

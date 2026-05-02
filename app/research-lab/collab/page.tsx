@@ -14,7 +14,7 @@ import {
     SparklesIcon, DocumentChartBarIcon,
     PhoneIcon, ChatBubbleLeftEllipsisIcon, DocumentTextIcon
 } from "@heroicons/react/24/outline";
-import MatrixRain from "@/components/main/star-background";
+import StarBackground from "@/components/main/star-background";
 
 // --- APPLE STYLE LOADER ---
 const AppleLoader = ({ status }: { status: string }) => (
@@ -99,7 +99,9 @@ export default function AdminControlRoom() {
             : 'relative z-10 pt-[110px] bg-slate-100 dark:bg-[#030014] h-screen w-full'
         }`}>
 
-            <div className="absolute inset-0 z-0 pointer-events-none opacity-20 hidden dark:block"><MatrixRain /></div>
+            <div className="absolute inset-0 z-0 pointer-events-none opacity-20 hidden dark:block">
+                <StarBackground />
+            </div>
 
             {/* BOTÃO FOCUS - FIXO NO TOPO DA SIDEBAR */}
             <div className="fixed left-6 z-[600] transition-all duration-500" style={{ top: '24px' }}>

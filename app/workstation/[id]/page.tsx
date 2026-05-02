@@ -11,7 +11,7 @@ import {
     EyeIcon, LockClosedIcon, AcademicCapIcon, PencilSquareIcon, UserGroupIcon as CollabIcon, HandRaisedIcon,
     ArrowLeftIcon, UserPlusIcon, PaperAirplaneIcon, CheckIcon, XMarkIcon
 } from "@heroicons/react/24/outline";
-import MatrixRain from "@/components/main/star-background";
+
 import NetworkMural from "@/app/workstation/profiles/NetworkMural";
 
 const ROOM_MAPPING: Record<string, string[]> = {
@@ -334,7 +334,7 @@ export default function VisitedWorkStationPage({ params }: { params: { id: strin
 
     return (
         <div className={`w-full min-h-screen overflow-x-hidden overflow-y-auto custom-scrollbar relative transition-colors duration-1000 font-mono pb-20 ${theme.pageBg}`}>
-            <div className={`fixed inset-0 z-0 ${theme.matrixOpacity} pointer-events-none mix-blend-overlay`}><MatrixRain /></div>
+
 
             <div className="fixed top-24 left-8 z-[100]">
                 <button onClick={() => router.push('/workstation')} className="flex items-center gap-2 px-4 py-2 bg-white/80 dark:bg-black/40 border border-slate-300 dark:border-white/10 backdrop-blur-md rounded-full text-slate-700 dark:text-white/70 hover:text-black dark:hover:text-white hover:bg-white dark:hover:bg-black/60 transition-all shadow-lg">

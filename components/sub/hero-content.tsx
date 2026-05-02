@@ -8,30 +8,46 @@ import { SparklesIcon, UserIcon } from "@heroicons/react/24/outline";
 
 // Componentes Internos
 import MenuNavigation from "@/components/sub/MenuNavigation";
+import StarBackground from "@/components/main/star-background";
+
+const TARGET_WORDS = [
+  "estudantes.",
+  "professores.",
+  "faculdades.",
+  "universidades.",
+  "empreendedores.",
+  "empresas.",
+  "mentes produtivas."
+];
 
 export default function HeroPage() {
   const { t } = useTranslation();
   const { status } = useSession();
 
   const [showChatbox, setShowChatbox] = useState(false);
+  const [wordIndex, setWordIndex] = useState(0);
 
+  // Redireciona diretamente para o chat caso já esteja logado
   useEffect(() => {
     if (status === "authenticated") {
       setShowChatbox(true);
     }
   }, [status]);
 
+  // Rotaciona a palavra em destaque a cada 3 segundos
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setWordIndex((prev) => (prev + 1) % TARGET_WORDS.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
-    <main className="w-full min-h-screen flex flex-col items-center justify-center relative px-4 py-12 overflow-hidden bg-slate-50 dark:bg-[#030508] transition-colors duration-700 font-sans">
+    <main className="w-full min-h-screen flex flex-col items-center justify-center relative px-4 py-12 overflow-hidden transition-colors duration-700 font-sans">
 
-      {/* BACKGROUND ESTILO GRID TECNOLÓGICO CIANO */}
-      <div className="absolute inset-0 z-0">
-        {/* Grid Sutil Adaptativo */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#06b6d415_1px,transparent_1px),linear-gradient(to_bottom,#06b6d415_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
-
-        {/* Orbs de Neon Exclusivamente Ciano/Azul */}
-        <div className="absolute top-[-10%] left-[10%] w-[500px] h-[500px] rounded-full bg-cyan-500/20 dark:bg-cyan-600/20 blur-[120px] mix-blend-screen pointer-events-none" />
-        <div className="absolute bottom-[-10%] right-[10%] w-[600px] h-[600px] rounded-full bg-blue-500/10 dark:bg-blue-600/10 blur-[150px] mix-blend-screen pointer-events-none" />
+      {/* BACKGROUND LIMPO - Apenas o StarBackground visível */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <StarBackground />
       </div>
 
       {/* ========================================= */}
@@ -39,9 +55,9 @@ export default function HeroPage() {
       {/* ========================================= */}
       <motion.div
         animate={{
-          scale: showChatbox ? 0.75 : 1,
-          y: showChatbox ? -60 : 0,
-          opacity: showChatbox ? 0.4 : 1,
+          scale: showChatbox ? 0.85 : 1,
+          y: showChatbox ? -40 : 0,
+          opacity: 1,
         }}
         transition={{ type: "spring", stiffness: 90, damping: 20 }}
         className="flex flex-col items-center text-center max-w-4xl z-10 w-full"
@@ -50,22 +66,31 @@ export default function HeroPage() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
-          className="relative"
+          className="relative flex flex-col items-center justify-center"
         >
-          <h1
-            className="text-4xl sm:text-5xl md:text-[5rem] font-light tracking-tighter text-slate-900 dark:text-white leading-[1.1] z-10 relative"
-          >
+          <h1 className="text-4xl sm:text-5xl md:text-[4.5rem] font-light tracking-tighter text-slate-900 dark:text-white leading-[1.2] z-10 relative">
             Agentes autônomos para <br className="hidden md:block" />
-            <span
-              className="font-black text-cyan-600 dark:text-cyan-400 cyber-glitch relative inline-block mt-2 md:mt-4"
-              data-text="mentes produtivas."
-            >
-              mentes produtivas.
-            </span>
+
+            {/* Altura mínima garantida para evitar saltos no layout durante a troca de palavras */}
+            <div className="min-h-[1.2em] flex items-center justify-center mt-2 md:mt-4">
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={wordIndex}
+                  initial={{ opacity: 0, filter: "blur(8px)", y: 10, skewX: 10 }}
+                  animate={{ opacity: 1, filter: "blur(0px)", y: 0, skewX: 0 }}
+                  exit={{ opacity: 0, filter: "blur(8px)", y: -10, skewX: -10 }}
+                  transition={{ duration: 0.5, ease: "easeInOut" }}
+                  className="font-extralight tracking-widest text-cyan-600 dark:text-cyan-400 cyber-glitch relative inline-block"
+                  data-text={TARGET_WORDS[wordIndex]}
+                >
+                  {TARGET_WORDS[wordIndex]}
+                </motion.span>
+              </AnimatePresence>
+            </div>
           </h1>
         </motion.div>
 
-        {/* Botões Iniciais - Simétricos e Tecnológicos */}
+        {/* Botões Iniciais - Sem fundo pesado, mantendo a visão do espaço */}
         <AnimatePresence>
           {!showChatbox && (
             <motion.div
@@ -77,16 +102,16 @@ export default function HeroPage() {
             >
               <button
                 onClick={() => setShowChatbox(true)}
-                className="group relative flex items-center justify-center gap-3 px-10 py-4 rounded-xl bg-cyan-600 dark:bg-cyan-500/10 backdrop-blur-xl border border-transparent dark:border-cyan-400/50 text-white dark:text-cyan-300 font-bold uppercase tracking-[0.2em] text-[11px] overflow-hidden transition-all hover:bg-cyan-700 dark:hover:bg-cyan-500/20 shadow-xl dark:shadow-[0_0_30px_rgba(34,211,238,0.15)] hover:scale-105"
+                className="group relative flex items-center justify-center gap-3 px-10 py-4 rounded-full border border-cyan-500/30 text-cyan-700 dark:text-cyan-300 font-medium uppercase tracking-[0.2em] text-[11px] overflow-hidden transition-all hover:border-cyan-400 dark:hover:shadow-[0_0_20px_rgba(34,211,238,0.2)] hover:scale-105 bg-transparent"
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 dark:via-cyan-400/10 to-transparent -translate-x-[100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-400/10 to-transparent -translate-x-[100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
                 <SparklesIcon className="w-4 h-4" />
                 Criar meu agente
               </button>
 
               <button
                 onClick={() => signIn('google', { callbackUrl: '/workstation' })}
-                className="flex items-center justify-center gap-3 px-10 py-4 rounded-xl border border-slate-300 dark:border-white/10 bg-white/50 dark:bg-white/5 backdrop-blur-md text-slate-800 dark:text-white font-bold uppercase tracking-[0.2em] text-[11px] hover:bg-white dark:hover:bg-white/10 transition-colors shadow-sm hover:scale-105"
+                className="flex items-center justify-center gap-3 px-10 py-4 rounded-full border border-slate-300 dark:border-white/10 text-slate-800 dark:text-white font-medium uppercase tracking-[0.2em] text-[11px] hover:border-slate-500 dark:hover:border-white/30 transition-colors bg-transparent hover:scale-105"
               >
                 <UserIcon className="w-4 h-4 text-slate-400" />
                 Acessar Conta
@@ -113,8 +138,12 @@ export default function HeroPage() {
         )}
       </AnimatePresence>
 
-      {/* CSS do Glitch Ciano Moderno */}
+      {/* CSS do Glitch Holográfico Elegante */}
       <style jsx global>{`
+        .cyber-glitch {
+          position: relative;
+        }
+        
         .cyber-glitch::before,
         .cyber-glitch::after {
           content: attr(data-text);
@@ -123,32 +152,44 @@ export default function HeroPage() {
           left: 0;
           width: 100%;
           height: 100%;
-          opacity: 0.8;
+          background: transparent;
+          pointer-events: none;
         }
         
-        /* Reflexo Ciano Claro (Modo Light e Dark) */
+        /* Camada 1: Ciano Deslocado */
         .cyber-glitch::before {
-          left: 2px;
-          text-shadow: -2px 0 #06b6d4;
-          clip: rect(24px, 550px, 90px, 0);
-          animation: glitch-anim 3s infinite linear alternate-reverse;
+          left: 1px;
+          text-shadow: -1px 0 rgba(6, 182, 212, 0.8);
+          clip-path: polygon(0 0, 100% 0, 100% 10%, 0 10%);
+          animation: glitch-elegant-1 3.5s infinite linear alternate-reverse;
         }
         
-        /* Reflexo Azul/Ciano Escuro */
+        /* Camada 2: Branco/Prata Subtil */
         .cyber-glitch::after {
-          left: -2px;
-          text-shadow: -2px 0 #3b82f6;
-          clip: rect(85px, 550px, 140px, 0);
-          animation: glitch-anim 2.5s infinite linear alternate-reverse;
+          left: -1px;
+          text-shadow: 1px 0 rgba(255, 255, 255, 0.3);
+          clip-path: polygon(0 80%, 100% 80%, 100% 100%, 0 100%);
+          animation: glitch-elegant-2 4s infinite linear alternate-reverse;
         }
 
-        @keyframes glitch-anim {
-          0% { clip: rect(10px, 9999px, 80px, 0); }
-          20% { clip: rect(60px, 9999px, 10px, 0); transform: translate(-1px, 1px); }
-          40% { clip: rect(20px, 9999px, 90px, 0); transform: translate(1px, -1px); }
-          60% { clip: rect(90px, 9999px, 30px, 0); transform: translate(-1px, 0); }
-          80% { clip: rect(30px, 9999px, 70px, 0); transform: translate(1px, 1px); }
-          100% { clip: rect(70px, 9999px, 20px, 0); transform: translate(0); }
+        @keyframes glitch-elegant-1 {
+          0% { clip-path: polygon(0 15%, 100% 15%, 100% 25%, 0 25%); transform: translate(0); }
+          10% { clip-path: polygon(0 45%, 100% 45%, 100% 50%, 0 50%); transform: translate(-1px, 1px); }
+          20% { clip-path: polygon(0 85%, 100% 85%, 100% 90%, 0 90%); transform: translate(1px, -1px); }
+          30% { clip-path: polygon(0 10%, 100% 10%, 100% 20%, 0 20%); transform: translate(0); }
+          40% { clip-path: polygon(0 60%, 100% 60%, 100% 70%, 0 70%); transform: translate(-1px, 0); }
+          50% { clip-path: polygon(0 30%, 100% 30%, 100% 40%, 0 40%); transform: translate(0); }
+          60%, 100% { clip-path: polygon(0 0, 0 0, 0 0, 0 0); transform: translate(0); } /* Pausa limpa sem glitch */
+        }
+
+        @keyframes glitch-elegant-2 {
+          0%, 40% { clip-path: polygon(0 0, 0 0, 0 0, 0 0); transform: translate(0); } /* Pausa longa */
+          50% { clip-path: polygon(0 20%, 100% 20%, 100% 30%, 0 30%); transform: translate(1px, 0); }
+          60% { clip-path: polygon(0 75%, 100% 75%, 100% 80%, 0 80%); transform: translate(-1px, 1px); }
+          70% { clip-path: polygon(0 40%, 100% 40%, 100% 55%, 0 55%); transform: translate(0); }
+          80% { clip-path: polygon(0 80%, 100% 80%, 100% 90%, 0 90%); transform: translate(1px, -1px); }
+          90% { clip-path: polygon(0 5%, 100% 5%, 100% 15%, 0 15%); transform: translate(-1px, 0); }
+          100% { clip-path: polygon(0 60%, 100% 60%, 100% 65%, 0 65%); transform: translate(0); }
         }
       `}</style>
     </main>

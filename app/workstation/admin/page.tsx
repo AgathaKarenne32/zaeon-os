@@ -10,7 +10,7 @@ import {
     DocumentChartBarIcon,
     PuzzlePieceIcon
 } from "@heroicons/react/24/outline";
-import MatrixRain from "@/components/main/star-background";
+
 
 // --- IMPORTAÇÃO DOS MÓDULOS MODULARIZADOS ---
 import ProfileModule from "./modules/ProfileModule";
@@ -75,7 +75,7 @@ export default function AdminControlRoom() {
         <div className="fixed inset-0 z-[500] bg-slate-50 dark:bg-[#030014] flex font-sans overflow-hidden transition-colors duration-500">
             {/* Matrix Rain de fundo para manter a estética Zaeon */}
             <div className="absolute inset-0 z-0 opacity-20 hidden dark:block">
-                <MatrixRain />
+
             </div>
 
             {/* SIDEBAR MESTRA (O Shell) */}

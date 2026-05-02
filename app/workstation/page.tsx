@@ -10,7 +10,8 @@ import {
     ArrowPathIcon, ChartBarIcon, BookOpenIcon, CameraIcon,
     EyeIcon, LockClosedIcon, AcademicCapIcon, PencilSquareIcon, UserGroupIcon as CollabIcon, HandRaisedIcon, UserPlusIcon, PaperAirplaneIcon, XMarkIcon, CheckIcon
 } from "@heroicons/react/24/outline";
-import MatrixRain from "@/components/main/star-background";
+import StarBackground from "@/components/main/star-background";
+
 import NetworkMural from "@/app/workstation/profiles/NetworkMural";
 
 const ROOM_MAPPING: Record<string, string[]> = {
@@ -407,7 +408,7 @@ export default function WorkStationPage({ isEmbedded = false }: { isEmbedded?: b
     return (
         // 🔥 Layout adaptável: se for embutido, remove o "min-h-screen" para encaixar perfeitamente na página do professor
         <div className={`w-full overflow-x-hidden overflow-y-auto custom-scrollbar relative transition-colors duration-1000 font-mono ${isEmbedded ? 'min-h-full pb-10' : 'min-h-screen pb-20'} ${theme.pageBg}`}>
-            {!isEmbedded && <div className={`fixed inset-0 z-0 ${theme.matrixOpacity} pointer-events-none mix-blend-overlay`}><MatrixRain /></div>}
+            {!isEmbedded && <div className={`fixed inset-0 z-0 ${theme.matrixOpacity} pointer-events-none mix-blend-overlay`}><StarBackground /></div>}
 
             <div className={`w-full flex flex-col items-center justify-start relative z-20 ${isEmbedded ? 'pt-8 px-2' : 'pt-24 px-8'}`}>
 

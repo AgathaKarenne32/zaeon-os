@@ -25,7 +25,7 @@ interface Particle {
     vy: number;
 }
 
-const MatrixRain: React.FC = () => {
+const StarBackground: React.FC = () => {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const { theme, resolvedTheme } = useTheme();
     const [mounted, setMounted] = useState(false);
@@ -205,4 +205,4 @@ const MatrixRain: React.FC = () => {
     return <div className="fixed inset-0 z-0 pointer-events-none transition-colors duration-500"><canvas ref={canvasRef} className="w-full h-full" /></div>;
 };
 
-export default MatrixRain;
+export default StarBackground;
