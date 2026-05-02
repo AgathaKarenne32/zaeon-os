@@ -1,20 +1,18 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
-  ChevronRightIcon, ArrowLeftIcon, ArrowRightStartOnRectangleIcon,
-  BeakerIcon, DocumentTextIcon
+  ChevronRightIcon, ArrowLeftIcon, ArrowRightStartOnRectangleIcon
 } from "@heroicons/react/24/outline";
-import { Bot, Send, ShieldCheck, Loader2 } from "lucide-react";
+import { Bot, Send, ShieldCheck, Loader2, Mic, MicOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { signIn, signOut, useSession } from "next-auth/react";
 import Image from "next/image";
 
+// 🔥 Menu simplificado: Apenas opções vitais pós-login
 const MENU_ITEMS = [
-  { labelKey: "menu.new", href: "/signup" },
-  { labelKey: "menu.load", href: "#" },
   { labelKey: "menu.options", href: "/settings" },
   { labelKey: "menu.manual", href: "/workstation/admin" },
 ];
@@ -32,6 +30,7 @@ export default function MenuNavigation() {
   // ==========================================
   // ESTADOS DO CHATBOT (MODO ONBOARDING NO MENU)
   // ==========================================
+  // 🔥 Inicia automaticamente no chat se não estiver logado
   const [isOnboardMode, setIsOnboardMode] = useState(false);
   const [messages, setMessages] = useState<{ role: 'zaeon' | 'user', text: string }[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -39,21 +38,33 @@ export default function MenuNavigation() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const chatScrollRef = useRef<HTMLDivElement>(null);
 
-  // Dados do Perfil Extraídos pela IA
+  // ESTADOS PARA O MICROFONE
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  // Dados do Perfil Extraídos pela IA (Foco Acadêmico/Produtividade)
   const [userData, setUserData] = useState({
     name: '',
     age: 0,
-    studyArea: '',
+    studyArea: '', // Concurso, Faculdade, Pesquisa
     institution: '',
     gender: 'other'
   });
 
-  // Controle de Estado da Conversa (0 = coletando dados, 1 = finalizado)
   const [step, setStep] = useState(0);
 
   const isLoggedIn = status === "authenticated";
   const isStudent = (session?.user as any)?.role === "student" || !(session?.user as any)?.role;
   const isAdmin = !!(session?.user as any)?.isAdmin;
+
+  // Garante que o estado de onboard esteja correto baseado no login
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      setIsOnboardMode(true);
+    } else if (status === "authenticated") {
+      setIsOnboardMode(false);
+    }
+  }, [status]);
 
   // Busca Pesquisa (Usuários logados)
   useEffect(() => {
@@ -80,14 +91,14 @@ export default function MenuNavigation() {
     }
   }, [messages, isTyping]);
 
-  // Dispara a animação de digitação e Saudação da Zaeon ao abrir o modo Onboard
+  // Saudação inicial customizada para o novo nicho
   useEffect(() => {
     if (isOnboardMode && messages.length === 0) {
       setIsTyping(true);
       const timer = setTimeout(() => {
         setMessages([{
           role: 'zaeon',
-          text: "Olá! O meu nome é Zaeon e fui criada para transformar a sua rotina para melhor. Vamos começar por nos conhecer. Qual é o seu nome completo e a sua idade?"
+          text: "Olá! O meu nome é Zaeon e fui criada para transformar a sua rotina de estudos e produtividade. Vamos criar o seu primeiro agente em segundos. Qual é o seu nome completo e a sua idade?"
         }]);
         setIsTyping(false);
       }, 1500);
@@ -96,8 +107,49 @@ export default function MenuNavigation() {
     }
   }, [isOnboardMode, messages.length]);
 
+  // Lógica de Reconhecimento de Voz
+  useEffect(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = true;
+      recognitionRef.current.interimResults = true;
+      recognitionRef.current.lang = i18n.language === 'pt' ? 'pt-BR' : 'en-US';
+
+      recognitionRef.current.onresult = (event: any) => {
+        let transcript = "";
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        setInputValue(transcript);
+      };
+
+      recognitionRef.current.onerror = (event: any) => {
+        console.error("Erro no reconhecimento de voz:", event.error);
+        setIsListening(false);
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+      };
+    }
+  }, [i18n.language]);
+
+  const toggleListening = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+    } else {
+      setInputValue("");
+      recognitionRef.current?.start();
+      setIsListening(true);
+    }
+  };
+
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
+
+    if (isListening) toggleListening();
 
     const userText = inputValue;
     setMessages(prev => [...prev, { role: 'user', text: userText }]);
@@ -132,7 +184,7 @@ export default function MenuNavigation() {
 
             if (!updatedData.name) missingFields.push("nome");
             if (!updatedData.age || updatedData.age === 0) missingFields.push("idade");
-            if (!updatedData.studyArea) missingFields.push("curso ou profissão");
+            if (!updatedData.studyArea) missingFields.push("foco acadêmico/concurso");
             if (!updatedData.institution) missingFields.push("instituição de ensino ou empresa");
 
             if (missingFields.length > 0) {
@@ -140,13 +192,13 @@ export default function MenuNavigation() {
               if (!updatedData.name && !updatedData.age) {
                 askMsg = "Desculpe, não consegui entender bem o seu nome e idade. Pode repetir?";
               } else if (updatedData.name && !updatedData.studyArea && !updatedData.institution) {
-                askMsg = `Entendido, ${updatedData.name.split(' ')[0]}! E qual é o seu curso ou profissão, e em que instituição atua?`;
+                askMsg = `Entendido, ${updatedData.name.split(' ')[0]}! E qual é o seu curso, área de pesquisa ou concurso que está a preparar?`;
               } else if (updatedData.studyArea && !updatedData.institution) {
                 askMsg = `Fabuloso atuar em ${updatedData.studyArea}, ${updatedData.name.split(' ')[0]}! Em qual faculdade ou empresa você está focado no momento?`;
               } else if (!updatedData.studyArea && updatedData.institution) {
                 askMsg = `Ah, conheço a ${updatedData.institution}. Mas qual é exatamente o seu curso ou a sua área de atuação lá?`;
               } else {
-                askMsg = `Quase lá! Para completarmos o seu perfil, ainda preciso de saber: ${missingFields.join(" e ")}.`;
+                askMsg = `Quase lá! Para completarmos o seu perfil e criarmos o agente ideal, ainda preciso de saber: ${missingFields.join(" e ")}.`;
               }
 
               setMessages(prev => [...prev, { role: 'zaeon', text: askMsg }]);
@@ -161,7 +213,7 @@ export default function MenuNavigation() {
               setTimeout(() => {
                 setMessages(prev => [...prev, {
                   role: 'zaeon',
-                  text: `Para ativarmos a sua conta de forma segura, aceda com a sua conta Google (ou conta Institucional).`
+                  text: `Para ativarmos os seus agentes de forma segura, inicie sessão com a sua conta Google (ou Institucional).`
                 }]);
                 setStep(1);
                 setIsTyping(false);
@@ -194,7 +246,7 @@ export default function MenuNavigation() {
 
   const visibleMenuItems = MENU_ITEMS.filter(item => item.labelKey === "menu.manual" ? isAdmin : true);
 
-  const panelClass = "w-full mt-24 rounded-[32px] overflow-hidden backdrop-blur-2xl transition-all duration-500 bg-white/40 dark:bg-cyan-950/10 border border-slate-200 dark:border-white/10 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.1)] dark:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] flex flex-col min-h-[380px] max-h-[500px]";
+  const panelClass = "w-full mt-4 rounded-[32px] overflow-hidden backdrop-blur-2xl transition-all duration-500 bg-white/40 dark:bg-cyan-950/10 border border-slate-200 dark:border-white/10 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.1)] dark:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] flex flex-col min-h-[380px] max-h-[500px]";
   const cardBase = "group relative overflow-hidden flex items-center justify-between rounded-2xl px-4 min-h-[52px] w-full transition-all duration-300 cursor-pointer font-medium text-slate-800 dark:text-white bg-white/50 hover:bg-white/80 dark:bg-white/[0.03] dark:hover:bg-white/[0.08] border border-slate-200 dark:border-white/5 hover:border-cyan-400/50 dark:hover:border-cyan-400/30";
   const cardSelected = "bg-white border-cyan-400 dark:bg-cyan-400/10 dark:border-cyan-400/40 text-cyan-600 dark:text-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.2)] dark:shadow-[0_0_15px_rgba(34,211,238,0.15)]";
   const accentBar = (active: boolean) => `absolute left-1 top-1/2 -translate-y-1/2 h-6 w-[3px] rounded-full transition-all duration-500 ${active ? "bg-cyan-500 dark:bg-cyan-400 opacity-100 scale-y-100" : "bg-transparent opacity-0 scale-y-0"}`;
@@ -210,15 +262,17 @@ export default function MenuNavigation() {
           {isOnboardMode ? (
             <motion.div key="onboard" initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -50, opacity: 0 }} className="flex flex-col h-full relative">
 
-              {/* Cabeçalho Voltar */}
+              {/* Cabeçalho Voltar (Se o usuário estiver logado e entrou aqui acidentalmente) */}
               <div className="flex items-center gap-3 border-b border-slate-200 dark:border-white/10 pb-4 mb-4">
-                <button
-                  onClick={() => setIsOnboardMode(false)}
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-200 dark:bg-white/5 hover:bg-slate-300 dark:hover:bg-white/10 transition-colors shrink-0 border border-slate-300 dark:border-white/10"
-                  title="Voltar ao menu"
-                >
-                  <ArrowLeftIcon className="w-4 h-4 text-slate-700 dark:text-white" />
-                </button>
+                {isLoggedIn && (
+                  <button
+                    onClick={() => setIsOnboardMode(false)}
+                    className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-200 dark:bg-white/5 hover:bg-slate-300 dark:hover:bg-white/10 transition-colors shrink-0 border border-slate-300 dark:border-white/10"
+                    title="Voltar ao menu"
+                  >
+                    <ArrowLeftIcon className="w-4 h-4 text-slate-700 dark:text-white" />
+                  </button>
+                )}
                 <span className="text-xs font-black uppercase tracking-widest text-slate-800 dark:text-white">Conexão Neural</span>
               </div>
 
@@ -251,26 +305,61 @@ export default function MenuNavigation() {
                 )}
               </div>
 
-              {/* Ações Inferiores (Input ou Botões de Login) */}
+              {/* Ações Inferiores (Input com Voz ou Botões de Login) */}
               <div className="mt-auto pt-2 border-t border-slate-200 dark:border-white/5">
                 {step === 0 ? (
-                  <div className="flex items-center gap-2 bg-white dark:bg-black/40 rounded-xl p-1.5 border border-slate-300 dark:border-white/10 focus-within:border-cyan-400 dark:focus-within:border-cyan-500/50 transition-colors shadow-sm dark:shadow-inner">
-                    <input
-                      type="text"
-                      value={inputValue}
-                      onChange={(e) => setInputValue(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                      disabled={isTyping}
-                      placeholder="Escreva aqui..."
-                      className="flex-1 bg-transparent border-none outline-none text-[11px] text-slate-800 dark:text-white px-3 placeholder:text-slate-400"
-                    />
-                    <button
-                      onClick={handleSendMessage}
-                      disabled={isTyping || !inputValue.trim()}
-                      className="w-8 h-8 rounded-lg bg-cyan-500 text-white dark:text-slate-900 flex items-center justify-center disabled:opacity-50 transition-colors hover:bg-cyan-600 dark:hover:bg-cyan-400 shadow-sm"
-                    >
-                      <Send size={14} className="ml-0.5" />
-                    </button>
+                  <div className="flex flex-col gap-2">
+                    <AnimatePresence>
+                      {isListening && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0 }}
+                          className="flex justify-center items-center gap-2 mb-1"
+                        >
+                          <span className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-pulse" />
+                          <span className="text-[9px] font-bold text-cyan-600 dark:text-cyan-400 uppercase tracking-tighter">Zaeon está a ouvir...</span>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    <div className="flex items-center gap-2 bg-white dark:bg-black/40 rounded-xl p-1.5 border border-slate-300 dark:border-white/10 focus-within:border-cyan-400 dark:focus-within:border-cyan-500/50 transition-colors shadow-sm dark:shadow-inner">
+                      <input
+                        autoFocus
+                        type="text"
+                        value={inputValue}
+                        onChange={(e) => setInputValue(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                        disabled={isTyping}
+                        placeholder={isListening ? "Fale agora..." : "Pergunte a Zaeon..."}
+                        className="flex-1 bg-transparent border-none outline-none text-[11px] text-slate-800 dark:text-white px-3 placeholder:text-slate-400"
+                      />
+
+                      <button
+                        onClick={toggleListening}
+                        disabled={isTyping}
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${isListening
+                          ? "bg-red-500/20 text-red-500 shadow-[0_0_10px_rgba(239,68,68,0.3)]"
+                          : "bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 hover:text-cyan-500"
+                          }`}
+                      >
+                        {isListening ? (
+                          <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1 }}>
+                            <MicOff size={14} />
+                          </motion.div>
+                        ) : (
+                          <Mic size={14} />
+                        )}
+                      </button>
+
+                      <button
+                        onClick={handleSendMessage}
+                        disabled={isTyping || !inputValue.trim()}
+                        className="w-8 h-8 rounded-lg bg-cyan-500 text-white dark:text-slate-900 flex items-center justify-center disabled:opacity-50 transition-colors hover:bg-cyan-600 dark:hover:bg-cyan-400 shadow-sm"
+                      >
+                        <Send size={14} className="ml-0.5" />
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <div className="flex gap-2 mt-1 justify-center">
@@ -326,32 +415,21 @@ export default function MenuNavigation() {
             ) :
 
               /* ========================================= */
-              /* FLUXO 3: MENU PADRÃO (A LISTA ORIGINAL)   */
+              /* FLUXO 3: MENU PADRÃO PÓS LOGIN            */
               /* ========================================= */
               (
                 <motion.ul key="main" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="flex flex-col gap-2 w-full h-full justify-center">
 
-                  {/* ITEM 1: CONTA (Abre o Onboard Mode) */}
-                  <li className="w-full" onMouseEnter={() => setIndex(0)} onClick={() => !isLoggedIn && setIsOnboardMode(true)}>
-                    <div className={`${cardBase} ${index === 0 ? cardSelected : ""} ${!isLoggedIn ? "ring-1 ring-cyan-500/40 dark:ring-cyan-400/40 animate-pulse-slow shadow-[0_0_20px_rgba(34,211,238,0.15)]" : ""}`}>
-                      <div className={accentBar(index === 0)} />
-                      <span className="truncate pr-2 text-sm tracking-tight pl-2">
-                        {isLoggedIn ? `${session?.user?.name || 'User'} Lv.1` : t("menu.new")}
-                      </span>
-                      <ChevronRightIcon className="h-4 w-4 opacity-30 group-hover:opacity-100 transition-opacity" />
-                    </div>
-                  </li>
-
-                  {/* ITEM 2: PESQUISA / LAB */}
-                  {isLoggedIn && isStudent && (
+                  {/* ITEM 1: PESQUISA / AGENTES */}
+                  {isStudent && (
                     <li className="w-full">
-                      <div onClick={() => router.push("/research-lab")} className={`${cardBase} ${workTitle ? "border-emerald-400/30 hover:border-emerald-400/50 dark:hover:border-emerald-400/50" : "border-cyan-400/20 hover:border-cyan-400/40"}`}>
-                        <div className={`absolute left-1 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-full transition-all duration-500 ${workTitle ? "bg-emerald-500 dark:bg-emerald-400 opacity-100 scale-y-100" : "bg-cyan-400 opacity-60 scale-y-75"}`} />
+                      <div onClick={() => router.push("/research-lab")} className={`${cardBase} ring-1 ring-cyan-500/40 dark:ring-cyan-400/40 animate-pulse-slow shadow-[0_0_20px_rgba(34,211,238,0.15)] ${workTitle ? "border-cyan-400/30 hover:border-cyan-400/50" : "border-cyan-400/20 hover:border-cyan-400/40"}`}>
+                        <div className={`absolute left-1 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-full transition-all duration-500 bg-cyan-500 dark:bg-cyan-400`} />
                         <div className="flex items-center gap-3 pl-2 flex-1 min-w-0">
-                          {workTitle ? <DocumentTextIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" /> : <BeakerIcon className="w-4 h-4 text-cyan-600 dark:text-cyan-400 shrink-0" />}
+                          <Bot className="w-5 h-5 text-cyan-600 dark:text-cyan-400 shrink-0" />
                           <div className="flex flex-col min-w-0">
-                            <span className="text-[9px] uppercase tracking-widest text-slate-500 dark:text-white/40 font-bold">{workTitle ? "Research" : "Lab"}</span>
-                            <span className="text-sm tracking-tight truncate text-slate-800 dark:text-white">{isLoadingResearch ? "..." : workTitle ? `Continuar: ${workTitle}` : "Iniciar Pesquisa"}</span>
+                            <span className="text-[9px] uppercase tracking-widest text-slate-500 dark:text-white/40 font-bold">{workTitle ? "Núcleo de Pesquisa" : "Iniciação"}</span>
+                            <span className="text-sm tracking-tight truncate text-slate-800 dark:text-white">{isLoadingResearch ? "Orquestrando..." : workTitle ? `Continuar: ${workTitle}` : "Criar Novo Agente"}</span>
                           </div>
                         </div>
                         <ChevronRightIcon className="h-4 w-4 opacity-30 group-hover:opacity-100 transition-opacity shrink-0" />
@@ -359,13 +437,12 @@ export default function MenuNavigation() {
                     </li>
                   )}
 
-                  {/* RESTANTES ITEMS DO MENU */}
-                  {visibleMenuItems.slice(1).map((item, i) => {
+                  {/* RESTANTES ITEMS DO MENU (Settings e Admin) */}
+                  {visibleMenuItems.map((item, i) => {
                     const isSel = index === i + 1;
                     return (
                       <li key={item.labelKey} className="w-full" onMouseEnter={() => setIndex(i + 1)} onClick={() => {
                         if (item.labelKey === "menu.options") setIsOptionsOpen(true);
-                        else if (item.labelKey === "menu.load" && !isLoggedIn) signIn('google');
                         else router.push(item.href);
                       }}>
                         <div className={`${cardBase} ${isSel ? cardSelected : ""}`}>

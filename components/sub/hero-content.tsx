@@ -1,220 +1,156 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
+import { signIn, useSession } from "next-auth/react";
+import { SparklesIcon, UserIcon } from "@heroicons/react/24/outline";
 
 // Componentes Internos
 import MenuNavigation from "@/components/sub/MenuNavigation";
-import GameHint from "@/src/components/ui/game-hint";
 
 export default function HeroPage() {
   const { t } = useTranslation();
+  const { status } = useSession();
 
-  // Estado que controla se o highlight já foi descartado
-  const [showHighlight, setShowHighlight] = useState(true);
+  const [showChatbox, setShowChatbox] = useState(false);
 
-  // Estados para controlar o Scroll e visibilidade
-  const [show, setShow] = useState(true);
-  const lastScrollY = useRef(0);
-
-  // Lógica de Scroll (Esconde ao descer, mostra ao subir)
   useEffect(() => {
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-      if (currentScrollY > lastScrollY.current && currentScrollY > 50) {
-        setShow(false);
-      } else {
-        setShow(true);
-      }
-      lastScrollY.current = currentScrollY;
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  // Transição suave
-  const transition = { duration: 1.5, ease: [0.23, 1, 0.32, 1] };
+    if (status === "authenticated") {
+      setShowChatbox(true);
+    }
+  }, [status]);
 
   return (
-    <main className="w-full min-h-screen flex justify-start items-start relative px-4 md:pl-20 py-12 overflow-hidden bg-white dark:bg-[#05080a] transition-colors duration-700">
+    <main className="w-full min-h-screen flex flex-col items-center justify-center relative px-4 py-12 overflow-hidden bg-slate-50 dark:bg-[#030508] transition-colors duration-700 font-sans">
 
-      {/* CONTEÚDO PRINCIPAL (TRAVADO EM 420px) */}
-      <div className="flex flex-col items-start z-20 w-full max-w-[420px]">
+      {/* BACKGROUND ESTILO GRID TECNOLÓGICO CIANO */}
+      <div className="absolute inset-0 z-0">
+        {/* Grid Sutil Adaptativo */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#06b6d415_1px,transparent_1px),linear-gradient(to_bottom,#06b6d415_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
 
-        <motion.div
-          className="w-full"
-          initial={{ x: "-100%", opacity: 0 }}
-          animate={{ x: show ? 0 : "-100%", opacity: show ? 1 : 0 }}
-          transition={transition}
-        >
-          <AnimatePresence mode="wait">
-            {showHighlight ? (
-              /* ─── HIGHLIGHT DE BOAS-VINDAS COM GLITCH ─── */
-              <motion.div
-                key="highlight"
-                className="w-full mt-24 rounded-[32px] overflow-hidden backdrop-blur-2xl bg-cyan-950/10 border border-white/10 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] flex flex-col"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20, transition: { duration: 0.4 } }}
-                transition={{ duration: 0.6 }}
-              >
-                <div className="px-8 py-12 md:py-16 flex flex-col items-start gap-6 min-h-[320px] justify-center relative overflow-hidden">
-
-                  {/* Ambient scan line */}
-                  <div className="absolute inset-0 pointer-events-none z-0 opacity-[0.03]" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.05) 2px, rgba(255,255,255,0.05) 4px)' }} />
-
-                  {/* Tagline */}
-                  <motion.span
-                    className="text-[10px] uppercase tracking-[0.35em] text-cyan-400/80 font-bold z-10"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.3 }}
-                  >
-                    ZAEON OS
-                  </motion.span>
-
-                  {/* Mensagem principal com glitch */}
-                  <motion.div
-                    className="z-10"
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5, duration: 0.8 }}
-                  >
-                    <h1
-                      className="highlight-glitch text-[22px] sm:text-2xl md:text-[28px] font-light text-slate-800 dark:text-white/90 leading-[1.5] tracking-tight"
-                      style={{ fontFamily: 'var(--font-outfit), system-ui, -apple-system, sans-serif' }}
-                      data-text="O Sistema Operacional de Quem Ensina, Aprende, Pesquisa e Entrega."
-                    >
-                      O Sistema Operacional de Quem Ensina, Aprende, Pesquisa e Entrega.
-                    </h1>
-                  </motion.div>
-
-                  {/* Subtle separator */}
-                  <motion.div
-                    className="w-12 h-[1px] bg-gradient-to-r from-cyan-400/60 to-transparent z-10"
-                    initial={{ scaleX: 0 }}
-                    animate={{ scaleX: 1 }}
-                    transition={{ delay: 0.8, duration: 0.6 }}
-                    style={{ transformOrigin: 'left' }}
-                  />
-
-                  {/* Botão Iniciar */}
-                  <motion.button
-                    onClick={() => setShowHighlight(false)}
-                    className="group relative overflow-hidden flex items-center justify-center rounded-2xl px-6 min-h-[44px] transition-all duration-300 cursor-pointer font-medium text-slate-800 dark:text-white bg-black/5 dark:bg-white/[0.03] hover:bg-black/10 dark:hover:bg-white/[0.08] border border-black/10 dark:border-white/5 hover:border-cyan-400/50 dark:hover:border-cyan-400/30 text-xs tracking-[0.15em] uppercase z-10"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 1.0 }}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.97 }}
-                  >
-                    <div className="absolute left-1 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-full bg-cyan-400 opacity-0 scale-y-0 group-hover:opacity-100 group-hover:scale-y-100 transition-all duration-500" />
-                    <span className="pl-2 group-hover:text-cyan-400 transition-colors">Iniciar</span>
-                  </motion.button>
-
-                </div>
-              </motion.div>
-            ) : (
-              /* ─── MENU NAVIGATION ORIGINAL ─── */
-              <motion.div
-                key="menu"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-              >
-                <MenuNavigation />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
-
-        {/* Game Hints — só aparece depois do highlight sumir */}
-        {!showHighlight && (
-          <motion.div
-            className="mt-4 w-full"
-            initial={{ x: "-120%", opacity: 0 }}
-            animate={{ x: show ? 0 : "-120%", opacity: show ? 1 : 0 }}
-            transition={{ ...transition, delay: 0.1 }}
-          >
-            <GameHint
-              isVisible={show}
-              hints={[
-                t("hints.new_game", "DICA: Inicie com um perfil novo para conferir a tecnologia."),
-                t("hints.save_progress", "DICA: Conecte sua conta Google para salvar progresso."),
-                t("hints.roles", "DICA: Cada classe libera ferramentas exclusivas.")
-              ]}
-            />
-          </motion.div>
-        )}
+        {/* Orbs de Neon Exclusivamente Ciano/Azul */}
+        <div className="absolute top-[-10%] left-[10%] w-[500px] h-[500px] rounded-full bg-cyan-500/20 dark:bg-cyan-600/20 blur-[120px] mix-blend-screen pointer-events-none" />
+        <div className="absolute bottom-[-10%] right-[10%] w-[600px] h-[600px] rounded-full bg-blue-500/10 dark:bg-blue-600/10 blur-[150px] mix-blend-screen pointer-events-none" />
       </div>
 
-      {/* CSS do Glitch embutido para não depender do styled-jsx */}
-      <style dangerouslySetInnerHTML={{
-        __html: `
-        .highlight-glitch {
-          position: relative;
-        }
-        .highlight-glitch::before,
-        .highlight-glitch::after {
+      {/* ========================================= */}
+      {/* HIGHLIGHT (HERO) - MINIMALISTA & GLITCH   */}
+      {/* ========================================= */}
+      <motion.div
+        animate={{
+          scale: showChatbox ? 0.75 : 1,
+          y: showChatbox ? -60 : 0,
+          opacity: showChatbox ? 0.4 : 1,
+        }}
+        transition={{ type: "spring", stiffness: 90, damping: 20 }}
+        className="flex flex-col items-center text-center max-w-4xl z-10 w-full"
+      >
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="relative"
+        >
+          <h1
+            className="text-4xl sm:text-5xl md:text-[5rem] font-light tracking-tighter text-slate-900 dark:text-white leading-[1.1] z-10 relative"
+          >
+            Agentes autônomos para <br className="hidden md:block" />
+            <span
+              className="font-black text-cyan-600 dark:text-cyan-400 cyber-glitch relative inline-block mt-2 md:mt-4"
+              data-text="mentes produtivas."
+            >
+              mentes produtivas.
+            </span>
+          </h1>
+        </motion.div>
+
+        {/* Botões Iniciais - Simétricos e Tecnológicos */}
+        <AnimatePresence>
+          {!showChatbox && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, filter: "blur(10px)" }}
+              transition={{ duration: 0.4 }}
+              className="mt-14 flex flex-col sm:flex-row gap-6 w-full sm:w-auto items-center justify-center"
+            >
+              <button
+                onClick={() => setShowChatbox(true)}
+                className="group relative flex items-center justify-center gap-3 px-10 py-4 rounded-xl bg-cyan-600 dark:bg-cyan-500/10 backdrop-blur-xl border border-transparent dark:border-cyan-400/50 text-white dark:text-cyan-300 font-bold uppercase tracking-[0.2em] text-[11px] overflow-hidden transition-all hover:bg-cyan-700 dark:hover:bg-cyan-500/20 shadow-xl dark:shadow-[0_0_30px_rgba(34,211,238,0.15)] hover:scale-105"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 dark:via-cyan-400/10 to-transparent -translate-x-[100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                <SparklesIcon className="w-4 h-4" />
+                Criar meu agente
+              </button>
+
+              <button
+                onClick={() => signIn('google', { callbackUrl: '/workstation' })}
+                className="flex items-center justify-center gap-3 px-10 py-4 rounded-xl border border-slate-300 dark:border-white/10 bg-white/50 dark:bg-white/5 backdrop-blur-md text-slate-800 dark:text-white font-bold uppercase tracking-[0.2em] text-[11px] hover:bg-white dark:hover:bg-white/10 transition-colors shadow-sm hover:scale-105"
+              >
+                <UserIcon className="w-4 h-4 text-slate-400" />
+                Acessar Conta
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+
+      {/* ========================================= */}
+      {/* CHATBOX (Aparece ao clicar em Criar Agente) */}
+      {/* ========================================= */}
+      <AnimatePresence>
+        {showChatbox && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 50, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 100, damping: 20, delay: 0.1 }}
+            className="w-full max-w-[500px] z-20 mt-[-20px] relative"
+          >
+            <MenuNavigation />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* CSS do Glitch Ciano Moderno */}
+      <style jsx global>{`
+        .cyber-glitch::before,
+        .cyber-glitch::after {
           content: attr(data-text);
           position: absolute;
           top: 0;
           left: 0;
           width: 100%;
           height: 100%;
-          pointer-events: none;
+          opacity: 0.8;
         }
-        .highlight-glitch::before {
-          left: 1px;
-          text-shadow: -1px 0 rgba(0, 255, 249, 0.25);
-          animation: highlight-glitch-1 8s infinite linear alternate-reverse;
-          clip-path: inset(0 0 0 0);
+        
+        /* Reflexo Ciano Claro (Modo Light e Dark) */
+        .cyber-glitch::before {
+          left: 2px;
+          text-shadow: -2px 0 #06b6d4;
+          clip: rect(24px, 550px, 90px, 0);
+          animation: glitch-anim 3s infinite linear alternate-reverse;
         }
-        .highlight-glitch::after {
-          left: -1px;
-          text-shadow: 1px 0 rgba(255, 0, 193, 0.25);
-          animation: highlight-glitch-2 6s infinite linear alternate-reverse;
-          clip-path: inset(0 0 0 0);
-        }
-
-        @keyframes highlight-glitch-1 {
-          0%   { clip-path: inset(85% 0 5% 0); }
-          5%   { clip-path: inset(15% 0 65% 0); transform: translate(-0.5px, 0); }
-          10%  { clip-path: inset(0 0 100% 0); }
-          15%  { clip-path: inset(60% 0 15% 0); }
-          20%  { clip-path: inset(5% 0 80% 0); transform: translate(0.5px, 0); }
-          30%  { clip-path: inset(0 0 100% 0); }
-          40%  { clip-path: inset(45% 0 40% 0); }
-          45%  { clip-path: inset(90% 0 2% 0); transform: translate(0); }
-          55%  { clip-path: inset(0 0 100% 0); }
-          60%  { clip-path: inset(25% 0 55% 0); transform: translate(-0.5px, 0); }
-          70%  { clip-path: inset(0 0 100% 0); }
-          80%  { clip-path: inset(10% 0 75% 0); transform: translate(0.5px, 0); }
-          85%  { clip-path: inset(0 0 100% 0); }
-          90%  { clip-path: inset(50% 0 30% 0); }
-          95%  { clip-path: inset(0 0 100% 0); }
-          100% { clip-path: inset(30% 0 50% 0); transform: translate(0); }
+        
+        /* Reflexo Azul/Ciano Escuro */
+        .cyber-glitch::after {
+          left: -2px;
+          text-shadow: -2px 0 #3b82f6;
+          clip: rect(85px, 550px, 140px, 0);
+          animation: glitch-anim 2.5s infinite linear alternate-reverse;
         }
 
-        @keyframes highlight-glitch-2 {
-          0%   { clip-path: inset(10% 0 70% 0); }
-          8%   { clip-path: inset(50% 0 25% 0); transform: translate(0.5px, 0); }
-          15%  { clip-path: inset(0 0 100% 0); }
-          25%  { clip-path: inset(80% 0 5% 0); }
-          30%  { clip-path: inset(20% 0 60% 0); transform: translate(-0.5px, 0); }
-          40%  { clip-path: inset(0 0 100% 0); }
-          50%  { clip-path: inset(65% 0 20% 0); }
-          55%  { clip-path: inset(5% 0 85% 0); transform: translate(0); }
-          65%  { clip-path: inset(0 0 100% 0); }
-          75%  { clip-path: inset(40% 0 40% 0); transform: translate(0.5px, 0); }
-          80%  { clip-path: inset(0 0 100% 0); }
-          90%  { clip-path: inset(15% 0 65% 0); }
-          95%  { clip-path: inset(75% 0 10% 0); transform: translate(-0.5px, 0); }
-          100% { clip-path: inset(55% 0 30% 0); transform: translate(0); }
+        @keyframes glitch-anim {
+          0% { clip: rect(10px, 9999px, 80px, 0); }
+          20% { clip: rect(60px, 9999px, 10px, 0); transform: translate(-1px, 1px); }
+          40% { clip: rect(20px, 9999px, 90px, 0); transform: translate(1px, -1px); }
+          60% { clip: rect(90px, 9999px, 30px, 0); transform: translate(-1px, 0); }
+          80% { clip: rect(30px, 9999px, 70px, 0); transform: translate(1px, 1px); }
+          100% { clip: rect(70px, 9999px, 20px, 0); transform: translate(0); }
         }
-        `
-      }} />
+      `}</style>
     </main>
   );
 }

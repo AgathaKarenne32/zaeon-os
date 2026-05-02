@@ -142,7 +142,7 @@
         }
     },
     "encryption": {
-        "typing_title": "Ensino, Pesquisa e Inovação.",
+        "typing_title": "A Era dos Agentes chegou",
         "pipeline_title": "O gasoduto Zaeon",
         "steps": {
             "vertex": {
@@ -241,19 +241,19 @@
     },
     "about": {
         "back": "Voltar",
-        "scroll_down": "role para baixo para aprender tudo",
-        "title_secondary": "A escola do futuro.",
-        "title_main": "ACONTECENDO AGORA.",
+        "scroll_down": "role para baixo para entender",
+        "title_secondary": "O futuro é agêntico.",
+        "title_main": "O futuro é autônomo.",
         "genesis": {
-            "title": "A Gênese do Protocolo",
-            "p1": "Hoje, a nossa atenção é roubada por grandes corporações que procuram apenas o lucro, capturando o foco de milhões de pessoas enquanto os seus algoritmos corroem a inteligência humana.",
-            "p2": "A Zaeon surge para mudar isso: viemos resgatar novamente a alegria de aprender: com profundidade, modernidade e diversão. Embora a educação tradicional tenha parado no tempo, nós desbloqueamos o seu verdadeiro potencial através de poderosos agentes de IA. Aqui, humanos e máquinas trabalham por um mundo melhor",
+            "title": "A era dos agentes de IA",
+            "p1": "Agentes de IA são sistemas que não apenas respondem perguntas, mas também executam tarefas. Eles entendem um objetivo, dividem em etapas e agem para alcançar resultados — como um assistente digital que realmente trabalha por você.",
+            "p2": "Aqui na Zaeon, acreditamos que a tecnologia deve servir às pessoas.",
             "p2_highlight": "dentro do Blockchain."
         },
         "mission": {
-            "title": "Nossa Missão",
-            "p1": "Capacitar a próxima geração de estudantes, pesquisadores e professores, oferecendo ferramentas simples de usar para o dia a dia na educação de alto desempenho.",
-            "p2": "Levando-os a uma plataforma completa de monetização para sua resistência acadêmica."
+            "title": "O que fazemos?",
+            "p1": "Oferecemos Agentes de IA para o dia a dia das mentes mais produtivas da internet, com assistentes inteligentes que entendem a vida dos usuários, suas rotinas e necessidades.",
+            "p2": ""
         },
         "architecture": {
             "title": "A Arquitetura Zaeon",

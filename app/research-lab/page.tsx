@@ -9,6 +9,7 @@ import "@/src/i18n";
 
 // --- IMPORTS ---
 import { Navbar } from "@/components/main/navbar";
+import { Mic, MicOff } from "lucide-react";
 
 // --- ICONS ---
 import {
@@ -73,23 +74,106 @@ const ActionButton = ({ icon: Icon, label, onClick, colorClass = "text-black dar
     </div>
 );
 
+// 🔥 CHAT BUBBLE REDESENHADO (Avatar + Nome na Esquerda)
 const ChatBubble = ({ role, text, agentName, agentImg, userImg }: { role: string, text: string, agentName: string, agentImg: string, userImg?: string | null }) => {
     const isUser = role === 'user';
     return (
-        <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} gap-3 mb-6`}>
+        <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} mb-6`}>
             {!isUser && (
-                <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-slate-300 dark:border-white/20 shadow-sm flex items-center justify-center bg-white dark:bg-black">
-                    <img src={agentImg} alt={agentName} className="w-full h-full object-cover" onError={(e) => (e.currentTarget.src = `https://ui-avatars.com/api/?name=${agentName}&background=random`)} />
+                <div className="flex flex-col items-start gap-1.5 mr-3 max-w-[85%]">
+                    <div className="flex items-center gap-2 px-1">
+                        <div className="w-7 h-7 rounded-full overflow-hidden border border-slate-300 dark:border-white/20 shadow-sm flex items-center justify-center bg-white dark:bg-black shrink-0">
+                            <img src={agentImg} alt={agentName} className="w-full h-full object-cover" onError={(e) => (e.currentTarget.src = `https://ui-avatars.com/api/?name=${agentName}&background=random`)} />
+                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">{agentName}</span>
+                    </div>
+                    <div className="p-4 rounded-2xl rounded-tl-sm text-[13px] md:text-[14px] leading-relaxed shadow-sm font-medium bg-slate-100 dark:bg-white/10 text-black dark:text-white border border-slate-300 dark:border-white/20">
+                        {text}
+                    </div>
                 </div>
             )}
-            <div className={`p-4 rounded-2xl max-w-[80%] text-[14px] leading-relaxed shadow-sm w-fit font-medium ${isUser ? 'bg-cyan-600 text-white rounded-tr-sm' : 'bg-slate-100 dark:bg-white/10 text-black dark:text-white rounded-tl-sm border border-slate-300 dark:border-white/20'}`}>
-                {text}
-            </div>
             {isUser && (
-                <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-slate-300 dark:border-white/20 shadow-sm flex items-center justify-center bg-white dark:bg-black">
-                    {userImg ? <img src={userImg} alt="User" className="w-full h-full object-cover" /> : <UserCircleIcon className="w-5 h-5 text-black dark:text-white" />}
+                <div className="flex items-end gap-2 max-w-[85%]">
+                    <div className="p-4 rounded-2xl rounded-tr-sm text-[13px] md:text-[14px] leading-relaxed shadow-sm w-fit font-medium bg-cyan-600 text-white">
+                        {text}
+                    </div>
+                    <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 border border-slate-300 dark:border-white/20 shadow-sm flex items-center justify-center bg-white dark:bg-black mb-1">
+                        {userImg ? <img src={userImg} alt="User" className="w-full h-full object-cover" /> : <UserCircleIcon className="w-5 h-5 text-black dark:text-white" />}
+                    </div>
                 </div>
             )}
+        </div>
+    );
+};
+
+// 🔥 COMPONENTE DE INPUT UNIFICADO (COM VOZ)
+const ChatInput = ({ value, onChange, onSend, isTyping, placeholder, lang = 'pt-BR' }: any) => {
+    const [isListening, setIsListening] = useState(false);
+    const recognitionRef = useRef<any>(null);
+
+    useEffect(() => {
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        if (SpeechRecognition) {
+            recognitionRef.current = new SpeechRecognition();
+            recognitionRef.current.continuous = true;
+            recognitionRef.current.interimResults = true;
+            recognitionRef.current.lang = lang;
+
+            recognitionRef.current.onresult = (event: any) => {
+                let transcript = "";
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    transcript += event.results[i][0].transcript;
+                }
+                onChange(transcript);
+            };
+
+            recognitionRef.current.onerror = () => setIsListening(false);
+            recognitionRef.current.onend = () => setIsListening(false);
+        }
+    }, [lang, onChange]);
+
+    const toggleListening = () => {
+        if (isListening) {
+            recognitionRef.current?.stop();
+            setIsListening(false);
+        } else {
+            onChange("");
+            recognitionRef.current?.start();
+            setIsListening(true);
+        }
+    };
+
+    const handleSendClick = () => {
+        if (isListening) toggleListening();
+        onSend();
+    };
+
+    return (
+        <div className="flex flex-col gap-2 w-full mt-2">
+            <AnimatePresence>
+                {isListening && (
+                    <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex justify-center items-center gap-2 mb-1">
+                        <span className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-pulse" />
+                        <span className="text-[9px] font-bold text-cyan-600 dark:text-cyan-400 uppercase tracking-tighter">Ouvindo...</span>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+            <div className="flex items-center gap-2 bg-white dark:bg-black/60 rounded-full border border-slate-300 dark:border-white/20 p-1.5 pl-4 focus-within:ring-2 focus-within:ring-cyan-500/30 transition-all shadow-sm">
+                <input
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSendClick()}
+                    disabled={isTyping}
+                    placeholder={isListening ? "Fale agora..." : placeholder}
+                    className="flex-1 bg-transparent border-none outline-none text-[13px] text-black dark:text-white placeholder:text-slate-400"
+                />
+                <button onClick={toggleListening} disabled={isTyping} className={`w-9 h-9 rounded-full flex items-center justify-center transition-all shrink-0 ${isListening ? "bg-red-500/20 text-red-500 shadow-[0_0_10px_rgba(239,68,68,0.3)]" : "bg-slate-100 dark:bg-white/10 text-slate-500 hover:text-cyan-500"}`}>
+                    {isListening ? <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1 }}><MicOff size={14} /></motion.div> : <Mic size={14} />}
+                </button>
+                <button onClick={handleSendClick} disabled={isTyping || !value.trim()} className="w-9 h-9 rounded-full bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white flex items-center justify-center shrink-0 transition-colors shadow-sm">
+                    <PaperAirplaneIcon className="w-4 h-4" />
+                </button>
+            </div>
         </div>
     );
 };
@@ -128,9 +212,12 @@ export default function HomeworkPage() {
     const [citationContent, setCitationContent] = useState<string | null>(null);
     const [activeCitationText, setActiveCitationText] = useState<string | null>(null);
 
-    const [pdfChatHistory, setPdfChatHistory] = useState<{ role: 'ai' | 'user', text: string }[]>([]);
+    // 🔥 ESTADOS CONTROLADOS PARA OS PROMPTS (Para a voz funcionar perfeitamente)
     const [pdfPrompt, setPdfPrompt] = useState("");
+    const [scribePrompt, setScribePrompt] = useState("");
+    const [examinerPrompt, setExaminerPrompt] = useState("");
 
+    const [pdfChatHistory, setPdfChatHistory] = useState<{ role: 'ai' | 'user', text: string }[]>([]);
     const [specialistChatHistory, setSpecialistChatHistory] = useState<{
         scribe: { role: 'ai' | 'user', text: string }[],
         examiner: { role: 'ai' | 'user', text: string }[]
@@ -142,7 +229,7 @@ export default function HomeworkPage() {
     const [isExaminerTyping, setIsExaminerTyping] = useState(false);
     const [isCitationTyping, setIsCitationTyping] = useState(false);
     const [isSystemProcessing, setIsSystemProcessing] = useState(false);
-    const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle"); // Estado Minimalista de Save
+    const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
 
     // --- MODALS ---
     const [isPublishOpen, setIsPublishOpen] = useState(false);
@@ -219,6 +306,7 @@ export default function HomeworkPage() {
         return ctx;
     };
 
+    // 🔥 FETCH CORRECTO PARA O RESUMO DO PDF
     const handlePlayDocument = async (doc: StudyDoc) => {
         if (!doc.file || isPdfTyping || processingFileId) return;
         setProcessingFileId(doc.id);
@@ -229,39 +317,57 @@ export default function HomeworkPage() {
             setActiveFileContext(base64Data);
             const response = await fetch('/api/chat', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: `Analise o documento "${doc.title}" e gere um resumo.`, agent: "aura", fileData: base64Data, systemContext: buildSystemContext() })
+                body: JSON.stringify({
+                    prompt: `Analise o documento "${doc.title}" e gere um resumo.`,
+                    agent: "aura",
+                    fileData: base64Data,
+                    systemContext: buildSystemContext()
+                })
             });
             const data = await response.json();
-            setPdfChatHistory([{ role: 'ai', text: data.text }]);
+            if (data.text) setPdfChatHistory([{ role: 'ai', text: data.text }]);
         } catch (e) { showToast("Erro ao processar o PDF."); } finally { setIsPdfTyping(false); setProcessingFileId(null); }
     };
 
+    // 🔥 FETCH CORRECTO PARA CHAT AURA
     const handlePdfQuestion = async () => {
         if (!pdfPrompt.trim() || !activeFileContext) return;
         const currentPrompt = pdfPrompt;
         setPdfPrompt("");
         setPdfChatHistory(prev => [...prev, { role: 'user', text: currentPrompt }]);
         setIsPdfTyping(true);
+
         try {
-            const historyContext = pdfChatHistory.map(msg => `${msg.role === 'ai' ? 'Agent' : 'User'}: ${msg.text}`).join('\n');
-            const systemContext = `[PDF CHAT HISTORY]:\n${historyContext}\nRespond strictly based on the loaded document.\n${buildSystemContext()}`;
+            const historyForGemini = pdfChatHistory.map(m => ({
+                role: m.role === 'ai' ? 'model' : 'user',
+                parts: [{ text: m.text }]
+            }));
 
             const response = await fetch('/api/chat', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: currentPrompt, agent: "aura", fileData: activeFileContext, systemContext })
+                body: JSON.stringify({
+                    prompt: currentPrompt,
+                    agent: "aura",
+                    fileData: activeFileContext,
+                    history: historyForGemini,
+                    systemContext: buildSystemContext()
+                })
             });
             const data = await response.json();
-            setPdfChatHistory(prev => [...prev, { role: 'ai', text: data.text }]);
-        } catch (e) { console.error(e); } finally { setIsPdfTyping(false); }
+            if (data.text) setPdfChatHistory(prev => [...prev, { role: 'ai', text: data.text }]);
+        } catch (e) { console.error(e); showToast("Falha de conexão."); } finally { setIsPdfTyping(false); }
     };
 
     const handleGenerateCitations = async () => {
         if (!activeFileContext) return;
         setIsCitationTyping(true);
         try {
-            const response = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: "Gere 3 citações ABNT", agent: 'scholar', fileData: activeFileContext }) });
+            const response = await fetch('/api/chat', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: "Gere 3 citações ABNT", agent: 'scholar', fileData: activeFileContext })
+            });
             const data = await response.json();
-            setCitationContent(data.text);
+            if (data.text) setCitationContent(data.text);
         } catch (e) { console.error(e); } finally { setIsCitationTyping(false); }
     };
 
@@ -274,19 +380,42 @@ export default function HomeworkPage() {
         showToast("Citação salva na base de dados.");
     };
 
+    // 🔥 FETCH CORRECTO PARA SCRIBE / EXAMINER
     const handleSpecialistQuery = async (specialistType: 'scribe' | 'examiner', inputVal: string) => {
         if (!inputVal.trim()) return;
         const isScribe = specialistType === 'scribe';
-        if (isScribe) setIsScribeTyping(true); else setIsExaminerTyping(true);
+        if (isScribe) { setIsScribeTyping(true); setScribePrompt(""); }
+        else { setIsExaminerTyping(true); setExaminerPrompt(""); }
+
         setSpecialistChatHistory(prev => ({ ...prev, [specialistType]: [...prev[specialistType], { role: 'user', text: inputVal }] }));
+
         try {
+            const currentHistory = specialistChatHistory[specialistType];
+            const historyForGemini = currentHistory.map(m => ({
+                role: m.role === 'ai' ? 'model' : 'user',
+                parts: [{ text: m.text }]
+            }));
+
             const response = await fetch('/api/chat', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: inputVal, agent: specialistType, fileData: specialistType === 'examiner' ? activeFileContext : null, systemContext: buildSystemContext() })
+                body: JSON.stringify({
+                    prompt: inputVal,
+                    agent: specialistType,
+                    fileData: specialistType === 'examiner' ? activeFileContext : null,
+                    history: historyForGemini,
+                    systemContext: buildSystemContext()
+                })
             });
             const data = await response.json();
-            setSpecialistChatHistory(prev => ({ ...prev, [specialistType]: [...prev[specialistType], { role: 'ai', text: data.text }] }));
-        } catch (e) { console.error(e); } finally { if (isScribe) setIsScribeTyping(false); else setIsExaminerTyping(false); }
+
+            if (data.text) {
+                setSpecialistChatHistory(prev => ({ ...prev, [specialistType]: [...prev[specialistType], { role: 'ai', text: data.text }] }));
+            }
+        } catch (e) {
+            console.error(e); showToast("Falha de conexão.");
+        } finally {
+            if (isScribe) setIsScribeTyping(false); else setIsExaminerTyping(false);
+        }
     };
 
     const copyToClipboard = async (text: string) => {
@@ -305,7 +434,6 @@ export default function HomeworkPage() {
         } catch (err) { console.error(err); }
     };
 
-    // --- NOVA LÓGICA DE SAVE MINIMALISTA ---
     const handleSaveWorkspace = async (e: React.MouseEvent) => {
         e.stopPropagation();
         if (saveState === "saving") return;
@@ -440,16 +568,19 @@ export default function HomeworkPage() {
                                 </div>
 
                                 {activePdfTab === 'chat' ? (
-                                    <div className="flex flex-col gap-4">
-                                        <div ref={pdfChatRef} className="h-[250px] overflow-y-auto bg-slate-50 dark:bg-black p-5 rounded-2xl border border-slate-300 dark:border-white/10 shadow-inner">
+                                    <div className="flex flex-col gap-2">
+                                        <div ref={pdfChatRef} className="h-[250px] overflow-y-auto bg-slate-50 dark:bg-black/50 p-5 rounded-2xl border border-slate-300 dark:border-white/10 shadow-inner custom-scrollbar">
                                             {pdfChatHistory.length === 0 && <span className="text-black dark:text-white text-xs font-medium italic">Nenhum resumo gerado.</span>}
                                             {pdfChatHistory.map((msg, i) => <ChatBubble key={i} role={msg.role} text={msg.text} agentName="Aura" agentImg="/agents/aura.png" userImg={session?.user?.image} />)}
-                                            {isPdfTyping && <div className="text-[10px] font-bold animate-pulse text-cyan-600 ml-12">Analisando o PDF...</div>}
+                                            {isPdfTyping && <div className="text-[10px] font-bold animate-pulse text-cyan-600 ml-12">Aura está a analisar...</div>}
                                         </div>
-                                        <div className="flex gap-2">
-                                            <input value={pdfPrompt} onChange={(e) => setPdfPrompt(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handlePdfQuestion()} className="flex-1 bg-white dark:bg-black border border-slate-300 dark:border-white/20 rounded-full px-5 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-cyan-500/30" placeholder="Pergunte ao PDF..." />
-                                            <button onClick={handlePdfQuestion} disabled={isPdfTyping || !pdfPrompt.trim()} className="bg-cyan-600 text-white px-6 rounded-full font-black uppercase text-[11px]">Enviar</button>
-                                        </div>
+                                        <ChatInput
+                                            value={pdfPrompt}
+                                            onChange={setPdfPrompt}
+                                            onSend={handlePdfQuestion}
+                                            isTyping={isPdfTyping}
+                                            placeholder="Pergunte ao PDF..."
+                                        />
                                     </div>
                                 ) : (
                                     <div className="flex flex-col gap-4">
@@ -473,34 +604,46 @@ export default function HomeworkPage() {
                     </section>
 
                     {/* SCRIBE CHAT */}
-                    <section onClick={() => setActiveSection('scribe')} className={`flex flex-col h-[450px] shrink-0 rounded-[32px] overflow-hidden ${getCardStyle('scribe')}`}>
+                    <section onClick={() => setActiveSection('scribe')} className={`flex flex-col h-[480px] shrink-0 rounded-[32px] overflow-hidden ${getCardStyle('scribe')}`}>
                         <div className="p-5 border-b border-slate-300 dark:border-white/10 bg-slate-50 dark:bg-white/5 flex items-center justify-between">
                             <span className="text-[10px] font-black uppercase text-purple-700 dark:text-purple-400 tracking-widest border border-purple-300 px-4 py-1.5 rounded-full bg-purple-100 dark:bg-purple-900/30">Escritor Acadêmico</span>
                             <div className="w-10 h-10 rounded-full border border-slate-300 shadow-sm overflow-hidden"><img src="/agents/scribe.png" className="w-full h-full object-cover" /></div>
                         </div>
-                        <div ref={scribeChatRef} className="flex-1 p-6 overflow-y-auto space-y-4 custom-scrollbar bg-white dark:bg-[#0f172a]">
+                        <div ref={scribeChatRef} className="flex-1 p-6 overflow-y-auto space-y-4 custom-scrollbar bg-white dark:bg-[#0f172a]/50">
                             {specialistChatHistory.scribe.length === 0 && <span className="text-sm text-black dark:text-white font-medium italic flex items-center justify-center h-full text-center px-4">Peça ao Scribe para reescrever e refinar seus textos.</span>}
                             {specialistChatHistory.scribe.map((msg, i) => <ChatBubble key={i} role={msg.role} text={msg.text} agentName="Scribe" agentImg="/agents/scribe.png" userImg={session?.user?.image} />)}
-                            {isScribeTyping && <div className="text-[11px] text-purple-600 font-black uppercase tracking-widest animate-pulse ml-12">Scribe está redigindo...</div>}
+                            {isScribeTyping && <div className="text-[11px] text-purple-600 font-black uppercase tracking-widest animate-pulse ml-12">Scribe está a redigir...</div>}
                         </div>
-                        <div className="p-5 bg-slate-50 dark:bg-black border-t border-slate-300 dark:border-white/10">
-                            <input placeholder="Refine seu texto..." onKeyDown={(e) => { if (e.key === 'Enter') { handleSpecialistQuery('scribe', (e.target as HTMLInputElement).value); (e.target as HTMLInputElement).value = ''; } }} disabled={isScribeTyping} className="w-full bg-white dark:bg-white/10 border border-slate-300 dark:border-white/20 rounded-full py-4 px-6 text-[14px] font-medium focus:outline-none focus:ring-2 focus:ring-purple-500/30 placeholder:text-slate-400" />
+                        <div className="p-4 bg-slate-50 dark:bg-black border-t border-slate-300 dark:border-white/10">
+                            <ChatInput
+                                value={scribePrompt}
+                                onChange={setScribePrompt}
+                                onSend={() => handleSpecialistQuery('scribe', scribePrompt)}
+                                isTyping={isScribeTyping}
+                                placeholder="Dite ou escreva o seu rascunho..."
+                            />
                         </div>
                     </section>
 
                     {/* QUIZ CHAT */}
-                    <section onClick={() => setActiveSection('examiner')} className={`flex flex-col h-[450px] shrink-0 rounded-[32px] overflow-hidden ${getCardStyle('examiner')}`}>
+                    <section onClick={() => setActiveSection('examiner')} className={`flex flex-col h-[480px] shrink-0 rounded-[32px] overflow-hidden ${getCardStyle('examiner')}`}>
                         <div className="p-5 border-b border-slate-300 dark:border-white/10 bg-slate-50 dark:bg-white/5 flex items-center justify-between">
                             <span className="text-[10px] font-black uppercase text-orange-700 dark:text-orange-400 tracking-widest border border-orange-300 px-4 py-1.5 rounded-full bg-orange-100 dark:bg-orange-900/30">Testador de Conhecimento</span>
                             <div className="w-10 h-10 rounded-full border border-slate-300 shadow-sm overflow-hidden"><img src="/agents/examiner.png" className="w-full h-full object-cover" /></div>
                         </div>
-                        <div ref={examinerChatRef} className="flex-1 p-6 overflow-y-auto space-y-4 custom-scrollbar bg-white dark:bg-[#0f172a]">
+                        <div ref={examinerChatRef} className="flex-1 p-6 overflow-y-auto space-y-4 custom-scrollbar bg-white dark:bg-[#0f172a]/50">
                             {specialistChatHistory.examiner.length === 0 && <span className="text-sm text-black dark:text-white font-medium italic flex items-center justify-center h-full text-center px-4">Peça ao Examiner para testar seu conhecimento sobre o PDF.</span>}
                             {specialistChatHistory.examiner.map((msg, i) => <ChatBubble key={i} role={msg.role} text={msg.text} agentName="Examiner" agentImg="/agents/examiner.png" userImg={session?.user?.image} />)}
-                            {isExaminerTyping && <div className="text-[11px] text-orange-600 font-black uppercase tracking-widest animate-pulse ml-12">Examiner avaliando...</div>}
+                            {isExaminerTyping && <div className="text-[11px] text-orange-600 font-black uppercase tracking-widest animate-pulse ml-12">Examiner está a avaliar...</div>}
                         </div>
-                        <div className="p-5 bg-slate-50 dark:bg-black border-t border-slate-300 dark:border-white/10">
-                            <input placeholder="Inicie um quiz..." onKeyDown={(e) => { if (e.key === 'Enter') { handleSpecialistQuery('examiner', (e.target as HTMLInputElement).value); (e.target as HTMLInputElement).value = ''; } }} disabled={isExaminerTyping} className="w-full bg-white dark:bg-white/10 border border-slate-300 dark:border-white/20 rounded-full py-4 px-6 text-[14px] font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/30 placeholder:text-slate-400" />
+                        <div className="p-4 bg-slate-50 dark:bg-black border-t border-slate-300 dark:border-white/10">
+                            <ChatInput
+                                value={examinerPrompt}
+                                onChange={setExaminerPrompt}
+                                onSend={() => handleSpecialistQuery('examiner', examinerPrompt)}
+                                isTyping={isExaminerTyping}
+                                placeholder="Fale ou escreva a sua resposta..."
+                            />
                         </div>
                     </section>
 

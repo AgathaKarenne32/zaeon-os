@@ -19,7 +19,8 @@ import {
     AcademicCapIcon,
     ArrowsRightLeftIcon
 } from "@heroicons/react/24/outline";
-import { Bot } from "lucide-react";
+// 🔥 ADICIONADO: Mic e MicOff
+import { Bot, Mic, MicOff } from "lucide-react";
 
 interface LoungeChatWidgetProps {
     defaultOpen?: boolean;
@@ -36,7 +37,7 @@ const ZAEON_AGENT = {
 export const LoungeChatWidget = ({ defaultOpen = false }: LoungeChatWidgetProps) => {
     const router = useRouter();
     const pathname = usePathname(); // 🔥 Consciência da página atual
-    const { data: session } = useSession();
+    const { data: session, status } = useSession();
     // @ts-ignore
     const fallbackId = session?.user?.id || "";
     const isTeacher = (session?.user as any)?.role === "teacher" || (session?.user as any)?.role === "professor";
@@ -58,10 +59,12 @@ export const LoungeChatWidget = ({ defaultOpen = false }: LoungeChatWidgetProps)
     const [chatHistory, setChatHistory] = useState<any[]>([]);
 
     // 🔥 Estado exclusivo para a memória da Zaeon
-    const [zaeonMessages, setZaeonMessages] = useState<any[]>([
-        { id: 'intro', senderId: 'zaeon-agent', text: 'Olá! Sou a Zaeon. Estou aqui com você. Precisa de ajuda em alguma parte da plataforma?' }
-    ]);
+    const [zaeonMessages, setZaeonMessages] = useState<any[]>([]);
     const [isZaeonTyping, setIsZaeonTyping] = useState(false);
+
+    // 🔥 NOVOS ESTADOS PARA O MICROFONE
+    const [isListening, setIsListening] = useState(false);
+    const recognitionRef = useRef<any>(null);
 
     // Estados para Modo Professor
     const [studentSearchQuery, setStudentSearchQuery] = useState("");
@@ -75,6 +78,28 @@ export const LoungeChatWidget = ({ defaultOpen = false }: LoungeChatWidgetProps)
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
+    // 🔥 SAUDAÇÃO INICIAL DO AGENTE + NOTIFICAÇÃO
+    useEffect(() => {
+        if (status === "authenticated" && session?.user && zaeonMessages.length === 0) {
+            const timer = setTimeout(() => {
+                const userName = session?.user?.name;
+                const firstName = userName ? userName.split(" ")[0] : "Operador";
+
+                setZaeonMessages([
+                    { id: 'intro', senderId: 'zaeon-agent', text: `Bem-vindo de volta, ${firstName}! Os sistemas estão online. Precisa de ajuda com alguma coisa hoje?` }
+                ]);
+
+                if (!isOpen) {
+                    setUnreadCount(prev => prev + 1);
+                    setFlash(true);
+                    setTimeout(() => setFlash(false), 1500);
+                }
+            }, 3000);
+
+            return () => clearTimeout(timer);
+        }
+    }, [status, session, zaeonMessages.length, isOpen]);
+
     useEffect(() => {
         activeChatRef.current = activeChat;
         if (isOpen) setUnreadCount(0);
@@ -85,6 +110,45 @@ export const LoungeChatWidget = ({ defaultOpen = false }: LoungeChatWidgetProps)
             messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
         }
     }, [chatHistory, zaeonMessages, isZaeonTyping, isOpen, activeChat]);
+
+    // 🔥 LÓGICA DE RECONHECIMENTO DE VOZ
+    useEffect(() => {
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        if (SpeechRecognition) {
+            recognitionRef.current = new SpeechRecognition();
+            recognitionRef.current.continuous = true;
+            recognitionRef.current.interimResults = true;
+            recognitionRef.current.lang = 'pt-BR';
+
+            recognitionRef.current.onresult = (event: any) => {
+                let transcript = "";
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    transcript += event.results[i][0].transcript;
+                }
+                setMessageInput(transcript);
+            };
+
+            recognitionRef.current.onerror = (event: any) => {
+                console.error("Erro no reconhecimento de voz:", event.error);
+                setIsListening(false);
+            };
+
+            recognitionRef.current.onend = () => {
+                setIsListening(false);
+            };
+        }
+    }, []);
+
+    const toggleListening = () => {
+        if (isListening) {
+            recognitionRef.current?.stop();
+            setIsListening(false);
+        } else {
+            setMessageInput(""); // Limpa o input ao começar a ouvir
+            recognitionRef.current?.start();
+            setIsListening(true);
+        }
+    };
 
     // 1. INICIALIZAÇÃO DO PUSHER (WEB SOCKET HUMANOS)
     useEffect(() => {
@@ -163,9 +227,14 @@ export const LoungeChatWidget = ({ defaultOpen = false }: LoungeChatWidgetProps)
     }, [isOpen, activeChat]);
 
     // 🔥 5. FUNÇÃO DE ENVIAR MENSAGEM (Híbrida: Humano vs Zaeon) 🔥
-    // 🔥 5. FUNÇÃO DE ENVIAR MENSAGEM (Híbrida: Humano vs Zaeon) 🔥
     const handleSendMessage = async () => {
         if (!messageInput.trim() || !activeChat) return;
+
+        // Desliga o microfone se enviar a mensagem enquanto fala
+        if (isListening) {
+            toggleListening();
+        }
+
         const text = messageInput.trim();
         setMessageInput("");
 
@@ -193,6 +262,8 @@ export const LoungeChatWidget = ({ defaultOpen = false }: LoungeChatWidgetProps)
                     parts: [{ text: msg.text }]
                 }));
 
+                const userName = session?.user?.name || "Operador";
+
                 // 3. Dispara para a rota com Contexto, Memória e Histórico
                 const res = await fetch('/api/ai/chat', {
                     method: 'POST',
@@ -202,7 +273,7 @@ export const LoungeChatWidget = ({ defaultOpen = false }: LoungeChatWidgetProps)
                         agent: "zaeon",
                         userData: savedOnboardingData, // 🔥 Memória injetada!
                         history: chatHistoryForGemini, // 🔥 Histórico do chat injetado!
-                        systemContext: `Você é a Zaeon. O usuário está neste momento na rota/página: ${pathname}. Se ele perguntar sobre o que ele pode fazer aqui ou pedir ajuda contextual, use essa rota como base para explicar a interface ou funcionalidades desta área específica do sistema.`
+                        systemContext: `Você é a Zaeon. O usuário com quem você está falando se chama ${userName}. O usuário está neste momento na rota/página: ${pathname}. Se ele perguntar sobre o que ele pode fazer aqui ou pedir ajuda contextual, use essa rota como base para explicar a interface ou funcionalidades desta área específica do sistema.`
                     })
                 });
 
@@ -220,7 +291,7 @@ export const LoungeChatWidget = ({ defaultOpen = false }: LoungeChatWidgetProps)
             // ---> FLUXO HUMANO (Pusher) <---
             setChatHistory(prev => [...prev, optimisticMsg]);
             try {
-                await fetch('/api/chat/messages', {
+                await fetch('/api/aichat/messages', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ targetId: activeChat.id, text })
                 });
             } catch (error) { console.error(error); }
@@ -238,7 +309,6 @@ export const LoungeChatWidget = ({ defaultOpen = false }: LoungeChatWidgetProps)
         } catch (error) { console.error(error); }
     };
 
-    // Funções Professor omitidas por brevidade, mantendo a lógica igual
     const handleStudentSearch = useCallback(async () => {
         if (studentSearchQuery.length < 2) { setStudentSearchResults([]); return; }
         setIsStudentSearching(true);
@@ -270,21 +340,20 @@ export const LoungeChatWidget = ({ defaultOpen = false }: LoungeChatWidgetProps)
         shadow-[0_0_40px_rgba(0,0,0,0.15)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.5)]
     `;
 
-    // Define qual lista de mensagens usar
     const displayMessages = activeChat?.isAgent ? zaeonMessages : chatHistory;
 
     return (
         <motion.div
-            initial={{ y: 100, opacity: 0 }}
+            layout
+            initial={false}
             animate={{
-                y: 0,
-                opacity: 1,
                 height: isOpen ? 450 : 48,
-                width: isOpen ? 320 : 200
+                width: isOpen ? 320 : 200,
             }}
-            transition={{ type: "spring", stiffness: 150, damping: 25 }}
-            className={`fixed bottom-0 z-[999] rounded-t-3xl flex flex-col overflow-hidden ${glassContainer} transition-all duration-500
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            className={`fixed bottom-0 z-[999] rounded-t-3xl flex flex-col overflow-hidden ${glassContainer} 
             ${widgetPosition === 'right' ? 'right-4 sm:right-8' : 'left-4 sm:left-8'}`}
+            style={{ willChange: "width, height" }}
         >
             <div
                 onClick={() => setIsOpen(!isOpen)}
@@ -342,10 +411,10 @@ export const LoungeChatWidget = ({ defaultOpen = false }: LoungeChatWidgetProps)
                 {isOpen && (
                     <motion.div
                         key={activeChat ? "chat" : "menu"}
-                        initial={{ opacity: 0, x: activeChat ? 20 : -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: activeChat ? -20 : 20 }}
-                        transition={{ duration: 0.2 }}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.15 }}
                         className="flex-1 flex flex-col overflow-hidden relative"
                     >
                         {activeChat ? (
@@ -421,17 +490,51 @@ export const LoungeChatWidget = ({ defaultOpen = false }: LoungeChatWidgetProps)
                                     <div ref={messagesEndRef} />
                                 </div>
 
-                                <div className="p-3 bg-white/70 dark:bg-black/30 backdrop-blur-xl border-t border-slate-200 dark:border-white/5">
-                                    <div className="flex items-center gap-2 bg-white dark:bg-[#0f172a] rounded-full border border-slate-300 dark:border-white/10 p-1 pl-4 shadow-inner">
+                                {/* 🔥 INPUT ÁREA COM RECONHECIMENTO DE VOZ */}
+                                <div className="p-3 bg-white/70 dark:bg-black/30 backdrop-blur-xl border-t border-slate-200 dark:border-white/5 flex flex-col gap-2">
+                                    <AnimatePresence>
+                                        {isListening && (
+                                            <motion.div
+                                                initial={{ opacity: 0, y: 5 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0 }}
+                                                className="flex justify-center items-center gap-2 mb-1"
+                                            >
+                                                <span className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-pulse" />
+                                                <span className="text-[9px] font-bold text-cyan-600 dark:text-cyan-400 uppercase tracking-tighter">Ouvindo...</span>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+
+                                    <div className="flex items-center gap-2 bg-white dark:bg-[#0f172a] rounded-full border border-slate-300 dark:border-white/10 p-1 pl-4 shadow-inner focus-within:border-cyan-400 dark:focus-within:border-cyan-500/50 transition-colors">
                                         <input
                                             type="text"
                                             value={messageInput}
                                             onChange={(e) => setMessageInput(e.target.value)}
                                             onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                                            placeholder="Transmita algo..."
+                                            placeholder={isListening ? "Fale agora..." : "Transmita algo..."}
                                             disabled={isZaeonTyping}
                                             className="flex-1 bg-transparent text-[11px] focus:outline-none text-slate-700 dark:text-white placeholder:text-slate-400 disabled:opacity-50"
                                         />
+
+                                        {/* BOTÃO DE VOZ */}
+                                        <button
+                                            onClick={toggleListening}
+                                            disabled={isZaeonTyping}
+                                            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all shrink-0 ${isListening
+                                                ? "bg-red-500/20 text-red-500 shadow-[0_0_10px_rgba(239,68,68,0.3)]"
+                                                : "bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 hover:text-cyan-500"
+                                                }`}
+                                        >
+                                            {isListening ? (
+                                                <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1 }}>
+                                                    <MicOff size={14} />
+                                                </motion.div>
+                                            ) : (
+                                                <Mic size={14} />
+                                            )}
+                                        </button>
+
                                         <button
                                             onClick={handleSendMessage}
                                             disabled={!messageInput.trim() || isZaeonTyping}
@@ -492,8 +595,6 @@ export const LoungeChatWidget = ({ defaultOpen = false }: LoungeChatWidgetProps)
                                             ) : null}
                                         </div>
                                     )}
-
-                                    {/* Demais abas ocultadas por simplicidade... mantive a lógica exata */}
                                 </div>
                             </div>
                         )}
