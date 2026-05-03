@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { signIn, signOut, useSession } from "next-auth/react";
 import Image from "next/image";
+import ZaeonLogo from "@/components/main/ZaeonLogo";
 
 // 🔥 Menu simplificado: Apenas opções vitais pós-login
 const MENU_ITEMS = [
@@ -282,7 +283,7 @@ export default function MenuNavigation() {
                   <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start gap-2'}`}>
                     {msg.role === 'zaeon' && (
                       <div className="w-6 h-6 rounded-full bg-cyan-100 dark:bg-cyan-500/20 flex items-center justify-center shrink-0 mt-1">
-                        <Bot size={12} className="text-cyan-600 dark:text-cyan-400" />
+                        <ZaeonLogo aiState="idle" className="w-4 h-4" />
                       </div>
                     )}
                     <div className={`max-w-[85%] p-3 rounded-2xl text-[11px] md:text-xs font-medium leading-relaxed shadow-sm ${msg.role === 'user' ? 'bg-cyan-600 text-white rounded-tr-sm' : 'bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-slate-200 rounded-tl-sm'}`}>
@@ -294,7 +295,7 @@ export default function MenuNavigation() {
                 {isTyping && (
                   <div className="flex justify-start gap-2">
                     <div className="w-6 h-6 rounded-full bg-cyan-100 dark:bg-cyan-500/20 flex items-center justify-center shrink-0 mt-1">
-                      <Bot size={12} className="text-cyan-600 dark:text-cyan-400" />
+                      <ZaeonLogo aiState="thinking" className="w-4 h-4" />
                     </div>
                     <div className="px-3 py-2 rounded-2xl rounded-tl-sm bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 flex gap-1 items-center shadow-sm">
                       <span className="w-1.5 h-1.5 bg-cyan-500 dark:bg-cyan-400 rounded-full animate-bounce"></span>
@@ -426,7 +427,7 @@ export default function MenuNavigation() {
                       <div onClick={() => router.push("/research-lab")} className={`${cardBase} ring-1 ring-cyan-500/40 dark:ring-cyan-400/40 animate-pulse-slow shadow-[0_0_20px_rgba(34,211,238,0.15)] ${workTitle ? "border-cyan-400/30 hover:border-cyan-400/50" : "border-cyan-400/20 hover:border-cyan-400/40"}`}>
                         <div className={`absolute left-1 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-full transition-all duration-500 bg-cyan-500 dark:bg-cyan-400`} />
                         <div className="flex items-center gap-3 pl-2 flex-1 min-w-0">
-                          <Bot className="w-5 h-5 text-cyan-600 dark:text-cyan-400 shrink-0" />
+                          <ZaeonLogo aiState="idle" className="w-6 h-6 shrink-0" />
                           <div className="flex flex-col min-w-0">
                             <span className="text-[9px] uppercase tracking-widest text-slate-500 dark:text-white/40 font-bold">{workTitle ? "Núcleo de Pesquisa" : "Iniciação"}</span>
                             <span className="text-sm tracking-tight truncate text-slate-800 dark:text-white">{isLoadingResearch ? "Orquestrando..." : workTitle ? `Continuar: ${workTitle}` : "Criar Novo Agente"}</span>

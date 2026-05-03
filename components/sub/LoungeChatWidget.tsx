@@ -21,6 +21,32 @@ import {
 } from "@heroicons/react/24/outline";
 // 🔥 ADICIONADO: Mic e MicOff
 import { Bot, Mic, MicOff } from "lucide-react";
+import ZaeonLogo from "@/components/main/ZaeonLogo";
+import type { AIState } from "@/components/main/ZaeonLogo";
+
+const TypewriterText = ({ text, onComplete }: { text: string, onComplete: () => void }) => {
+    const [displayedText, setDisplayedText] = useState("");
+    const index = useRef(0);
+
+    useEffect(() => {
+        setDisplayedText("");
+        index.current = 0;
+        
+        const interval = setInterval(() => {
+            if (index.current < text.length) {
+                setDisplayedText(prev => prev + text.charAt(index.current));
+                index.current++;
+            } else {
+                clearInterval(interval);
+                onComplete();
+            }
+        }, 15);
+
+        return () => clearInterval(interval);
+    }, [text, onComplete]);
+
+    return <span>{displayedText}</span>;
+};
 
 interface LoungeChatWidgetProps {
     defaultOpen?: boolean;
@@ -61,6 +87,8 @@ export const LoungeChatWidget = ({ defaultOpen = false }: LoungeChatWidgetProps)
     // 🔥 Estado exclusivo para a memória da Zaeon
     const [zaeonMessages, setZaeonMessages] = useState<any[]>([]);
     const [isZaeonTyping, setIsZaeonTyping] = useState(false);
+    const [aiState, setAiState] = useState<AIState>("idle");
+    const [currentlyTypingMsgId, setCurrentlyTypingMsgId] = useState<number | string | null>(null);
 
     // 🔥 NOVOS ESTADOS PARA O MICROFONE
     const [isListening, setIsListening] = useState(false);
@@ -248,6 +276,7 @@ export const LoungeChatWidget = ({ defaultOpen = false }: LoungeChatWidgetProps)
             // ---> FLUXO ZAEON (IA) <---
             setZaeonMessages(prev => [...prev, optimisticMsg]);
             setIsZaeonTyping(true);
+            setAiState("thinking");
 
             try {
                 // 1. Resgata a memória do utilizador gravada no Onboarding
@@ -280,9 +309,15 @@ export const LoungeChatWidget = ({ defaultOpen = false }: LoungeChatWidgetProps)
                 if (!res.ok) throw new Error("Falha de comunicação com o núcleo neural.");
 
                 const data = await res.json();
-                setZaeonMessages(prev => [...prev, { id: Date.now(), senderId: 'zaeon-agent', text: data.text }]);
+                const msgId = Date.now();
+                setCurrentlyTypingMsgId(msgId);
+                setZaeonMessages(prev => [...prev, { id: msgId, senderId: 'zaeon-agent', text: data.text }]);
+                setAiState("executing");
             } catch (error) {
-                setZaeonMessages(prev => [...prev, { id: Date.now(), senderId: 'zaeon-agent', text: "Desculpe, minha rede neural falhou. Pode tentar novamente?" }]);
+                const msgId = Date.now();
+                setCurrentlyTypingMsgId(msgId);
+                setZaeonMessages(prev => [...prev, { id: msgId, senderId: 'zaeon-agent', text: "Desculpe, minha rede neural falhou. Pode tentar novamente?" }]);
+                setAiState("executing");
             } finally {
                 setIsZaeonTyping(false);
             }
@@ -426,7 +461,7 @@ export const LoungeChatWidget = ({ defaultOpen = false }: LoungeChatWidgetProps)
                                     </button>
                                     <div className={`relative w-8 h-8 rounded-full overflow-hidden border bg-slate-200 dark:bg-black shrink-0 flex items-center justify-center ${activeChat.isAgent ? 'border-cyan-400 bg-cyan-100 dark:bg-cyan-900/30' : 'border-slate-300 dark:border-white/20'}`}>
                                         {activeChat.isAgent ? (
-                                            <Bot className="w-4 h-4 text-cyan-500" />
+                                            <ZaeonLogo aiState={aiState} className="w-6 h-6" />
                                         ) : activeChat.image ? (
                                             <Image src={activeChat.image} alt={activeChat.name} fill sizes="32px" className="object-cover" />
                                         ) : (
@@ -456,7 +491,7 @@ export const LoungeChatWidget = ({ defaultOpen = false }: LoungeChatWidgetProps)
                                                     {!isMe && (
                                                         <div className={`relative w-6 h-6 rounded-full overflow-hidden shrink-0 border flex items-center justify-center ${activeChat.isAgent ? 'border-cyan-400 bg-cyan-100 dark:bg-cyan-900/30' : 'border-slate-300 dark:border-white/10 bg-slate-200 dark:bg-black'}`}>
                                                             {activeChat.isAgent ? (
-                                                                <Bot className="w-3 h-3 text-cyan-500" />
+                                                                <ZaeonLogo aiState="idle" className="w-4 h-4" />
                                                             ) : activeChat.image ? (
                                                                 <Image src={activeChat.image} alt={activeChat.name} fill sizes="24px" className="object-cover" />
                                                             ) : (
@@ -466,7 +501,14 @@ export const LoungeChatWidget = ({ defaultOpen = false }: LoungeChatWidgetProps)
                                                     )}
                                                     <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
                                                         <div className={`p-2.5 text-[11px] shadow-sm backdrop-blur-md ${isMe ? 'bg-cyan-500 text-white rounded-2xl rounded-br-sm' : activeChat.isAgent ? 'bg-white dark:bg-[#1e293b] text-slate-800 dark:text-slate-200 border border-cyan-200 dark:border-cyan-500/20 rounded-2xl rounded-bl-sm' : 'bg-white dark:bg-[#1e293b] text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-white/5 rounded-2xl rounded-bl-sm'}`}>
-                                                            {msg.text}
+                                                            {msg.id === currentlyTypingMsgId ? (
+                                                                <TypewriterText text={msg.text} onComplete={() => {
+                                                                    setCurrentlyTypingMsgId(null);
+                                                                    setAiState("idle");
+                                                                }} />
+                                                            ) : (
+                                                                msg.text
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -477,7 +519,7 @@ export const LoungeChatWidget = ({ defaultOpen = false }: LoungeChatWidgetProps)
                                         <div className="flex justify-start w-full">
                                             <div className="flex items-end gap-2 max-w-[85%]">
                                                 <div className="relative w-6 h-6 rounded-full overflow-hidden shrink-0 border border-cyan-400 bg-cyan-100 dark:bg-cyan-900/30 flex items-center justify-center">
-                                                    <Bot className="w-3 h-3 text-cyan-500" />
+                                                    <ZaeonLogo aiState={aiState} className="w-4 h-4" />
                                                 </div>
                                                 <div className="px-3 py-2.5 rounded-2xl rounded-bl-sm bg-white dark:bg-[#1e293b] border border-cyan-200 dark:border-cyan-500/20 flex gap-1 items-center shadow-sm">
                                                     <span className="w-1 h-1 bg-cyan-400 rounded-full animate-bounce"></span>
@@ -571,7 +613,7 @@ export const LoungeChatWidget = ({ defaultOpen = false }: LoungeChatWidgetProps)
                                                 className="flex items-center gap-3 p-2.5 rounded-2xl cursor-pointer transition-colors group border border-cyan-400/30 dark:border-cyan-500/30 bg-gradient-to-r from-cyan-50 to-white dark:from-cyan-950/20 dark:to-transparent mb-1 hover:shadow-md"
                                             >
                                                 <div className="relative w-10 h-10 rounded-full border border-cyan-300 dark:border-cyan-400/50 bg-cyan-100 dark:bg-cyan-900/50 flex items-center justify-center shrink-0 shadow-inner">
-                                                    <Bot className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
+                                                    <ZaeonLogo aiState="idle" className="w-7 h-7" />
                                                     <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white dark:border-slate-900 rounded-full animate-pulse"></span>
                                                 </div>
                                                 <div className="flex flex-col flex-1 overflow-hidden">

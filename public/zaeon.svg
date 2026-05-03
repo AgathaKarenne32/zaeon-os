@@ -1,0 +1,41 @@
+<svg viewBox="0 0 512 512" width="240" height="240" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00E5FF"/>
+      <stop offset="100%" stop-color="#1D4ED8"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" fill="#020617"/>
+
+  <!-- núcleo -->
+  <circle cx="256" cy="256" r="6" fill="#00E5FF">
+    <animate attributeName="r" values="6;10;6" dur="1.2s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.6;1;0.6" dur="1.2s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- hexágono -->
+  <path d="M256 120 L380 190 L380 322 L256 392 L132 322 L132 190 Z"
+        fill="none"
+        stroke="url(#g)"
+        stroke-width="4"
+        stroke-dasharray="800"
+        stroke-dashoffset="800">
+    <animate attributeName="stroke-dashoffset"
+             from="800" to="0"
+             dur="1.5s"
+             fill="freeze"/>
+  </path>
+
+  <!-- conexões internas -->
+  <g stroke="url(#g)" stroke-width="3" fill="none" opacity="0">
+    <path d="M256 120 Q300 200 256 256"/>
+    <path d="M380 190 Q300 250 256 256"/>
+    <path d="M380 322 Q300 280 256 256"/>
+    <path d="M256 392 Q210 300 256 256"/>
+    <path d="M132 322 Q200 280 256 256"/>
+    <path d="M132 190 Q200 220 256 256"/>
+
+    <animate attributeName="opacity" from="0" to="1" dur="1s" begin="1.5s" fill="freeze"/>
+  </g>
+</svg>
