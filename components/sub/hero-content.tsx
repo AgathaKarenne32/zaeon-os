@@ -11,13 +11,15 @@ import MenuNavigation from "@/components/sub/MenuNavigation";
 import StarBackground from "@/components/main/star-background";
 
 const TARGET_WORDS = [
-  "estudantes.",
-  "professores.",
-  "faculdades.",
-  "universidades.",
-  "empreendedores.",
-  "empresas.",
-  "mentes produtivas."
+  "Mentes produtivas.",
+  "Estudantes.",
+  "Professores.",
+  "Empresários.",
+  "Faculdades.",
+  "Universidades.",
+  "Empresas.",
+  "Gestores."
+
 ];
 
 export default function HeroPage() {
@@ -43,7 +45,7 @@ export default function HeroPage() {
   }, []);
 
   return (
-    <main className="w-full min-h-screen flex flex-col items-center justify-center relative px-4 py-12 overflow-hidden transition-colors duration-700 font-sans">
+    <main className="w-full min-h-screen flex flex-col items-start justify-start relative px-8 md:px-16 lg:px-24 pt-24 md:pt-32 lg:pt-40 pb-20 overflow-hidden transition-colors duration-700 font-sans">
 
       {/* BACKGROUND LIMPO - Apenas o StarBackground visível */}
       <div className="absolute inset-0 z-0 pointer-events-none">
@@ -55,24 +57,24 @@ export default function HeroPage() {
       {/* ========================================= */}
       <motion.div
         animate={{
-          scale: showChatbox ? 0.85 : 1,
-          y: showChatbox ? -40 : 0,
+          scale: showChatbox ? 0.9 : 1,
+          y: showChatbox ? -30 : 0,
           opacity: 1,
         }}
         transition={{ type: "spring", stiffness: 90, damping: 20 }}
-        className="flex flex-col items-center text-center max-w-4xl z-10 w-full"
+        className="flex flex-col items-start text-left max-w-4xl z-10 w-full origin-left"
       >
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
-          className="relative flex flex-col items-center justify-center"
+          className="relative flex flex-col items-start justify-center"
         >
-          <h1 className="text-4xl sm:text-5xl md:text-[4.5rem] font-light tracking-tighter text-slate-900 dark:text-white leading-[1.2] z-10 relative">
+          <h1 className="text-3xl sm:text-4xl md:text-[3.5rem] font-light tracking-tighter text-slate-900 dark:text-white leading-[1.2] z-10 relative">
             Agentes autônomos para <br className="hidden md:block" />
 
             {/* Altura mínima garantida para evitar saltos no layout durante a troca de palavras */}
-            <div className="min-h-[1.2em] flex items-center justify-center mt-2 md:mt-4">
+            <div className="min-h-[1.2em] flex items-center justify-start mt-2 md:mt-4">
               <AnimatePresence mode="wait">
                 <motion.span
                   key={wordIndex}
@@ -88,6 +90,22 @@ export default function HeroPage() {
               </AnimatePresence>
             </div>
           </h1>
+
+          <AnimatePresence>
+            {!showChatbox && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                animate={{ opacity: 1, height: "auto", marginTop: 24 }}
+                exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                transition={{ duration: 0.4, ease: "easeInOut" }}
+                className="overflow-hidden"
+              >
+                <p className="max-w-2xl text-base sm:text-lg md:text-xl text-slate-600 dark:text-slate-400 font-light leading-relaxed">
+                  A plataforma definitiva para orquestrar inteligências artificiais. Automatize fluxos de trabalho, ganhe eficiência e escale suas operações com agentes autônomos de última geração.
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
 
         {/* Botões Iniciais - Sem fundo pesado, mantendo a visão do espaço */}
@@ -97,8 +115,8 @@ export default function HeroPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, filter: "blur(10px)" }}
-              transition={{ duration: 0.4 }}
-              className="mt-14 flex flex-col sm:flex-row gap-6 w-full sm:w-auto items-center justify-center"
+              transition={{ duration: 0.4, delay: 0.2 }}
+              className="mt-10 flex flex-col sm:flex-row gap-4 w-full sm:w-auto items-center justify-start"
             >
               <button
                 onClick={() => setShowChatbox(true)}
@@ -114,7 +132,7 @@ export default function HeroPage() {
                 className="flex items-center justify-center gap-3 px-10 py-4 rounded-full border border-slate-300 dark:border-white/10 text-slate-800 dark:text-white font-medium uppercase tracking-[0.2em] text-[11px] hover:border-slate-500 dark:hover:border-white/30 transition-colors bg-transparent hover:scale-105"
               >
                 <UserIcon className="w-4 h-4 text-slate-400" />
-                Acessar Conta
+                Contratar um Agente
               </button>
             </motion.div>
           )}
@@ -128,10 +146,10 @@ export default function HeroPage() {
         {showChatbox && (
           <motion.div
             initial={{ opacity: 0, y: 50, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
+            animate={{ opacity: 1, y: -20, scale: 1 }}
             exit={{ opacity: 0, y: 50, scale: 0.95 }}
             transition={{ type: "spring", stiffness: 100, damping: 20, delay: 0.1 }}
-            className="w-full max-w-[500px] z-20 mt-[-20px] relative"
+            className="w-full max-w-[500px] z-20 mt-0 relative origin-left"
           >
             <MenuNavigation />
           </motion.div>

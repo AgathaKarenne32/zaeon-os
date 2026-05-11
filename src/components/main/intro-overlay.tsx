@@ -172,15 +172,7 @@ export default function MacSplash({ show = true, onDone, logoSrc = LOGO_DEFAULT 
 
                     <button onClick={handleInitiate} className={`flex flex-col items-center justify-center transition-all duration-300 relative ${!hasStarted ? "cursor-pointer hover:scale-105 opacity-80" : "cursor-default"}`} disabled={hasStarted}>
 
-                        {!hasStarted && (
-                            <div className="absolute top-[-200px] right-[10px] flex items-end gap-0.5 z-40 pointer-events-none">
-                                <span className="zzz-text zzz-1 text-[13px] font-bold text-sky-400/90 tracking-tighter">Z</span>
-                                <span className="zzz-text zzz-2 text-[10px] font-medium text-sky-400/80 tracking-tighter">z</span>
-                                <span className="zzz-text zzz-3 text-[12px] font-semibold text-sky-400/85 tracking-tighter">z</span>
-                                <span className="zzz-text zzz-4 text-[9px] text-sky-400/70 tracking-tighter">z</span>
-                                <span className="zzz-text zzz-5 text-[11px] font-medium text-sky-400/80 tracking-tighter">z</span>
-                            </div>
-                        )}
+
 
                         <Image
                             src={currentCharacterImg}
@@ -210,42 +202,7 @@ export default function MacSplash({ show = true, onDone, logoSrc = LOGO_DEFAULT 
                 </div>
             </div>
 
-            {/* Injeção de CSS nativa para não depender do styled-jsx no Next.js App Router */}
-            <style dangerouslySetInnerHTML={{
-                __html: `
-                @keyframes zzz-float {
-                    0% {
-                        opacity: 0;
-                        transform: translateY(-80px) rotate(0deg) scale(0.8);
-                    }
-                    15% {
-                        opacity: 1;
-                        transform: translateY(340) rotate(3deg) scale(1);
-                    }
-                    80% {
-                        opacity: 1;
-                        transform: translateY(-105px) rotate(-3deg) scale(1.1);
-                    }
-                    100% {
-                        opacity: 0;
-                        transform: translateY(-95px) rotate(0deg) scale(1);
-                    }
-                }
-
-                .zzz-text {
-                    display: inline-block;
-                    animation: zzz-float 3s infinite ease-in-out;
-                    font-family: monospace;
-                    transform-origin: center bottom;
-                }
-
-                .zzz-1 { animation-delay: 0s; }
-                .zzz-2 { animation-delay: 0.5s; animation-duration: 2.8s; }
-                .zzz-3 { animation-delay: 1.1s; animation-duration: 3.2s; }
-                .zzz-4 { animation-delay: 1.7s; animation-duration: 2.7s; }
-                .zzz-5 { animation-delay: 2.3s; animation-duration: 3.1s; }
-                `
-            }} />
+            {/* Removed zzz animation CSS */}
         </>
     );
 }

@@ -57,24 +57,23 @@ const FeatureCard = ({ feature, scrollProgress, index, total }: any) => {
     const isLeft = feature.align === "left";
 
     // CALIBRAÇÃO FINA: Compensamos o padding do container para mapear o centro físico dos cards
-    // O primeiro card está por volta dos 8% do container, e o último aos 92%
-    const activationPoint = 0.08 + (index / (total - 1)) * 0.84;
+    // Em um layout com 5 cards de mesmo tamanho, os centros são 10%, 30%, 50%, 70%, 90%
+    const activationPoint = 0.10 + (index / (total - 1)) * 0.80;
 
     // A ramificação desenha-se pouco antes da linha central bater no card
     const drawStart = Math.max(0, activationPoint - 0.1);
     const drawEnd = activationPoint;
 
-    // AÇÕES 1:1 COM O SCROLL (O Card acende exatamente no activationPoint e apaga depois)
-    const activeStart = activationPoint - 0.08;
+    // AÇÕES 1:1 COM O SCROLL (O Card acende quando a linha chega e PERMANECE ACESO para se destacar)
+    const activeStart = Math.max(0, activationPoint - 0.05);
     const activePeak = activationPoint;
-    const activeEnd = activationPoint + 0.08;
 
     const pathLength = useTransform(scrollProgress, [drawStart, drawEnd], [0, 1]);
-    const isEnergized = useTransform(scrollProgress, [activeStart, activePeak, activeEnd], [0, 1, 0]);
+    const isEnergized = useTransform(scrollProgress, [activeStart, activePeak], [0, 1]);
 
-    // Opacidade geral da caixa
-    const cardOpacity = useTransform(scrollProgress, [activeStart - 0.05, activePeak, activeEnd + 0.05], [0.4, 1, 0.4]);
-    const cardScale = useTransform(scrollProgress, [activeStart, activePeak, activeEnd], [0.95, 1, 0.95]);
+    // Opacidade geral da caixa permanece forte após acender
+    const cardOpacity = useTransform(scrollProgress, [activeStart - 0.05, activePeak], [0.4, 1]);
+    const cardScale = useTransform(scrollProgress, [activeStart, activePeak], [0.95, 1]);
 
     // Opacidade dos nós SVG
     const nodeStartOpacity = useTransform(pathLength, [0, 0.1], [0, 1]);
